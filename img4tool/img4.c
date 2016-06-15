@@ -10,4 +10,8 @@
 
 
 
+char *ansGetString(char *file, char **outpur){
+    
+}
+
 
