@@ -9,9 +9,7 @@
 #include "img4.h"
 
 
-
-char *ansGetString(char *file, char **outpur){
+char *ans1GetString(char *buf, char **outString){
     
 }
-
 

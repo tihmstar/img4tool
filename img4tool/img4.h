@@ -66,7 +66,7 @@ typedef struct{
     byte isLong : 1;
 }t_asn1Length;
 
-char *ansGetString(char *file, char **outpur);
+char *ans1GetString(char *buf, char **outString);
 
 
 #endif /* img4_h */
