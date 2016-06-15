@@ -12,10 +12,11 @@
 #include <stdlib.h>
 #include "img4.h"
 
-//TODO: Parse arguments
+
 static struct option longopts[] = {
     { "help",           no_argument,       NULL, 'h' },
     { "extract",        required_argument,  NULL, 'e' },
+    { "all-headers",     no_argument,        NULL, 'a'},
     { NULL, 0, NULL, 0 }
 };
 
@@ -26,9 +27,9 @@ void cmd_help(){
     
     printf("  -h, --help                prints usage information\n");
     printf("  -e, --extract FILEPATH    extracts data to file\n");
+    printf("  -a, --all-headers         print all headers of all IM4Ps\n");
     printf("\n");
 }
-
 
 int main(int argc, const char * argv[]) {
     
@@ -38,18 +39,25 @@ int main(int argc, const char * argv[]) {
     char *img4FilePath = 0;
     char *extractedFilePath = 0;
     
+    int extract_flag = 0;
+    int allHeaders_flag = 0;
+    
     if (argc == 1){
         cmd_help();
         return -1;
     }
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "e:h", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "e:ha", longopts, &optindex)) > 0) {
         switch (opt) {
             case 'h': // long option: "help"; can be called as short option
                 cmd_help();
                 return 0;
             case 'e': // long option: "extract"; can be called as short option
+                extract_flag = 1;
                 extractedFilePath = optarg;
+                break;
+            case 'a': // long option: "all-headers"; can be called as short option
+                allHeaders_flag = 1;
                 break;
             default:
                  cmd_help();
@@ -61,7 +69,6 @@ int main(int argc, const char * argv[]) {
     strcpy(img4FilePath, argv[argc-1]);
     
     
-    
     FILE *f = fopen(img4FilePath, "r");
     fseek(f, 0, SEEK_END);
     size_t size = ftell(f);
@@ -70,11 +77,30 @@ int main(int argc, const char * argv[]) {
     char * buf = malloc(size);
     fread(buf, size, 1, f);
     
-    printIM4P(buf,size);
+    // TODO: Use function to determine wether you have an img4 or only an im4p
+    // if(IS IM4P)
+    //     if (extract_flag)
+    //         EXTRACT FILE
+    //     else
+    //         printIM4P(buf,size);
+    //
+    // else
+    //      if (extract_flag)
+    //          EXTRACT FILES
+    //      else if(allHeaders_flag)
+    //          print all header data of all im4ps
+    //      else
+    //          print all im4p names
+    
+    
+    
     
     free(buf);
     fclose(f);
     
+    // free arguments
+    free(img4FilePath);
+    free(extractedFilePath);
     
     return 0;
 }
