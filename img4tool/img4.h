@@ -66,6 +66,7 @@ typedef struct{
     byte isLong : 1;
 }t_asn1Length;
 
+size_t asn1Len(char buf[4], size_t *sizeBytes);
 char *ans1GetString(char *buf, char **outString);
 
 

@@ -28,6 +28,7 @@
 		878307411D11499E00866EF5 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		878307481D1149E400866EF5 /* img4.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = img4.c; sourceTree = "<group>"; };
 		878307491D1149E400866EF5 /* img4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = img4.h; sourceTree = "<group>"; };
+		8783074B1D114EE300866EF5 /* all.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = all.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,6 +61,7 @@
 		878307401D11499E00866EF5 /* img4tool */ = {
 			isa = PBXGroup;
 			children = (
+				8783074B1D114EE300866EF5 /* all.h */,
 				878307491D1149E400866EF5 /* img4.h */,
 				878307481D1149E400866EF5 /* img4.c */,
 				878307411D11499E00866EF5 /* main.c */,
