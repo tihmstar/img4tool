@@ -10,6 +10,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <stdlib.h>
+#include "img4.h"
 
 //TODO: Parse arguments
 static struct option longopts[] = {
@@ -58,6 +59,21 @@ int main(int argc, const char * argv[]) {
     
     img4FilePath = malloc(strlen(argv[argc-1])+1);
     strcpy(img4FilePath, argv[argc-1]);
+    
+    
+    
+    FILE *f = fopen(img4FilePath, "r");
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    
+    char * buf = malloc(size);
+    fread(buf, size, 1, f);
+    
+    printIM4P(buf,size);
+    
+    free(buf);
+    fclose(f);
     
     
     return 0;

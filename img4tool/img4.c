@@ -97,6 +97,8 @@ char *ans1GetString(char *buf, char **outString){
 
 void printIM4P(char *buf, size_t len){
     
+    
+    printf("asd\n");
 }
 
 
