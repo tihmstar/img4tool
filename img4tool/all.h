@@ -10,5 +10,6 @@
 #define all_h
 
 #define error(a ...) printf(a)
+#define warning(a ...) printf(a)
 
 #endif /* all_h */
