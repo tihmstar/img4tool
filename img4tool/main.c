@@ -24,7 +24,7 @@ void cmd_help(){
     printf("Last argument must be an img4 file\n");
     
     printf("  -h, --help                prints usage information\n");
-    printf("  -e, --extract FILEPATH    extracts encrypted data to file\n");
+    printf("  -e, --extract FILEPATH    extracts data to file\n");
     printf("\n");
 }
 

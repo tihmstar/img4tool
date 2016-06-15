@@ -10,6 +10,7 @@
 
 
 char *ans1GetString(char *buf, char **outString){
-    
+    //Fetches IA5String
+    return 0;
 }
 
