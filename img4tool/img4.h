@@ -34,26 +34,26 @@ typedef unsigned char byte;
 #define kASN1TagObject          7
 #define kASN1TagEXTERNAL        8
 #define kASN1TagREAL            9
-#define kASN1TagENUMERATED      10
-#define kASN1TagEMBEDDED        11
-#define kASN1TagUTF8String      12
-#define kASN1TagRELATIVE_OID	13
-#define kASN1TagReserved        (14 | 15)
-#define kASN1TagSEQUENCE        16
-#define kASN1TagSET             17
-#define kASN1TagNumericString	18
-#define kASN1TagPrintableString	19
-#define kASN1TagT61String       20
-#define kASN1TagVideotexString	21
-#define kASN1TagIA5String       22
-#define kASN1TagUTCTime         23
-#define kASN1TagGeneralizedTime	24
-#define kASN1TagGraphicString	25
-#define kASN1TagVisibleString	26
-#define kASN1TagGeneralString	27
-#define kASN1TagUniversalString	28
-#define kASN1TagCHARACTER       29
-#define kASN1TagBMPString       30
+#define kASN1TagENUMERATED      10 //0x0A
+#define kASN1TagEMBEDDED        11 //0x0B
+#define kASN1TagUTF8String      12 //0x0C
+#define kASN1TagRELATIVE_OID	13 //0x0D
+#define kASN1TagReserved        (14 | 15) //(0x0E | 0x0F)
+#define kASN1TagSEQUENCE        16 //0x10
+#define kASN1TagSET             17 //0x11
+#define kASN1TagNumericString	18 //0x12
+#define kASN1TagPrintableString	19 //0x13
+#define kASN1TagT61String       20 //0x14
+#define kASN1TagVideotexString	21 //0x15
+#define kASN1TagIA5String       22 //0x16
+#define kASN1TagUTCTime         23 //0x17
+#define kASN1TagGeneralizedTime	24 //0x18
+#define kASN1TagGraphicString	25 //0x19
+#define kASN1TagVisibleString	26 //0x1A
+#define kASN1TagGeneralString	27 //0x1B
+#define kASN1TagUniversalString	28 //0x1C
+#define kASN1TagCHARACTER       29 //0x1D
+#define kASN1TagBMPString       30 //0x1E
 
 typedef struct{
     byte tagNumber : 5;
@@ -66,8 +66,13 @@ typedef struct{
     byte isLong : 1;
 }t_asn1Length;
 
+//asn1
 size_t asn1Len(char buf[4], size_t *sizeBytes);
 char *ans1GetString(char *buf, char **outString);
+
+//img4
+void printIM4P(char *buf, size_t len);
+
 
 
 #endif /* img4_h */

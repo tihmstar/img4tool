@@ -7,9 +7,25 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
+#include "img4.h"
 
 int main(int argc, const char * argv[]) {
-    // insert code here...
-    printf("Hello, World!\n");
+    
+    
+    FILE *f = fopen("iBEC.n66.RELEASE.im4p", "r");
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    
+    char * buf = malloc(size);
+    fread(buf, size, 1, f);
+    
+    char *str;
+    char *b2 = ans1GetString(buf+5, &str);
+    
+    free(buf);
+    fclose(f);
+    
     return 0;
 }
