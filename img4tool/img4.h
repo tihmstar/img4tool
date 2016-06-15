@@ -68,7 +68,9 @@ typedef struct{
 
 //asn1
 size_t asn1Len(char buf[4], size_t *sizeBytes);
-char *ans1GetString(char *buf, char **outString);
+char *ans1GetString(char *buf, char **outString, size_t *strlen);
+
+
 
 //img4
 void printIM4P(char *buf, size_t len);
