@@ -35,23 +35,6 @@ t_asn1ElemLen asn1Len(char buf[4]){
     return ret;
 }
 
-t_asn1Tag *asn1ParseTag(char *buf, char **data, size_t *dataLen){
-    char *data_ = NULL;
-    
-    t_asn1Tag *tag = (t_asn1Tag*)buf;
-    if (tag->tagClass == kASN1TagClassPrivate && buf[1] & 0x80) {
-        size_t tagbytes = asn1Len(++buf).sizeBytes;
-        buf += tagbytes+1;
-    }
-    
-    t_asn1ElemLen len = asn1Len(++buf);
-    data_ = buf + len.sizeBytes;
-    
-    if (data) *data = data_;
-    if (dataLen) *dataLen = len.dataLen;
-    return tag;
-}
-
 int asn1ElementsInObject(char *buf){
     int ret = 0;
     
@@ -87,26 +70,24 @@ char *ans1GetString(char *buf, char **outString, size_t *strlen){
 }
 
 t_asn1Tag *asn1ElementAtIndex(char *buf, int index){
-    char *data;
-    size_t dataLen;
-    t_asn1Tag *ret = asn1ParseTag(buf, &data, &dataLen);
+    int num = 0;
+    char *ret = 0;;
     
+    if (!((t_asn1Tag *)buf)->isConstructed) return 0;
+    t_asn1ElemLen len = asn1Len(++buf);
     
-    if (!ret->isConstructed) return 0; //not a constructed object
-    int firstTag = 1;
-    while (dataLen) {
-        size_t subDataLen;
-        asn1ParseTag((char*)ret, &data, &subDataLen);
-        dataLen -= data - buf +subDataLen;
-        ret = (t_asn1Tag *) data;
-        if (!firstTag)ret += subDataLen;
-        else firstTag = 0;
-        
-        
-        if (!index--) break;
-    }
+    buf +=len.sizeBytes+1;
+    do {
+        ret = buf-1;
+        t_asn1ElemLen sublen = asn1Len(buf);
+        size_t toadd =sublen.dataLen + sublen.sizeBytes + 1;
+        len.dataLen -=toadd;
+        buf +=toadd;
+        if (num == index) break;
+        num ++;
+    } while (len.dataLen);
     
-    return ret;
+    return (t_asn1Tag*)ret;
 }
 
 
