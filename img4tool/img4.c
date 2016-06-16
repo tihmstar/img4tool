@@ -52,22 +52,18 @@ t_asn1Tag *asn1ParseTag(char *buf, char **data, size_t *dataLen){
     return tag;
 }
 
-int asn1ElementsInObject(char *buf, size_t bufLen){
+int asn1ElementsInObject(char *buf){
     int ret = 0;
     
-    char *data;
-    size_t dataLen;
-    t_asn1Tag *tag = asn1ParseTag(buf, &data, &dataLen);
+    if (!((t_asn1Tag *)buf)->isConstructed) return 0;
+    t_asn1ElemLen len = asn1Len(++buf);
     
-    if (!tag->isConstructed) return 0;
-    
-    bufLen -= data - buf;
-    buf = data;
-    while (dataLen) {
-        size_t subDataLen;
-        asn1ParseTag(buf, &data, &subDataLen);
-        dataLen -= data - buf +subDataLen;
-        buf = data + subDataLen;
+    buf +=len.sizeBytes+1;
+    while (len.dataLen) {
+        t_asn1ElemLen sublen = asn1Len(buf);
+        size_t toadd =sublen.dataLen + sublen.sizeBytes + 1;
+        len.dataLen -=toadd;
+        buf +=toadd;
         ret ++;
     }
     return ret;
@@ -114,11 +110,11 @@ t_asn1Tag *asn1ElementAtIndex(char *buf, int index){
 }
 
 
-int getSequenceName(char *buf, size_t buflen,char**name, size_t *nameLen){
+int getSequenceName(char *buf,char**name, size_t *nameLen){
 #define reterror(a ...){printf(a); err = -1; goto error;}
     int err = 0;
     if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSEQUENCE) reterror("[Error] getSequenceName: not a SEQUENCE");
-    int elems = asn1ElementsInObject(buf, buflen);
+    int elems = asn1ElementsInObject(buf);
     if (!elems) reterror("[Error] getSequenceName: no elements in SEQUENCE\n");
     ans1GetString((char*)asn1ElementAtIndex(buf,0),name,nameLen);
     
@@ -178,10 +174,10 @@ void printKBAGOctet(char *octet){
     t_asn1ElemLen octetlen = asn1Len(++octet);
     octet +=octetlen.sizeBytes;
     //main seq
-    int subseqs = asn1ElementsInObject(octet, octetlen.dataLen);
+    int subseqs = asn1ElementsInObject(octet);
     for (int i=0; i<subseqs; i++) {
         char *s = (char*)asn1ElementAtIndex(octet, i);
-        int elems = asn1ElementsInObject(s, asn1Len(s+1).dataLen+1);
+        int elems = asn1ElementsInObject(s);
         
         if (elems--){
             //integer (currently unknown?)
@@ -215,15 +211,15 @@ void printNumber(t_asn1Tag *tag){
     printf("%u",num);
 }
 
-void printIM4P(char *buf, size_t len){
+void printIM4P(char *buf){
 #define reterror(a ...){printf(a);goto error;}
     
     char *magic;
     size_t l;
-    getSequenceName(buf, len, &magic, &l);
+    getSequenceName(buf, &magic, &l);
     if (strncmp("IM4P", magic, l)) reterror("[Error] printIM4P: unexpected \"%.*s\", expected \"IM4P\"\n",(int)l,magic);
     
-    int elems = asn1ElementsInObject(buf, len);
+    int elems = asn1ElementsInObject(buf);
     if (elems--) printStringWithKey("type: ",asn1ElementAtIndex(buf, 1));
     if (elems--) printStringWithKey("desc: ",asn1ElementAtIndex(buf, 2));
     if (elems--) {
@@ -244,7 +240,7 @@ error:
 }
 
 int extractFileFromIM4P(char *buf, size_t len, char *dstFilename){
-    int elems = asn1ElementsInObject(buf, len);
+    int elems = asn1ElementsInObject(buf);
     if (elems < 4){
         error("[Error] extractFileFromIM4P: not enough elements in SEQUENCE %d\n",elems);
         return -2;
@@ -269,10 +265,10 @@ void printElemsInIMG4(char *buf, size_t buflen){
 #define reterror(a...) {printf(a); goto error;}
     char *magic;
     size_t l;
-    getSequenceName(buf, buflen, &magic, &l);
+    getSequenceName(buf, &magic, &l);
     if (strncmp("IMG4", magic, l)) reterror("[Error] printElemsInIMG4: unexpected \"%.*s\", expected \"IMG4\"\n",(int)l,magic);
     printf("IMG4:\n");
-    int elems = asn1ElementsInObject(buf, buflen);
+    int elems = asn1ElementsInObject(buf);
     
     for (int i=1; i<elems; i++) {
         char *tag = (char*)asn1ElementAtIndex(buf, i);
@@ -283,13 +279,13 @@ void printElemsInIMG4(char *buf, size_t buflen){
         
         char *magic = 0;
         size_t l;
-        getSequenceName((char*)tag, asn1Len((char*)tag+1).dataLen, &magic, &l);
+        getSequenceName((char*)tag, &magic, &l);
         
         putStr(magic, l);printf(": ---------\n");
         
-        if (strncmp("IM4R", magic, l) == 0) printIM4R(tag, asn1Len(tag+1).dataLen);
-        if (strncmp("IM4M", magic, l) == 0) printIM4M(tag, asn1Len(tag+1).dataLen);
-        if (strncmp("IM4P", magic, l) == 0) printIM4P(tag, asn1Len(tag+1).dataLen);
+        if (strncmp("IM4R", magic, l) == 0) printIM4R(tag);
+        if (strncmp("IM4M", magic, l) == 0) printIM4M(tag);
+        if (strncmp("IM4P", magic, l) == 0) printIM4P(tag);
         putchar('\n');
     }
     
@@ -299,15 +295,15 @@ error:
 }
 
 
-void printIM4R(char *buf, size_t len){
+void printIM4R(char *buf){
 #define reterror(a ...){printf(a);goto error;}
     
     char *magic;
     size_t l;
-    getSequenceName(buf, len, &magic, &l);
+    getSequenceName(buf, &magic, &l);
     if (strncmp("IM4R", magic, l)) reterror("[Error] printIM4R: unexpected \"%.*s\", expected \"IM4R\"\n",(int)l,magic);
     
-    int elems = asn1ElementsInObject(buf, len);
+    int elems = asn1ElementsInObject(buf);
     if (elems<2) reterror("[Error] printIM4R: expecting at least 2 elements\n");
     
     t_asn1Tag *set = asn1ElementAtIndex(buf, 1);
@@ -320,7 +316,7 @@ void printIM4R(char *buf, size_t len){
     printf("PrivTag: 0x%08zx\n",asn1GetPrivateTagnum(++set));
     
     set += asn1Len((char*)set).sizeBytes+1;
-    elems = asn1ElementsInObject((char*)set, asn1Len((char*)set-1).dataLen);
+    elems = asn1ElementsInObject((char*)set);
     if (elems<2) reterror("[Error] printIM4R: expecting at least 2 elements\n");
     
     printf("\t");
@@ -335,15 +331,15 @@ error:
 }
 
 
-void printIM4M(char *buf, size_t len){
+void printIM4M(char *buf){
 #define reterror(a ...){printf(a);goto error;}
     
     char *magic;
     size_t l;
-    getSequenceName(buf, len, &magic, &l);
+    getSequenceName(buf, &magic, &l);
     if (strncmp("IM4M", magic, l)) reterror("[Error] printIM4M: unexpected \"%.*s\", expected \"IM4M\"\n",(int)l,magic);
     
-    int elems = asn1ElementsInObject(buf, len);
+    int elems = asn1ElementsInObject(buf);
     if (elems<2) reterror("[Error] printIM4M: expecting at least 2 elements\n");
     
     if (--elems>0) {
