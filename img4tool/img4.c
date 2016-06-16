@@ -127,6 +127,18 @@ error:
 #undef reterror
 }
 
+size_t asn1GetPrivateTagnum(t_asn1Tag *tag){
+    t_asn1ElemLen taglen = asn1Len((char*)tag);
+    taglen.sizeBytes-=1;
+    size_t tagname =0;
+    do {
+        tagname *=0x100;
+        tagname>>=1;
+        tagname += ((t_asn1PrivateTag*)tag)->num;
+    } while (((t_asn1PrivateTag*)tag++)->more);
+    return tagname;
+}
+
 void printStringWithKey(char*key, t_asn1Tag *string){
     char *str = 0;
     size_t strlen;
@@ -147,6 +159,16 @@ void printHexString(t_asn1Tag *str){
     unsigned char *string = (unsigned char*)str + len.sizeBytes +1;
     
     while (len.dataLen--) printf("%02x",*string++);
+}
+
+void printI5AString(t_asn1Tag *str){
+    if (str->tagNumber != kASN1TagIA5String){
+        error("[Error] not an I5A string\n");
+        return;
+    }
+    
+    t_asn1ElemLen len = asn1Len((char*)++str);
+    putStr(((char*)str)+len.sizeBytes, len.dataLen);
 }
 
 void printKBAGOctet(char *octet){
@@ -172,13 +194,25 @@ void printKBAGOctet(char *octet){
         }
         if (elems--)printHexString(asn1ElementAtIndex(s, 1)),putchar('\n');
         if (elems--)printHexString(asn1ElementAtIndex(s, 2)),putchar('\n');
-        
-        putchar('\n');
     }
     
 error:
     return;
 #undef reterror
+}
+
+void printNumber(t_asn1Tag *tag){
+    if (tag->tagNumber != kASN1TagINTEGER) {
+        error("[Error] printNumber: tag not an INTEGER\n");
+        return;
+    }
+    t_asn1ElemLen len = asn1Len((char*)++tag);
+    uint num = 0;
+    while (len.sizeBytes--) {
+        num *=0x100;
+        num += *(unsigned char*)++tag;
+    }
+    printf("%u",num);
 }
 
 void printIM4P(char *buf, size_t len){
@@ -196,7 +230,7 @@ void printIM4P(char *buf, size_t len){
         //data
         t_asn1Tag *data =asn1ElementAtIndex(buf, 3);
         if (data->tagNumber != kASN1TagOCTET) warning("[Warning] printIM4P: skipped an unexpected tag where OCTETSTING was expected\n");
-        else printf("size: 0x%08zx\n",asn1Len((char*)data+1));
+        else printf("size: 0x%08zx\n",asn1Len((char*)data+1).dataLen);
     }
     if (elems--) {
         //kbag values
@@ -237,7 +271,7 @@ void printElemsInIMG4(char *buf, size_t buflen){
     size_t l;
     getSequenceName(buf, buflen, &magic, &l);
     if (strncmp("IMG4", magic, l)) reterror("[Error] printElemsInIMG4: unexpected \"%.*s\", expected \"IMG4\"\n",(int)l,magic);
-    
+    printf("IMG4:\n");
     int elems = asn1ElementsInObject(buf, buflen);
     
     for (int i=1; i<elems; i++) {
@@ -251,13 +285,11 @@ void printElemsInIMG4(char *buf, size_t buflen){
         size_t l;
         getSequenceName((char*)tag, asn1Len((char*)tag+1).dataLen, &magic, &l);
         
-        putStr(magic, l);
-        if (strncmp("IM4P", magic, l) == 0) {
-            printf(": ");
-            char *str = (char*)asn1ElementAtIndex((char*)tag, 1)+1;
-            t_asn1ElemLen len = asn1Len(str);
-            putStr(str+len.sizeBytes, len.dataLen);
-        }
+        putStr(magic, l);printf(": ---------\n");
+        
+        if (strncmp("IM4R", magic, l) == 0) printIM4R(tag, asn1Len(tag+1).dataLen);
+        if (strncmp("IM4M", magic, l) == 0) printIM4M(tag, asn1Len(tag+1).dataLen);
+        if (strncmp("IM4P", magic, l) == 0) printIM4P(tag, asn1Len(tag+1).dataLen);
         putchar('\n');
     }
     
@@ -267,6 +299,68 @@ error:
 }
 
 
+void printIM4R(char *buf, size_t len){
+#define reterror(a ...){printf(a);goto error;}
+    
+    char *magic;
+    size_t l;
+    getSequenceName(buf, len, &magic, &l);
+    if (strncmp("IM4R", magic, l)) reterror("[Error] printIM4R: unexpected \"%.*s\", expected \"IM4R\"\n",(int)l,magic);
+    
+    int elems = asn1ElementsInObject(buf, len);
+    if (elems<2) reterror("[Error] printIM4R: expecting at least 2 elements\n");
+    
+    t_asn1Tag *set = asn1ElementAtIndex(buf, 1);
+    if (set->tagNumber != kASN1TagSET) reterror("[Error] printIM4R: expecting SET type\n");
+    
+    set += asn1Len((char*)set+1).sizeBytes+1;
+    
+    if (set->tagClass != kASN1TagClassPrivate) reterror("[Error] printIM4R: expecting PRIVATE type\n");
+    
+    printf("PrivTag: 0x%08zx\n",asn1GetPrivateTagnum(++set));
+    
+    set++;
+    elems = asn1ElementsInObject((char*)set, asn1Len((char*)set-1).dataLen);
+    if (elems<2) reterror("[Error] printIM4R: expecting at least 2 elements\n");
+    
+    printf("\t");
+    printI5AString(asn1ElementAtIndex((char*)set, 0));
+    printf(": ");
+    printHexString(asn1ElementAtIndex((char*)set, 1));
+    putchar('\n');
+    
+error:
+    return;
+#undef reterror
+}
+
+
+void printIM4M(char *buf, size_t len){
+#define reterror(a ...){printf(a);goto error;}
+    
+    char *magic;
+    size_t l;
+    getSequenceName(buf, len, &magic, &l);
+    if (strncmp("IM4M", magic, l)) reterror("[Error] printIM4M: unexpected \"%.*s\", expected \"IM4M\"\n",(int)l,magic);
+    
+    int elems = asn1ElementsInObject(buf, len);
+    if (elems<2) reterror("[Error] printIM4R: expecting at least 2 elements\n");
+    
+    if (--elems>0) {
+        printf("someinteger: ");
+        printNumber(asn1ElementAtIndex(buf, 1));
+        putchar('\n');
+    }
+    if (--elems>0) {
+        t_asn1Tag *manbset = asn1ElementAtIndex(buf, 2);
+#warning todo stuff here
+    }
+    
+    
+error:
+    return;
+#undef reterror
+}
 
 
 

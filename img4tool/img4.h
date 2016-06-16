@@ -71,6 +71,11 @@ typedef struct{
     size_t sizeBytes;
 } t_asn1ElemLen;
 
+typedef struct{
+    byte num : 7;
+    byte more : 1;
+}t_asn1PrivateTag;
+
 //asn1
 t_asn1ElemLen asn1Len(char buf[4]);
 char *ans1GetString(char *buf, char **outString, size_t *strlen);
@@ -79,6 +84,8 @@ char *ans1GetString(char *buf, char **outString, size_t *strlen);
 
 //img4
 void printIM4P(char *buf, size_t len);
+void printIM4R(char *buf, size_t len);
+void printIM4M(char *buf, size_t len);
 int extractFileFromIM4P(char *buf, size_t len, char *dstFilename);
 void printElemsInIMG4(char *buf, size_t buflen);
 

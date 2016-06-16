@@ -77,7 +77,24 @@ int main(int argc, const char * argv[]) {
     char * buf = malloc(size);
     fread(buf, size, 1, f);
     
+    // TODO: Use function to determine wether you have an img4 or only an im4p
+    // if(IS IM4P)
+    //     if (extract_flag)
+    //         EXTRACT FILE
+    //     else
+    //         printIM4P(buf,size);
+    //
+    // else
+    //      if (extract_flag)
+    //          EXTRACT FILES
+    //      else if(allHeaders_flag)
+    //          print all header data of all im4ps
+    //      else
+    //          print all im4p names
     printElemsInIMG4(buf,size);
+    
+    
+    
     
     free(buf);
     fclose(f);
