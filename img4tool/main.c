@@ -70,7 +70,7 @@ int main(int argc, const char * argv[]) {
     char * buf = malloc(size);
     fread(buf, size, 1, f);
     
-    printIM4P(buf,size);
+    printElemsInIMG4(buf,size);
     
     free(buf);
     fclose(f);
