@@ -220,7 +220,7 @@ error:
 #undef reterror
 }
 
-int extractFileFromIM4P(char *buf, size_t len, char *dstFilename){
+int extractFileFromIM4P(char *buf, char *dstFilename){
     int elems = asn1ElementsInObject(buf);
     if (elems < 4){
         error("[Error] extractFileFromIM4P: not enough elements in SEQUENCE %d\n",elems);
@@ -242,7 +242,7 @@ int extractFileFromIM4P(char *buf, size_t len, char *dstFilename){
     return 0;
 }
 
-void printElemsInIMG4(char *buf, size_t buflen){
+void printElemsInIMG4(char *buf){
 #define reterror(a...) {printf(a); goto error;}
     char *magic;
     size_t l;

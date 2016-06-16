@@ -91,7 +91,7 @@ int main(int argc, const char * argv[]) {
     //          print all header data of all im4ps
     //      else
     //          print all im4p names
-    printElemsInIMG4(buf,size);
+    printElemsInIMG4(buf);
     
     
     
