@@ -319,7 +319,7 @@ void printIM4R(char *buf, size_t len){
     
     printf("PrivTag: 0x%08zx\n",asn1GetPrivateTagnum(++set));
     
-    set++;
+    set += asn1Len((char*)set).sizeBytes+1;
     elems = asn1ElementsInObject((char*)set, asn1Len((char*)set-1).dataLen);
     if (elems<2) reterror("[Error] printIM4R: expecting at least 2 elements\n");
     
@@ -344,7 +344,7 @@ void printIM4M(char *buf, size_t len){
     if (strncmp("IM4M", magic, l)) reterror("[Error] printIM4M: unexpected \"%.*s\", expected \"IM4M\"\n",(int)l,magic);
     
     int elems = asn1ElementsInObject(buf, len);
-    if (elems<2) reterror("[Error] printIM4R: expecting at least 2 elements\n");
+    if (elems<2) reterror("[Error] printIM4M: expecting at least 2 elements\n");
     
     if (--elems>0) {
         printf("someinteger: ");
