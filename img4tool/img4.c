@@ -104,15 +104,22 @@ error:
 #undef reterror
 }
 
-size_t asn1GetPrivateTagnum(t_asn1Tag *tag){
-    t_asn1ElemLen taglen = asn1Len((char*)tag);
+size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes){
+    if (*(unsigned char*)tag != 0xff) {
+        error("[Error] asn1GetPrivateTagnum: not a private TAG 0x%02x\n",*(unsigned int*)tag);
+        return 0;
+    }
+    size_t sb = 1;
+    t_asn1ElemLen taglen = asn1Len((char*)++tag);
     taglen.sizeBytes-=1;
     size_t tagname =0;
     do {
         tagname *=0x100;
         tagname>>=1;
         tagname += ((t_asn1PrivateTag*)tag)->num;
+        sb++;
     } while (((t_asn1PrivateTag*)tag++)->more);
+    if (sizebytes) *sizebytes = sb;
     return tagname;
 }
 
@@ -294,7 +301,7 @@ void printIM4R(char *buf){
     
     if (set->tagClass != kASN1TagClassPrivate) reterror("[Error] printIM4R: expecting PRIVATE type\n");
     
-    printf("PrivTag: 0x%08zx\n",asn1GetPrivateTagnum(++set));
+    printf("PrivTag: 0x%08zx\n",asn1GetPrivateTagnum(set++,0));
     
     set += asn1Len((char*)set).sizeBytes+1;
     elems = asn1ElementsInObject((char*)set);
@@ -330,9 +337,39 @@ void printIM4M(char *buf){
     }
     if (--elems>0) {
         t_asn1Tag *manbset = asn1ElementAtIndex(buf, 2);
-#warning todo stuff here
+        if (manbset->tagNumber != kASN1TagSET) reterror("[Error] printIM4M: expecting SET\n");
+        
+        t_asn1Tag *privtag = manbset + asn1Len((char*)manbset+1).sizeBytes+1;
+        size_t sb;
+        printf("PrivTag: 0x%08zx\n",asn1GetPrivateTagnum(privtag++,&sb));
+        char *manbseq = (char*)privtag+sb;
+        manbseq+= asn1Len(manbseq).sizeBytes+1;
+        printMANB(manbseq);
+    }
+    if (--elems>0){
+        printf("signed hash: ");
+        printHexString(asn1ElementAtIndex(buf, 3));
+        putchar('\n');
+    }
+    if (--elems>0){
+#warning TODO print apple certificate?
     }
     
+    
+error:
+    return;
+#undef reterror
+}
+
+void printMANB(char *buf){
+#define reterror(a ...){printf(a);goto error;}
+    
+    char *magic;
+    size_t l;
+    getSequenceName(buf, &magic, &l);
+    if (strncmp("MANB", magic, l)) reterror("[Error] printMANB: unexpected \"%.*s\", expected \"MANB\"\n",(int)l,magic);
+    
+#warning TODO stuff
     
 error:
     return;

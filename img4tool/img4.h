@@ -86,6 +86,7 @@ char *ans1GetString(char *buf, char **outString, size_t *strlen);
 void printIM4P(char *buf);
 void printIM4R(char *buf);
 void printIM4M(char *buf);
+void printMANB(char *buf);
 int extractFileFromIM4P(char *buf, char *dstFilename);
 void printElemsInIMG4(char *buf);
 
