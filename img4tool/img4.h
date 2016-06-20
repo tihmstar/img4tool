@@ -87,6 +87,7 @@ void printIM4P(char *buf);
 void printIM4R(char *buf);
 void printIM4M(char *buf);
 void printMANB(char *buf);
+int getSequenceName(char *buf,char**name, size_t *nameLen);
 int extractFileFromIM4P(char *buf, char *dstFilename);
 void printElemsInIMG4(char *buf);
 

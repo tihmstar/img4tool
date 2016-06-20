@@ -91,8 +91,10 @@ int main(int argc, const char * argv[]) {
     //          print all header data of all im4ps
     //      else
     //          print all im4p names
-    printElemsInIMG4(buf);
-    
+    char *sname;
+    getSequenceName(buf, &sname, 0);
+    if (strncmp("IMG4", sname, 4) == 0) printElemsInIMG4(buf);
+    else printIM4P(buf);
     
     
     

@@ -97,8 +97,9 @@ int getSequenceName(char *buf,char**name, size_t *nameLen){
     if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSEQUENCE) reterror("[Error] getSequenceName: not a SEQUENCE");
     int elems = asn1ElementsInObject(buf);
     if (!elems) reterror("[Error] getSequenceName: no elements in SEQUENCE\n");
-    ans1GetString((char*)asn1ElementAtIndex(buf,0),name,nameLen);
-    
+    size_t len;
+    ans1GetString((char*)asn1ElementAtIndex(buf,0),name,&len);
+    if (nameLen) *nameLen = len;
 error:
     return err;
 #undef reterror
@@ -208,18 +209,20 @@ void printIM4P(char *buf){
     if (strncmp("IM4P", magic, l)) reterror("[Error] printIM4P: unexpected \"%.*s\", expected \"IM4P\"\n",(int)l,magic);
     
     int elems = asn1ElementsInObject(buf);
-    if (elems--) printStringWithKey("type: ",asn1ElementAtIndex(buf, 1));
-    if (elems--) printStringWithKey("desc: ",asn1ElementAtIndex(buf, 2));
-    if (elems--) {
+    if (--elems>0) printStringWithKey("type: ",asn1ElementAtIndex(buf, 1));
+    if (--elems>0) printStringWithKey("desc: ",asn1ElementAtIndex(buf, 2));
+    if (--elems>0) {
         //data
         t_asn1Tag *data =asn1ElementAtIndex(buf, 3);
         if (data->tagNumber != kASN1TagOCTET) warning("[Warning] printIM4P: skipped an unexpected tag where OCTETSTING was expected\n");
         else printf("size: 0x%08zx\n",asn1Len((char*)data+1).dataLen);
     }
-    if (elems--) {
+    if (--elems>0) {
         //kbag values
         printf("\nKBAG\n");
         printKBAGOctet((char*)asn1ElementAtIndex(buf, 4));
+    }else{
+        printf("\nIM4P does not contain KBAG values\n");
     }
     
 error:
