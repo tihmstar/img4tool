@@ -124,6 +124,19 @@ size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes){
     return tagname;
 }
 
+uint64_t ans1GetNumberFromTag(t_asn1Tag *tag){
+    if (tag->tagNumber != kASN1TagINTEGER) return (error("not an INTEGER\n"),0);
+    uint64_t ret = 0;
+    t_asn1ElemLen len = asn1Len((char*)++tag);
+    unsigned char *data = (unsigned char*)tag+len.sizeBytes;
+    while (len.dataLen--) {
+        ret *= 0x100;
+        ret+= *data;
+    }
+    
+    return ret;
+}
+
 void printStringWithKey(char*key, t_asn1Tag *string){
     char *str = 0;
     size_t strlen;
@@ -252,12 +265,31 @@ int extractFileFromIM4P(char *buf, char *dstFilename){
     return 0;
 }
 
-t_asn1Tag *getValueForPrivateTagInSet(char *set, size_t privTag){
+char *getValueForTagInSet(char *set, size_t tag){
 #define reterror(a) return (error(a),NULL)
     
-    if (((t_asn1Tag*)set)->tagNumber != 1+ kASN1TagSET) reterror("not a SET\n");
+    if (((t_asn1Tag*)set)->tagNumber != kASN1TagSET) reterror("not a SET\n");
+    t_asn1ElemLen setlen = asn1Len(++set);
     
-    
+    for (char *setelems = set+setlen.sizeBytes; setelems<set+setlen.dataLen;) {
+        
+        if (*(unsigned char*)setelems == 0xff) {
+            //priv tag
+            size_t sb;
+            size_t ptag = asn1GetPrivateTagnum((t_asn1Tag*)setelems,&sb);
+            setelems += sb;
+            t_asn1ElemLen len = asn1Len(setelems);
+            setelems += len.sizeBytes;
+            if (tag == ptag) return setelems;
+            setelems +=len.dataLen;
+        }else{
+            //normal tag
+            t_asn1ElemLen len = asn1Len(setelems);
+            setelems += len.sizeBytes + 1;
+            if (((t_asn1Tag*)setelems)->tagNumber == tag) return setelems;
+            setelems += len.dataLen;
+        }
+    }
     return 0;
 #undef reterror
 }
@@ -355,17 +387,48 @@ char *getIM4MFromIMG4(char *buf){
     return (strncmp("IM4M", magic, 4) == 0) ? ret : NULL;
 }
 
-int getECIDFromIM4M(char *buf, char **ecid, size_t *ecidLen){
-#define reterror(a ...) return (error(a),-1)
+uint64_t getECIDFromIM4M(char *buf){
+#define reterror(a ...) return (error(a),0)
     //get set
     int elems = asn1ElementsInObject(buf);
     if (elems<3) reterror("not enough elements in IM4M SEQUENCE\n");
     
     char *theset = (char*)asn1ElementAtIndex(buf, 2);
     
-    t_asn1Tag *manbSeq = getValueForPrivateTagInSet(theset, 1296125506);
+    char *manbSeq = (char*)getValueForTagInSet(theset, 0x4d414e42); //0x4d414e42 MANB private Tag
+    if (!manbSeq) reterror("MANB privTag not found\n");
+    if (((t_asn1Tag*)manbSeq)->tagNumber != kASN1TagSEQUENCE) reterror("value for privTag not a SEQUENCE\n");
+    char *magic;
+    size_t magiclen;
+    getSequenceName(manbSeq, &magic, &magiclen);
+    if (strncmp("MANB", magic, magiclen) != 0) reterror("unexpected SEQUENCENAME, expecting MANB\n");
     
-    return 0;
+    elems = asn1ElementsInObject(manbSeq);
+    if (elems<2) reterror("not enough elements in MANB SEQUENCE\n");
+    char *manbset = (char*)asn1ElementAtIndex(manbSeq, 1);
+    if (((t_asn1Tag*)manbset)->tagNumber != kASN1TagSET) reterror("not a SET\n");
+    
+    char *manpSeq = (char*)getValueForTagInSet(manbset, 0x4d414e50); //0x4d414e50 MANP private Tag
+    if (!manpSeq) reterror("MANP privTag not found\n");
+    if (((t_asn1Tag*)manpSeq)->tagNumber != kASN1TagSEQUENCE) reterror("value for privTag not a SEQUENCE\n");
+    getSequenceName(manpSeq, &magic, &magiclen);
+    if (strncmp("MANP", magic, magiclen) != 0) reterror("unexpected SEQUENCENAME, expecting MANP\n");
+    
+    elems = asn1ElementsInObject(manpSeq);
+    if (elems<2) reterror("not enough elements in MANP SEQUENCE\n");
+    char *manpSet = (char*)asn1ElementAtIndex(manpSeq, 1);
+    if (((t_asn1Tag*)manpSet)->tagNumber != kASN1TagSET) reterror("not a SET\n");
+    
+    char *ecidSeq = (char*)getValueForTagInSet(manpSet, 0x45434944);
+    if (!ecidSeq) reterror("ECID privTag not found\n");
+    if (((t_asn1Tag*)ecidSeq)->tagNumber != kASN1TagSEQUENCE) reterror("value for privTag not a SEQUENCE\n");
+    
+    elems = asn1ElementsInObject(ecidSeq);
+    if (elems<2) reterror("not enough elements in ECID SEQUENCE\n");
+    
+    t_asn1Tag *ecidNum = asn1ElementAtIndex(ecidSeq, 1);
+    
+    return ans1GetNumberFromTag(ecidNum);
 #undef reterror
 }
 

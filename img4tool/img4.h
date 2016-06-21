@@ -89,11 +89,11 @@ void printIM4M(char *buf);
 void printMANB(char *buf);
 
 int getSequenceName(char *buf,char**name, size_t *nameLen);
+size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes);
 int extractFileFromIM4P(char *buf, char *dstFilename);
 void printElemsInIMG4(char *buf);
 
 char *getIM4PFromIMG4(char *buf);
 char *getIM4MFromIMG4(char *buf);
-int getECIDFromIM4M(char *buf, char **ecid, size_t *ecidLen);
-
+uint64_t getECIDFromIM4M(char *buf);
 #endif /* img4_h */
