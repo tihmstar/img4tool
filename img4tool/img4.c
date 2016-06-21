@@ -57,7 +57,7 @@ char *ans1GetString(char *buf, char **outString, size_t *strlen){
     t_asn1Tag *tag = (t_asn1Tag *)buf;
     
     if (!(tag->tagNumber | kASN1TagIA5String)) {
-        error("[Error] ans1GetString: not a string\n");
+        error("not a string\n");
         return 0;
     }
     
@@ -92,11 +92,11 @@ t_asn1Tag *asn1ElementAtIndex(char *buf, int index){
 
 
 int getSequenceName(char *buf,char**name, size_t *nameLen){
-#define reterror(a ...){printf(a); err = -1; goto error;}
+#define reterror(a ...){error(a); err = -1; goto error;}
     int err = 0;
-    if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSEQUENCE) reterror("[Error] getSequenceName: not a SEQUENCE");
+    if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSEQUENCE) reterror("not a SEQUENCE");
     int elems = asn1ElementsInObject(buf);
-    if (!elems) reterror("[Error] getSequenceName: no elements in SEQUENCE\n");
+    if (!elems) reterror("no elements in SEQUENCE\n");
     size_t len;
     ans1GetString((char*)asn1ElementAtIndex(buf,0),name,&len);
     if (nameLen) *nameLen = len;
@@ -107,7 +107,7 @@ error:
 
 size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes){
     if (*(unsigned char*)tag != 0xff) {
-        error("[Error] asn1GetPrivateTagnum: not a private TAG 0x%02x\n",*(unsigned int*)tag);
+        error("not a private TAG 0x%02x\n",*(unsigned int*)tag);
         return 0;
     }
     size_t sb = 1;
@@ -135,7 +135,7 @@ void printStringWithKey(char*key, t_asn1Tag *string){
 
 void printHexString(t_asn1Tag *str){
     if (str->tagNumber != kASN1TagOCTET){
-        error("[Error] not an OCTET string\n");
+        error("not an OCTET string\n");
         return;
     }
     
@@ -148,7 +148,7 @@ void printHexString(t_asn1Tag *str){
 
 void printI5AString(t_asn1Tag *str){
     if (str->tagNumber != kASN1TagIA5String){
-        error("[Error] not an I5A string\n");
+        error("not an I5A string\n");
         return;
     }
     
@@ -157,8 +157,8 @@ void printI5AString(t_asn1Tag *str){
 }
 
 void printKBAGOctet(char *octet){
-#define reterror(a ...){printf(a);goto error;}
-    if (((t_asn1Tag*)octet)->tagNumber != kASN1TagOCTET) reterror("[Error] printKBAGOctet: not an OCTET\n");
+#define reterror(a ...){error(a);goto error;}
+    if (((t_asn1Tag*)octet)->tagNumber != kASN1TagOCTET) reterror("not an OCTET\n");
     
     t_asn1ElemLen octetlen = asn1Len(++octet);
     octet +=octetlen.sizeBytes;
@@ -171,7 +171,7 @@ void printKBAGOctet(char *octet){
         if (elems--){
             //integer (currently unknown?)
             t_asn1Tag *num = asn1ElementAtIndex(s, 0);
-            if (num->tagNumber != kASN1TagINTEGER) warning("[Warning] skipping unexpected tag\n");
+            if (num->tagNumber != kASN1TagINTEGER) warning("skipping unexpected tag\n");
             else{
                 char n = *(char*)(num+2);
                 printf("num: %d\n",n);
@@ -188,7 +188,7 @@ error:
 
 void printNumber(t_asn1Tag *tag){
     if (tag->tagNumber != kASN1TagINTEGER) {
-        error("[Error] printNumber: tag not an INTEGER\n");
+        error("tag not an INTEGER\n");
         return;
     }
     t_asn1ElemLen len = asn1Len((char*)++tag);
@@ -201,12 +201,12 @@ void printNumber(t_asn1Tag *tag){
 }
 
 void printIM4P(char *buf){
-#define reterror(a ...){printf(a);goto error;}
+#define reterror(a ...){error(a);goto error;}
     
     char *magic;
     size_t l;
     getSequenceName(buf, &magic, &l);
-    if (strncmp("IM4P", magic, l)) reterror("[Error] printIM4P: unexpected \"%.*s\", expected \"IM4P\"\n",(int)l,magic);
+    if (strncmp("IM4P", magic, l)) reterror("unexpected \"%.*s\", expected \"IM4P\"\n",(int)l,magic);
     
     int elems = asn1ElementsInObject(buf);
     if (--elems>0) printStringWithKey("type: ",asn1ElementAtIndex(buf, 1));
@@ -214,7 +214,7 @@ void printIM4P(char *buf){
     if (--elems>0) {
         //data
         t_asn1Tag *data =asn1ElementAtIndex(buf, 3);
-        if (data->tagNumber != kASN1TagOCTET) warning("[Warning] printIM4P: skipped an unexpected tag where OCTETSTING was expected\n");
+        if (data->tagNumber != kASN1TagOCTET) warning("skipped an unexpected tag where OCTETSTING was expected\n");
         else printf("size: 0x%08zx\n",asn1Len((char*)data+1).dataLen);
     }
     if (--elems>0) {
@@ -233,7 +233,7 @@ error:
 int extractFileFromIM4P(char *buf, char *dstFilename){
     int elems = asn1ElementsInObject(buf);
     if (elems < 4){
-        error("[Error] extractFileFromIM4P: not enough elements in SEQUENCE %d\n",elems);
+        error("not enough elements in SEQUENCE %d\n",elems);
         return -2;
     }
     
@@ -243,7 +243,7 @@ int extractFileFromIM4P(char *buf, char *dstFilename){
     
     FILE *f = fopen(dstFilename, "wb");
     if (!f) {
-        error("[Error] extractFileFromIM4P: can't open file %s\n",dstFilename);
+        error("can't open file %s\n",dstFilename);
         return -1;
     }
     fwrite(data, dlen.dataLen, 1, f);
@@ -252,12 +252,22 @@ int extractFileFromIM4P(char *buf, char *dstFilename){
     return 0;
 }
 
+t_asn1Tag *getValueForPrivateTagInSet(char *set, size_t privTag){
+#define reterror(a) return (error(a),NULL)
+    
+    if (((t_asn1Tag*)set)->tagNumber != 1+ kASN1TagSET) reterror("not a SET\n");
+    
+    
+    return 0;
+#undef reterror
+}
+
 void printElemsInIMG4(char *buf){
-#define reterror(a...) {printf(a); goto error;}
+#define reterror(a...) {error(a); goto error;}
     char *magic;
     size_t l;
     getSequenceName(buf, &magic, &l);
-    if (strncmp("IMG4", magic, l)) reterror("[Error] printElemsInIMG4: unexpected \"%.*s\", expected \"IMG4\"\n",(int)l,magic);
+    if (strncmp("IMG4", magic, l)) reterror("unexpected \"%.*s\", expected \"IMG4\"\n",(int)l,magic);
     printf("IMG4:\n");
     int elems = asn1ElementsInObject(buf);
     
@@ -287,28 +297,28 @@ error:
 
 
 void printIM4R(char *buf){
-#define reterror(a ...){printf(a);goto error;}
+#define reterror(a ...){error(a);goto error;}
     
     char *magic;
     size_t l;
     getSequenceName(buf, &magic, &l);
-    if (strncmp("IM4R", magic, l)) reterror("[Error] printIM4R: unexpected \"%.*s\", expected \"IM4R\"\n",(int)l,magic);
+    if (strncmp("IM4R", magic, l)) reterror("unexpected \"%.*s\", expected \"IM4R\"\n",(int)l,magic);
     
     int elems = asn1ElementsInObject(buf);
-    if (elems<2) reterror("[Error] printIM4R: expecting at least 2 elements\n");
+    if (elems<2) reterror("expecting at least 2 elements\n");
     
     t_asn1Tag *set = asn1ElementAtIndex(buf, 1);
-    if (set->tagNumber != kASN1TagSET) reterror("[Error] printIM4R: expecting SET type\n");
+    if (set->tagNumber != kASN1TagSET) reterror("expecting SET type\n");
     
     set += asn1Len((char*)set+1).sizeBytes+1;
     
-    if (set->tagClass != kASN1TagClassPrivate) reterror("[Error] printIM4R: expecting PRIVATE type\n");
+    if (set->tagClass != kASN1TagClassPrivate) reterror("expecting PRIVATE type\n");
     
     printf("PrivTag: 0x%08zx\n",asn1GetPrivateTagnum(set++,0));
     
     set += asn1Len((char*)set).sizeBytes+1;
     elems = asn1ElementsInObject((char*)set);
-    if (elems<2) reterror("[Error] printIM4R: expecting at least 2 elements\n");
+    if (elems<2) reterror("expecting at least 2 elements\n");
     
     printf("\t");
     printI5AString(asn1ElementAtIndex((char*)set, 0));
@@ -321,17 +331,54 @@ error:
 #undef reterror
 }
 
+char *getIM4PFromIMG4(char *buf){
+    char *magic;
+    size_t l;
+    getSequenceName(buf, &magic, &l);
+    if (strncmp("IMG4", magic, l)) return error("unexpected \"%.*s\", expected \"IMG4\"\n",(int)l,magic),NULL;
+    if (asn1ElementsInObject(buf)<2) return error("not enough elements in SEQUENCE"),NULL;
+    char *ret = (char*)asn1ElementAtIndex(buf, 1);
+    getSequenceName(ret, &magic, &l);
+    return (strncmp("IM4P", magic, 4) == 0) ? ret : (error("unexpected \"%.*s\", expected \"IM4P\"\n",(int)l,magic),NULL);
+}
+
+char *getIM4MFromIMG4(char *buf){
+    char *magic;
+    size_t l;
+    getSequenceName(buf, &magic, &l);
+    if (strncmp("IMG4", magic, l)) return error("unexpected \"%.*s\", expected \"IMG4\"\n",(int)l,magic),NULL;
+    if (asn1ElementsInObject(buf)<3) return error("not enough elements in SEQUENCE"),NULL;
+    char *ret = (char*)asn1ElementAtIndex(buf, 2);
+    if (((t_asn1Tag*)ret)->tagClass != kASN1TagClassContextSpecific) return error("unexpected Tag 0x%02x, expected SET\n",*(unsigned char*)ret),NULL;
+    ret += asn1Len(ret+1).sizeBytes + 1;
+    getSequenceName(ret, &magic, &l);
+    return (strncmp("IM4M", magic, 4) == 0) ? ret : NULL;
+}
+
+int getECIDFromIM4M(char *buf, char **ecid, size_t *ecidLen){
+#define reterror(a ...) return (error(a),-1)
+    //get set
+    int elems = asn1ElementsInObject(buf);
+    if (elems<3) reterror("not enough elements in IM4M SEQUENCE\n");
+    
+    char *theset = (char*)asn1ElementAtIndex(buf, 2);
+    
+    t_asn1Tag *manbSeq = getValueForPrivateTagInSet(theset, 1296125506);
+    
+    return 0;
+#undef reterror
+}
 
 void printIM4M(char *buf){
-#define reterror(a ...){printf(a);goto error;}
+#define reterror(a ...){error(a);goto error;}
     
     char *magic;
     size_t l;
     getSequenceName(buf, &magic, &l);
-    if (strncmp("IM4M", magic, l)) reterror("[Error] printIM4M: unexpected \"%.*s\", expected \"IM4M\"\n",(int)l,magic);
+    if (strncmp("IM4M", magic, l)) reterror("unexpected \"%.*s\", expected \"IM4M\"\n",(int)l,magic);
     
     int elems = asn1ElementsInObject(buf);
-    if (elems<2) reterror("[Error] printIM4M: expecting at least 2 elements\n");
+    if (elems<2) reterror("expecting at least 2 elements\n");
     
     if (--elems>0) {
         printf("someinteger: ");
@@ -340,7 +387,7 @@ void printIM4M(char *buf){
     }
     if (--elems>0) {
         t_asn1Tag *manbset = asn1ElementAtIndex(buf, 2);
-        if (manbset->tagNumber != kASN1TagSET) reterror("[Error] printIM4M: expecting SET\n");
+        if (manbset->tagNumber != kASN1TagSET) reterror("expecting SET\n");
         
         t_asn1Tag *privtag = manbset + asn1Len((char*)manbset+1).sizeBytes+1;
         size_t sb;
@@ -365,12 +412,12 @@ error:
 }
 
 void printMANB(char *buf){
-#define reterror(a ...){printf(a);goto error;}
+#define reterror(a ...){error(a);goto error;}
     
     char *magic;
     size_t l;
     getSequenceName(buf, &magic, &l);
-    if (strncmp("MANB", magic, l)) reterror("[Error] printMANB: unexpected \"%.*s\", expected \"MANB\"\n",(int)l,magic);
+    if (strncmp("MANB", magic, l)) reterror("unexpected \"%.*s\", expected \"MANB\"\n",(int)l,magic);
     
 #warning TODO stuff
     

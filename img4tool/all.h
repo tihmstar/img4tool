@@ -9,7 +9,7 @@
 #ifndef all_h
 #define all_h
 
-#define error(a ...) printf(a)
-#define warning(a ...) printf(a)
+#define error(a ...) printf("[Error] %s: ",__func__),printf(a)
+#define warning(a ...) printf("[Warning] %s: ",__func__),printf(a)
 
 #endif /* all_h */
