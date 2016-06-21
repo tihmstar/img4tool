@@ -93,8 +93,17 @@ int main(int argc, const char * argv[]) {
     //          print all im4p names
     char *sname;
     getSequenceName(buf, &sname, 0);
-    if (strncmp("IMG4", sname, 4) == 0) printElemsInIMG4(buf);
-    else printIM4P(buf);
+    if (strncmp("IMG4", sname, 4) == 0){
+         printElemsInIMG4(buf);
+        if (extract_flag) printf("todo extracting from img4\n");
+    }
+    else {
+        printIM4P(buf);
+        if (extract_flag) {
+            int ex = extractFileFromIM4P(buf, extractedFilePath);
+            printf("Extracting payload from IMP4 %s\n", (!ex) ? "SUCCEEDED" : "FAILED");
+        }
+    }
     
     
     
