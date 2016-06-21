@@ -131,7 +131,7 @@ uint64_t ans1GetNumberFromTag(t_asn1Tag *tag){
     unsigned char *data = (unsigned char*)tag+len.sizeBytes;
     while (len.dataLen--) {
         ret *= 0x100;
-        ret+= *data;
+        ret+= *data++;
     }
     
     return ret;
