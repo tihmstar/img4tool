@@ -93,6 +93,8 @@ size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes);
 int extractFileFromIM4P(char *buf, char *dstFilename);
 void printElemsInIMG4(char *buf);
 
+int extractElementFromIMG4(char *buf, char* element, char *dstFilename);
+
 char *getIM4PFromIMG4(char *buf);
 char *getIM4MFromIMG4(char *buf);
 uint64_t getECIDFromIM4M(char *buf);

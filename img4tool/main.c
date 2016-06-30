@@ -95,8 +95,12 @@ int main(int argc, const char * argv[]) {
     getSequenceName(buf, &sname, 0);
     if (strncmp("IMG4", sname, 4) == 0){
         printElemsInIMG4(buf);
+        
+        
+        printf("im4m extraction error=%d\n",extractElementFromIMG4(buf, "IM4M", "apticket.im4m"));
         uint64_t ecid = getECIDFromIM4M(getIM4MFromIMG4(buf));
         printf("ecid=%llu\n",ecid);
+        
         if (extract_flag) printf("todo extracting from img4\n");
     }
     else {

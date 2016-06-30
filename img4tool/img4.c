@@ -265,6 +265,48 @@ int extractFileFromIM4P(char *buf, char *dstFilename){
     return 0;
 }
 
+int sequenceHasName(char *buf, char *name){
+    char *magic;
+    size_t l;
+    getSequenceName(buf, &magic, &l);
+    return strncmp(name, magic, l) == 0;
+}
+
+int extractElementFromIMG4(char *buf, char* element, char *dstFilename){
+#define reterror(a ...) return (error(a),-1)
+    if (!sequenceHasName(buf, "IMG4")) reterror("not img4 sequcence\n");
+    
+    int elems = asn1ElementsInObject(buf);
+    for (int i=0; i<elems; i++) {
+        
+        t_asn1Tag *elemen = asn1ElementAtIndex(buf, i);
+        
+        if (elemen->tagNumber != kASN1TagSEQUENCE && elemen->tagClass == kASN1TagClassContextSpecific) {
+            //assuming we found a "subcontainer"
+            elemen += asn1Len((char*)elemen+1).sizeBytes+1;
+        }
+        
+        if (elemen->tagNumber == kASN1TagSEQUENCE && sequenceHasName((char*)elemen, element)) {
+            FILE *f = fopen(dstFilename, "wb");
+            if (!f) {
+                error("can't open file %s\n",dstFilename);
+                return -1;
+            }
+            
+            t_asn1ElemLen len = asn1Len((char*)elemen+1);
+            size_t flen = len.dataLen + len.sizeBytes +1;
+            fwrite(elemen, flen, 1, f);
+            fclose(f);
+            
+            return 0;
+        }
+        
+        
+    }
+    reterror("element %s not found in IMG4\n",element);
+#undef reterror
+}
+
 char *getValueForTagInSet(char *set, size_t tag){
 #define reterror(a) return (error(a),NULL)
     
