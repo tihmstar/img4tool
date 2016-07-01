@@ -42,6 +42,38 @@ int main(int argc, const char * argv[]) {
     int extract_flag = 0;
     int allHeaders_flag = 0;
     
+    char * im4p;
+    char * im4m;
+    {
+        FILE *f = fopen(argv[1], "r");
+        fseek(f, 0, SEEK_END);
+        size_t size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        
+        im4p = malloc(size);
+        fread(im4p, size, 1, f);
+        fclose(f);
+    }
+    {
+        FILE *f = fopen(argv[2], "r");
+        fseek(f, 0, SEEK_END);
+        size_t size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        
+        im4m = malloc(size);
+        fread(im4m, size, 1, f);
+        fclose(f);
+    }
+    {
+        size_t s= 0;
+        char * img4new = makeIMG4WithIM4PAndIM4M(im4p, im4m,&s);
+        FILE *f = fopen("img4new", "w");
+        fwrite(img4new, s, 1, f);
+        fclose(f);
+    }
+    
+    return 1;
+    
     if (argc == 1){
         cmd_help();
         return -1;

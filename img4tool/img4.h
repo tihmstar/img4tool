@@ -94,6 +94,7 @@ int extractFileFromIM4P(char *buf, char *dstFilename);
 void printElemsInIMG4(char *buf);
 
 int extractElementFromIMG4(char *buf, char* element, char *dstFilename);
+char *makeIMG4WithIM4PAndIM4M(char *im4p, char *im4m, size_t *size);
 
 char *getIM4PFromIMG4(char *buf);
 char *getIM4MFromIMG4(char *buf);
