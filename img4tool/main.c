@@ -10,6 +10,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <stdlib.h>
+#include <plist/plist.h>
 #include "img4.h"
 
 
