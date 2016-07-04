@@ -59,36 +59,6 @@ int main(int argc, const char * argv[]) {
     int allHeaders_flag = 0;
     
     
-    /*{
-        FILE *f = fopen(argv[1], "r");
-        fseek(f, 0, SEEK_END);
-        size_t size = ftell(f);
-        fseek(f, 0, SEEK_SET);
-        
-        im4p = malloc(size);
-        fread(im4p, size, 1, f);
-        fclose(f);
-    }
-    {
-        FILE *f = fopen(argv[2], "r");
-        fseek(f, 0, SEEK_END);
-        size_t size = ftell(f);
-        fseek(f, 0, SEEK_SET);
-        
-        im4m = malloc(size);
-        fread(im4m, size, 1, f);
-        fclose(f);
-    }
-    {
-        size_t s= 0;
-        char * img4new = makeIMG4WithIM4PAndIM4M(im4p, im4m,&s);
-        FILE *f = fopen("img4new", "w");
-        fwrite(img4new, s, 1, f);
-        fclose(f);
-    }
-    
-    return 1;*/
-    
     if (argc == 1){
         cmd_help();
         return -1;
@@ -238,32 +208,29 @@ int main(int argc, const char * argv[]) {
             }
             if (im4mFilePath) {
                 // Find im4m inside the img4 and write it to the file
-                extractElementFromIMG4(buf, "IM4M", im4mFilePath);
+                int errorcode = extractElementFromIMG4(buf, "IM4M", im4mFilePath);
+                if(errorcode)printf("im4m extraction error=%d\n",errorcode);
             }
             if (im4pFilePath) {
-                extractElementFromIMG4(buf, "IM4P", im4pFilePath);
+                int errorcode = extractElementFromIMG4(buf, "IM4P", im4pFilePath);
+                if(errorcode)printf("im4p extraction error=%d\n",errorcode);
+                
             }
         }
     }
     
-    char *sname;
-    getSequenceName(buf, &sname, 0);
-    if (strncmp("IMG4", sname, 4) == 0){
+    if (sequenceHasName(buf, "IMG4")){
         printElemsInIMG4(buf);
         
-        
-        printf("im4m extraction error=%d\n",extractElementFromIMG4(buf, "IM4M", "apticket.im4m"));
         uint64_t ecid = getECIDFromIM4M(getIM4MFromIMG4(buf));
         printf("ecid=%llu\n",ecid);
-        
-        if (extract_flag) printf("todo extracting from img4\n");
     }
-    else {
+    else if(sequenceHasName(buf, "IM4P")){
         printIM4P(buf);
-        if (extract_flag) {
-            int ex = extractFileFromIM4P(buf, extractedFilePath);
-            printf("Extracting payload from IMP4 %s\n", (!ex) ? "SUCCEEDED" : "FAILED");
-        }
+    }else if(sequenceHasName(buf, "IM4M")){
+        printIM4M(buf);
+    }else if (sequenceHasName(buf, "IM4R")){
+        printIM4R(buf);
     }
     
     
