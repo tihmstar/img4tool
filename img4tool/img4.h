@@ -79,6 +79,8 @@ typedef struct{
 //asn1
 t_asn1ElemLen asn1Len(char buf[4]);
 char *ans1GetString(char *buf, char **outString, size_t *strlen);
+int asn1ElementsInObject(char *buf);
+t_asn1Tag *asn1ElementAtIndex(char *buf, int index);
 
 
 
@@ -88,6 +90,7 @@ void printIM4R(char *buf);
 void printIM4M(char *buf);
 void printMANB(char *buf);
 
+int sequenceHasName(char *buf, char *name);
 int getSequenceName(char *buf,char**name, size_t *nameLen);
 size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes);
 int extractFileFromIM4P(char *buf, char *dstFilename);

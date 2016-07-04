@@ -30,6 +30,7 @@
 		878307491D1149E400866EF5 /* img4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = img4.h; sourceTree = "<group>"; };
 		8783074B1D114EE300866EF5 /* all.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = all.h; sourceTree = "<group>"; };
 		E9154D7F1D1AF07F00B8BD54 /* privateAppleTags.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = privateAppleTags.txt; sourceTree = "<group>"; };
+		E9623F231D2A811E00B4E2C8 /* iboot-img4-info.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "iboot-img4-info.txt"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -67,6 +68,7 @@
 				878307481D1149E400866EF5 /* img4.c */,
 				878307411D11499E00866EF5 /* main.c */,
 				E9154D7F1D1AF07F00B8BD54 /* privateAppleTags.txt */,
+				E9623F231D2A811E00B4E2C8 /* iboot-img4-info.txt */,
 			);
 			path = img4tool;
 			sourceTree = "<group>";
