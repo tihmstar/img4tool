@@ -29,6 +29,7 @@
 		878307481D1149E400866EF5 /* img4.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = img4.c; sourceTree = "<group>"; };
 		878307491D1149E400866EF5 /* img4.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = img4.h; sourceTree = "<group>"; };
 		8783074B1D114EE300866EF5 /* all.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = all.h; sourceTree = "<group>"; };
+		E9154D7F1D1AF07F00B8BD54 /* privateAppleTags.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = privateAppleTags.txt; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -65,6 +66,7 @@
 				878307491D1149E400866EF5 /* img4.h */,
 				878307481D1149E400866EF5 /* img4.c */,
 				878307411D11499E00866EF5 /* main.c */,
+				E9154D7F1D1AF07F00B8BD54 /* privateAppleTags.txt */,
 			);
 			path = img4tool;
 			sourceTree = "<group>";
@@ -245,6 +247,7 @@
 				878307471D11499E00866EF5 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
