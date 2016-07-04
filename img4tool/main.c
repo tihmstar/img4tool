@@ -13,6 +13,33 @@
 #include <plist/plist.h>
 #include "img4.h"
 
+void asd(char *shshfile){
+    FILE *ofp = fopen(shshfile,"rb");
+    fseek(ofp, SEEK_END, 0);
+    size_t shshsize = ftell(ofp);
+    fseek(ofp, SEEK_SET, 0);
+    char *opl = malloc(shshsize);
+    fread(opl, shshsize, 1, ofp);
+    fclose(ofp);
+    
+    plist_t shshplist;
+    
+    if (memcmp(opl, "bplist00", 8) == 0)
+        plist_from_bin(opl, shshsize, &shshplist);
+    else
+        plist_from_xml(opl, shshsize, &shshplist);
+    
+    
+    plist_t ticket = plist_dict_get_item(shshplist, "ApImg4Ticket");
+    
+    char *im4m;
+    size_t im4msize=0;
+    
+    plist_get_data_val(ticket, &im4m, &im4msize);
+    
+    plist_free(opl);
+    
+}
 
 static struct option longopts[] = {
     { "help",           no_argument,       NULL, 'h' },
