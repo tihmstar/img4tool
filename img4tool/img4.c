@@ -265,6 +265,137 @@ int extractFileFromIM4P(char *buf, char *dstFilename){
     return 0;
 }
 
+int sequenceHasName(char *buf, char *name){
+    char *magic;
+    size_t l;
+    getSequenceName(buf, &magic, &l);
+    return strncmp(name, magic, l) == 0;
+}
+
+int extractElementFromIMG4(char *buf, char* element, char *dstFilename){
+#define reterror(a ...) return (error(a),-1)
+    if (!sequenceHasName(buf, "IMG4")) reterror("not img4 sequcence\n");
+    
+    int elems = asn1ElementsInObject(buf);
+    for (int i=0; i<elems; i++) {
+        
+        t_asn1Tag *elemen = asn1ElementAtIndex(buf, i);
+        
+        if (elemen->tagNumber != kASN1TagSEQUENCE && elemen->tagClass == kASN1TagClassContextSpecific) {
+            //assuming we found a "subcontainer"
+            elemen += asn1Len((char*)elemen+1).sizeBytes+1;
+        }
+        
+        if (elemen->tagNumber == kASN1TagSEQUENCE && sequenceHasName((char*)elemen, element)) {
+            FILE *f = fopen(dstFilename, "wb");
+            if (!f) {
+                error("can't open file %s\n",dstFilename);
+                return -1;
+            }
+            
+            t_asn1ElemLen len = asn1Len((char*)elemen+1);
+            size_t flen = len.dataLen + len.sizeBytes +1;
+            fwrite(elemen, flen, 1, f);
+            fclose(f);
+            
+            return 0;
+        }
+        
+        
+    }
+    reterror("element %s not found in IMG4\n",element);
+#undef reterror
+}
+
+int asn1MakeSize(char *sizeBytesDst, size_t size){
+    int off = 0;
+    if (size >= 0x1000000) {
+        // 1+4 bytes length
+        sizeBytesDst[off++] = 0x84;
+        sizeBytesDst[off++] = (size >> 24) & 0xFF;
+        sizeBytesDst[off++] = (size >> 16) & 0xFF;
+        sizeBytesDst[off++] = (size >> 8) & 0xFF;
+        sizeBytesDst[off++] = size & 0xFF;
+    } else if (size >= 0x10000) {
+        // 1+3 bytes length
+        sizeBytesDst[off++] = 0x83;
+        sizeBytesDst[off++] = (size >> 16) & 0xFF;
+        sizeBytesDst[off++] = (size >> 8) & 0xFF;
+        sizeBytesDst[off++] = size & 0xFF;
+    } else if (size >= 0x100) {
+        // 1+2 bytes length
+        sizeBytesDst[off++] = 0x82;
+        sizeBytesDst[off++] = (size >> 8) & 0xFF;
+        sizeBytesDst[off++] = (size & 0xFF);
+    } else if (size >= 0x80) {
+        // 1+1 byte length
+        sizeBytesDst[off++] = 0x81;
+        sizeBytesDst[off++] = (size & 0xFF);
+    } else {
+        // 1 byte length
+        sizeBytesDst[off++] = size & 0xFF;
+    }
+    return off;
+}
+
+char *asn1PrepandTag(char *buf, t_asn1Tag tag){
+    t_asn1ElemLen len = asn1Len(buf+1);
+    
+    //alloc mem for oldTag+oldSizebytes+oldData  + newTag + newTagSizebytesMax
+    char *ret = malloc(len.sizeBytes + len.dataLen +1 +1+4);
+    ret[0] = *(char*)&tag;
+    int nSizeBytes = asn1MakeSize(ret+1, len.sizeBytes + len.dataLen +1);
+    memcpy(ret + nSizeBytes+1, buf, len.sizeBytes + len.dataLen +1);
+    free(buf);
+    return ret;
+}
+
+char *asn1AppendToTag(char *buf, char *toappend){
+    t_asn1ElemLen buflen = asn1Len(buf+1);
+    t_asn1ElemLen apndLen = asn1Len(toappend+1);
+    
+    //alloc memory for bufdata + buftag + apndData + apndSizebytes + apndTag + maxSizeBytesForBuf
+    size_t containerLen;
+    char *ret = malloc(1 +(containerLen = buflen.dataLen +apndLen.sizeBytes + apndLen.dataLen +1) +4);
+    
+    ret[0] = buf[0];
+    int nSizeBytes = asn1MakeSize(ret+1, containerLen);
+    //copy old data
+    memcpy(ret + nSizeBytes+1, buf+1+buflen.sizeBytes, buflen.dataLen);
+    
+    
+    memcpy(ret +nSizeBytes+1+ buflen.dataLen, toappend, apndLen.sizeBytes +apndLen.dataLen +1);
+    free(buf);
+    
+    return ret;
+}
+
+char *makeIMG4WithIM4PAndIM4M(char *im4p, char *im4m, size_t *size){
+    t_asn1Tag elem0;
+    elem0.tagNumber = 0;
+    elem0.tagClass = kASN1TagClassContextSpecific;
+    elem0.isConstructed = 1;
+    im4m = asn1PrepandTag(im4m, elem0);
+    
+    char *sequence = malloc(2);
+    sequence[0] = 0x30;
+    sequence[1] = 0x00;
+    
+    char iA5String_IMG4[] = {0x16, 0x04, 0x49, 0x4D, 0x47, 0x34};
+    
+    sequence = asn1AppendToTag(sequence, iA5String_IMG4);
+    sequence = asn1AppendToTag(sequence, im4p);
+    sequence = asn1AppendToTag(sequence, im4m);
+    
+    if (size){
+        t_asn1ElemLen retlen = asn1Len(sequence+1);
+        *size = 1+ retlen.dataLen + retlen.sizeBytes;
+    }
+    
+    return sequence;
+}
+
+
 char *getValueForTagInSet(char *set, size_t tag){
 #define reterror(a) return (error(a),NULL)
     
