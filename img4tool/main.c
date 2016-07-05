@@ -251,6 +251,7 @@ int main(int argc, const char * argv[]) {
         
         uint64_t ecid = getECIDFromIM4M(getIM4MFromIMG4(buf));
         printf("ecid=%llu\n",ecid);
+        // TODO: print more Tags?
     }
     else if(sequenceHasName(buf, "IM4P")){
         printIM4P(buf);
@@ -265,9 +266,13 @@ int main(int argc, const char * argv[]) {
     free(buf);
     fclose(f);
     
-    // free arguments
-    /*free(img4FilePath);
-    free(extractedFilePath);*/
+    /*// free arguments
+    if (img4FilePath) free(img4FilePath);
+    if (extractedFilePath) free(extractedFilePath);
+    if (createdImg4FilePath) free(createdImg4FilePath);
+    if (im4mFilePath) free(im4mFilePath);
+    if (im4pFilePath) free(im4pFilePath);
+    if (im4rNonce) free(im4rNonce);*/
     
     return 0;
 }
