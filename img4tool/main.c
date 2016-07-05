@@ -15,15 +15,15 @@
 
 char *im4mFormShshFile(char *shshfile){
     FILE *f = fopen(shshfile,"rb");
-    fseek(f, SEEK_END, 0);
+    fseek(f, 0, SEEK_END);
     
     size_t fSize = ftell(f);
-    fseek(f, SEEK_SET, 0);
+    fseek(f, 0, SEEK_SET);
     char *buf = malloc(fSize);
     fread(buf, fSize, 1, f);
     fclose(f);
     
-    plist_t shshplist;
+    plist_t shshplist = NULL;
     
     
     if (memcmp(buf, "bplist00", 8) == 0)
@@ -65,10 +65,10 @@ void cmd_help(){
     printf("  -e, --extract FILEPATH    extracts data to file (payload to file specified, im4m, im4p and im4r to files specified by the argument)\n");
     printf("  -c, --create-img4 FILEPATH creates an img4 with the specified im4m, im4p and optionally an im4r(see options below)");
     printf("  -a, --all-headers         print all headers of all IM4Ps\n");
-    printf("  -m, --im4m FILEPATH       Filepath for im4m (reading or writing, depending on Option)");
-    printf("  -s, --shsh FILEPATH       Filepath for shsh (for reading im4m)");
-    printf("  -p, --im4p FILEPATH       Filepath for im4p (reading or writing, depending on Option)");
-    printf("  -r, --im4r Nonce          Nonce for im4r (with hexadecimal encoding) reading or printing");
+    printf("  -m, --im4m FILEPATH       Filepath for im4m (reading or writing, depending on Option)\n");
+    printf("  -s, --shsh FILEPATH       Filepath for shsh (for reading im4m)\n");
+    printf("  -p, --im4p FILEPATH       Filepath for im4p (reading or writing, depending on Option)\n");
+    printf("  -r, --im4r Nonce          Nonce for im4r (with hexadecimal encoding) reading or printing\n");
     printf("\n");
 }
 
@@ -96,7 +96,7 @@ int main(int argc, const char * argv[]) {
         return -1;
     }
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "e:c:m:p:r:ha", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "e:c:m:p:r:s:ha", longopts, &optindex)) > 0) {
         switch (opt) {
             case 'h': // long option: "help"; can be called as short option
                 cmd_help();
@@ -160,7 +160,7 @@ int main(int argc, const char * argv[]) {
             printf("ERROR: im4p file path needed to create an img4!\n");
             return -1;
         }
-        if (!im4mFilePath) {
+        if (!im4mFilePath && !shshFilePath) {
             printf("ERROR: im4m file path needed to create an img4!\n");
             return -1;
         }
