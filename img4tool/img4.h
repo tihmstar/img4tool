@@ -54,6 +54,7 @@ typedef unsigned char byte;
 #define kASN1TagUniversalString	28 //0x1C
 #define kASN1TagCHARACTER       29 //0x1D
 #define kASN1TagBMPString       30 //0x1E
+#define kASN1TagPrivate   (char)0xff
 
 typedef struct{
     byte tagNumber : 5;
@@ -87,19 +88,18 @@ t_asn1Tag *asn1ElementAtIndex(char *buf, int index);
 //img4
 void printIM4P(char *buf);
 void printIM4R(char *buf);
-void printIM4M(char *buf);
-void printMANB(char *buf);
+void printIM4M(char *buf, int manpOnly);
+void printMANB(char *buf, int manpOnly);
 
 int sequenceHasName(char *buf, char *name);
 int getSequenceName(char *buf,char**name, size_t *nameLen);
 size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes);
 int extractFileFromIM4P(char *buf, char *dstFilename);
-void printElemsInIMG4(char *buf);
+void printElemsInIMG4(char *buf, int manpOnly);
 
 int extractElementFromIMG4(char *buf, char* element, char *dstFilename);
 char *makeIMG4WithIM4PAndIM4M(char *im4p, char *im4m, size_t *size);
 
 char *getIM4PFromIMG4(char *buf);
 char *getIM4MFromIMG4(char *buf);
-uint64_t getECIDFromIM4M(char *buf);
 #endif /* img4_h */
