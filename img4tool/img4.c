@@ -11,8 +11,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define putStr(s,l) printf("%.*s",(int)l,s)
-
 t_asn1ElemLen asn1Len(char buf[4]){
     t_asn1Length *sTmp = (t_asn1Length *)buf;
     size_t outSize = 0;
@@ -279,7 +277,7 @@ error:
 #undef reterror
 }
 
-int extractFileFromIM4P(char *buf, char *dstFilename){
+int extractFileFromIM4P(char *buf, const char *dstFilename){
     int elems = asn1ElementsInObject(buf);
     if (elems < 4){
         error("not enough elements in SEQUENCE %d\n",elems);
@@ -308,8 +306,8 @@ int sequenceHasName(char *buf, char *name){
     return strncmp(name, magic, l) == 0;
 }
 
-int extractElementFromIMG4(char *buf, char* element, char *dstFilename){
-#define reterror(a ...) return (error(a),-1)
+char *getElementFromIMG4(char *buf, char* element){
+#define reterror(a ...) return (error(a),NULL)
     if (!sequenceHasName(buf, "IMG4")) reterror("not img4 sequcence\n");
     
     int elems = asn1ElementsInObject(buf);
@@ -323,23 +321,30 @@ int extractElementFromIMG4(char *buf, char* element, char *dstFilename){
         }
         
         if (elemen->tagNumber == kASN1TagSEQUENCE && sequenceHasName((char*)elemen, element)) {
-            FILE *f = fopen(dstFilename, "wb");
-            if (!f) {
-                error("can't open file %s\n",dstFilename);
-                return -1;
-            }
-            
-            t_asn1ElemLen len = asn1Len((char*)elemen+1);
-            size_t flen = len.dataLen + len.sizeBytes +1;
-            fwrite(elemen, flen, 1, f);
-            fclose(f);
-            
-            return 0;
+            return element;
         }
-        
-        
     }
     reterror("element %s not found in IMG4\n",element);
+#undef reterror
+}
+
+int extractElementFromIMG4(char *buf, char* element, const char *dstFilename){
+#define reterror(a ...) return (error(a),-1)
+    
+    char *elemen = getElementFromIMG4(buf, element);
+    if (!elemen) return -1;
+    FILE *f = fopen(dstFilename, "wb");
+    if (!f) {
+        error("can't open file %s\n",dstFilename);
+        return -1;
+    }
+    
+    t_asn1ElemLen len = asn1Len((char*)elemen+1);
+    size_t flen = len.dataLen + len.sizeBytes +1;
+    fwrite(elemen, flen, 1, f);
+    fclose(f);
+    
+    return 0;
 #undef reterror
 }
 
@@ -406,7 +411,7 @@ char *asn1AppendToTag(char *buf, char *toappend){
     return ret;
 }
 
-char *makeIMG4WithIM4PAndIM4M(char *im4p, char *im4m, size_t *size){
+char *makeIMG4(char *im4p, char *im4m, size_t *size){
     t_asn1Tag elem0;
     elem0.tagNumber = 0;
     elem0.tagClass = kASN1TagClassContextSpecific;
@@ -420,8 +425,8 @@ char *makeIMG4WithIM4PAndIM4M(char *im4p, char *im4m, size_t *size){
     char iA5String_IMG4[] = {0x16, 0x04, 0x49, 0x4D, 0x47, 0x34};
     
     sequence = asn1AppendToTag(sequence, iA5String_IMG4);
-    sequence = asn1AppendToTag(sequence, im4p);
-    sequence = asn1AppendToTag(sequence, im4m);
+    if (im4p) sequence = asn1AppendToTag(sequence, im4p);
+    if (im4m) sequence = asn1AppendToTag(sequence, im4m);
     
     if (size){
         t_asn1ElemLen retlen = asn1Len(sequence+1);
@@ -461,7 +466,7 @@ char *getValueForTagInSet(char *set, size_t tag){
 #undef reterror
 }
 
-void printElemsInIMG4(char *buf, int manpOnly){
+void printElemsInIMG4(char *buf, bool manpOnly, bool im4pOnly){
 #define reterror(a...) {error(a); goto error;}
     char *magic;
     size_t l;
@@ -483,9 +488,9 @@ void printElemsInIMG4(char *buf, int manpOnly){
         
         putStr(magic, l);printf(": ---------\n");
         
-        if (strncmp("IM4R", magic, l) == 0) printIM4R(tag);
-        if (strncmp("IM4M", magic, l) == 0) printIM4M(tag,manpOnly);
-        if (strncmp("IM4P", magic, l) == 0) printIM4P(tag);
+        if (!manpOnly && !im4pOnly && strncmp("IM4R", magic, l) == 0) printIM4R(tag);
+        if ((!im4pOnly || (manpOnly && im4pOnly)) && strncmp("IM4M", magic, l) == 0) printIM4M(tag,manpOnly);
+        if ((!manpOnly || (manpOnly && im4pOnly)) && strncmp("IM4P", magic, l) == 0) printIM4P(tag);
         putchar('\n');
     }
     
@@ -555,7 +560,7 @@ char *getIM4MFromIMG4(char *buf){
     return (strncmp("IM4M", magic, 4) == 0) ? ret : NULL;
 }
 
-void printIM4M(char *buf, int manpOnly){
+void printIM4M(char *buf, bool manpOnly){
 #define reterror(a ...){error(a);goto error;}
     
     char *magic;
@@ -653,7 +658,7 @@ void asn1PrintRecKeyVal(char *buf){
     
 }
 
-void printMANB(char *buf, int manpOnly){
+void printMANB(char *buf, bool manpOnly){
 #define reterror(a ...){error(a);goto error;}
     
     char *magic;

@@ -13,6 +13,8 @@
 #define LEN_XTND  0x80		/* Indefinite or long form */
 typedef unsigned char byte;
 
+#define putStr(s,l) printf("%.*s",(int)l,s)
+
 //TagClass
 #define kASN1TagClassUniversal       0
 #define kASN1TagClassApplication     1
@@ -77,6 +79,11 @@ typedef struct{
     byte more : 1;
 }t_asn1PrivateTag;
 
+typedef enum{
+    false,
+    true
+}bool;
+
 //asn1
 t_asn1ElemLen asn1Len(char buf[4]);
 char *ans1GetString(char *buf, char **outString, size_t *strlen);
@@ -88,17 +95,19 @@ t_asn1Tag *asn1ElementAtIndex(char *buf, int index);
 //img4
 void printIM4P(char *buf);
 void printIM4R(char *buf);
-void printIM4M(char *buf, int manpOnly);
-void printMANB(char *buf, int manpOnly);
+void printIM4M(char *buf, bool manpOnly);
+void printMANB(char *buf, bool manpOnly);
 
 int sequenceHasName(char *buf, char *name);
 int getSequenceName(char *buf,char**name, size_t *nameLen);
 size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes);
-int extractFileFromIM4P(char *buf, char *dstFilename);
-void printElemsInIMG4(char *buf, int manpOnly);
+int extractFileFromIM4P(char *buf, const char *dstFilename);
+void printElemsInIMG4(char *buf, bool manpOnly, bool im4pOnly);
 
-int extractElementFromIMG4(char *buf, char* element, char *dstFilename);
-char *makeIMG4WithIM4PAndIM4M(char *im4p, char *im4m, size_t *size);
+char *getElementFromIMG4(char *buf, char* element);
+int extractElementFromIMG4(char *buf, char* element, const char *dstFilename);
+char *makeIMG4(char *im4p, char *im4m, size_t *size);
+
 
 char *getIM4PFromIMG4(char *buf);
 char *getIM4MFromIMG4(char *buf);

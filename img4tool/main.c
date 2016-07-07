@@ -13,7 +13,9 @@
 #include <plist/plist.h>
 #include "img4.h"
 
-char *im4mFormShshFile(char *shshfile){
+#define safeFree(buf) if (buf) free(buf), buf = NULL
+
+char *im4mFormShshFile(const char *shshfile){
     FILE *f = fopen(shshfile,"rb");
     fseek(f, 0, SEEK_END);
     
@@ -44,37 +46,52 @@ char *im4mFormShshFile(char *shshfile){
     return im4m;
 }
 
+char *readFromFile(const char *filePath){
+    FILE *f = fopen(filePath, "r");
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    
+    char *ret = malloc(size);
+    if (ret) fread(ret, size, 1, f);
+    fclose(f);
+    
+    return ret;
+}
+
 
 #define FLAG_EXTRACT    1 << 0
 #define FLAG_CREATE     1 << 1
 #define FLAG_MANPONLY   1 << 2
-
+#define FLAG_IM4PONLY   1 << 3
 
 static struct option longopts[] = {
-    { "help",           no_argument,       NULL, 'h' },
-    { "extract",        optional_argument,  NULL, 'e' },
-    { "create-img4",     required_argument, NULL, 'c'},
-    { "all-headers",     no_argument,        NULL, 'a'},
-    { "im4m",           required_argument,        NULL, 'm'},
-    { "shsh",           required_argument,        NULL, 's'},
-    { "im4p",           required_argument,        NULL, 'p'},
-    { "im4r",           optional_argument,        NULL, 'r'},
+    { "help",           no_argument,        NULL, 'h' },
+    { "extract",        no_argument,        NULL, 'e' },
+    { "manp-only",      no_argument,        NULL, 'n' },
+    { "im4p-only",      no_argument,        NULL, 'i' },
+    { "shsh",           required_argument,  NULL, 's' },
+    { "im4p",           required_argument,  NULL, 'p' },
+    { "im4m",           required_argument,  NULL, 'm' },
+    { "outfile",        required_argument,  NULL, 'o' },
+    { "create",         required_argument,  NULL, 'c' },
     { NULL, 0, NULL, 0 }
 };
 
 void cmd_help(){
     printf("Usage: img4tool [OPTIONS] FILE\n");
-    printf("Parses img4 or im4p files\n\n");
-    printf("Last argument must be an img4/im4p file\n");
+    printf("Parses img4, im4p, im4m files\n\n");
     
     printf("  -h, --help                prints usage information\n");
-    printf("  -e, --extract FILEPATH    extracts data to file (payload to file specified, im4m, im4p and im4r to files specified by the argument)\n");
-    printf("  -c, --create-img4 FILEPATH creates an img4 with the specified im4m, im4p and optionally an im4r(see options below)");
-    printf("  -a, --all-headers         print all headers of all IM4Ps\n");
-    printf("  -m, --im4m FILEPATH       Filepath for im4m (reading or writing, depending on Option)\n");
-    printf("  -s, --shsh FILEPATH       Filepath for shsh (for reading im4m)\n");
-    printf("  -p, --im4p FILEPATH       Filepath for im4p (reading or writing, depending on Option)\n");
-    printf("  -r, --im4r Nonce          Nonce for im4r (with hexadecimal encoding) reading or printing\n");
+    printf("  -n, --manp-only           print only MANP from IM4M (useful for getting personalized infos)\n");
+    printf("  -i, --im4p-only           print only IM4P (prints both when combined with -n)\n");
+    printf("  -e, --extract             extracts im4p payload,im4m,im4p\n");
+    printf("  -o, --outfile             output path for extracting im4p payload (does nothing without -e)\n");
+    printf("  -s, --shsh    PATH        Filepath for shsh (for reading im4m)\n");
+    printf("  -c, --create  PATH        creates an img4 with the specified im4m, im4p\n");
+    printf("  -m, --im4m    PATH        Filepath for im4m (reading or writing, depending on -e being set)\n");
+    printf("  -p, --im4p    PATH        Filepath for im4p (reading or writing, depending on -e being set)\n");
     printf("\n");
 }
 
@@ -83,42 +100,44 @@ int main(int argc, const char * argv[]) {
     int optindex = 0;
     int opt = 0;
     
-    char *img4FilePath = 0;
-    char *extractedFilePath = 0;
-    char *createdImg4FilePath = 0;
-    char *im4mFilePath = 0;
-    char *shshFilePath = 0;
-    char *im4pFilePath = 0;
-    char *im4rNonce = 0;
-    
     long flags = 0;
+    const char *img4File = NULL;
+    const char *im4pFile = NULL;
+    const char *im4mFile = NULL;
+    const char *shshFile = NULL;
+    const char *extractFile = NULL;
     
-    if (argc == 1){
-        cmd_help();
-        return -1;
-    }
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "e:c:m:p:r:s:ha", longopts, &optindex)) > 0) {
+    char *buf = NULL;
+    char *im4m = NULL;
+    char *im4p = NULL;
+    
+    while ((opt = getopt_long(argc, (char* const *)argv, "hns:em:p:o:c:i", longopts, &optindex)) > 0) {
         switch (opt) {
-            case 'h': // long option: "help"; can be called as short option
-                cmd_help();
-                return 0;
-            case 'e': // long option: "extract"; can be called as short option
-                flags |= FLAG_EXTRACT;
-                extractedFilePath = optarg;
+            case 'n':
+                flags |= FLAG_MANPONLY;
                 break;
-            case 'c': // long option: "create-img4"; can be called as short option
+            case 'i':
+                flags |= FLAG_IM4PONLY;
+                break;
+            case 's':
+                shshFile = optarg;
+                break;
+            case 'm':
+                im4mFile = optarg;
+                break;
+            case 'p':
+                im4pFile = optarg;
+                break;
+            case 'o':
+                extractFile = optarg;
+                break;
+            case 'c':
                 flags |= FLAG_CREATE;
-                createdImg4FilePath = optarg;
+                img4File = optarg;
                 break;
-            case 'm': // long option: "im4m"; can be called as short option
-                im4mFilePath = optarg;
-                break;
-            case 's': // long option: "shsh"; can be called as short option
-                shshFilePath = optarg;
-                break;
-            case 'p': // long option: "im4p"; can be called as short option
-                im4pFilePath = optarg;
+            case 'e':
+                flags |= FLAG_EXTRACT;
                 break;
             default:
                  cmd_help();
@@ -126,153 +145,94 @@ int main(int argc, const char * argv[]) {
         }
     }
     
-//    
-//    
-//    // TODO: Use function to determine wether you have an img4 or only an im4p
-//    // if(IS IM4P)
-//    //     if (extract_flag)
-//    //         EXTRACT FILE
-//    //     else
-//    //         printIM4P(buf,size);
-//    //
-//    // else
-//    //      if (extract_flag)
-//    //          EXTRACT FILES
-//    //      else if(allHeaders_flag)
-//    //          print all header data of all im4ps
-//    //      else
-//    //          print all im4p names
-//    
-//    // CHECK IF WE HAVE AN IMG4::: if (!sequenceHasName(buf, "IMG4")) reterror("not img4 sequcence\n");
-//    
-//    if (create_flag && extract_flag) {
-//        printf("ERROR: Invalid options! You can either create an img4 or extract from an existing one!\n");
-//        return -1;
-//    }
-//    
-//    if (create_flag) {
-//        if (!im4pFilePath) {
-//            printf("ERROR: im4p file path needed to create an img4!\n");
-//            return -1;
-//        }
-//        if (!im4mFilePath && !shshFilePath) {
-//            printf("ERROR: im4m file path needed to create an img4!\n");
-//            return -1;
-//        }
-//        if (!createdImg4FilePath) {
-//            printf("ERROR: img4 file path needed to write the result!\n");
-//            return -1;
-//        }
-//        
-//        char * im4p;
-//        char * im4m;
-//        
-//        // Read im4p to buffer
-//        {
-//            FILE *f = fopen(im4pFilePath, "r");
-//            fseek(f, 0, SEEK_END);
-//            size_t size = ftell(f);
-//            fseek(f, 0, SEEK_SET);
-//            
-//            im4p = malloc(size);
-//            fread(im4p, size, 1, f);
-//            fclose(f);
-//        }
-//        // Read im4m to buffer
-//        if (shshFilePath) {
-//            im4m = im4mFormShshFile(shshFilePath);
-//        }else{
-//            FILE *f = fopen(im4mFilePath, "r");
-//            fseek(f, 0, SEEK_END);
-//            size_t size = ftell(f);
-//            fseek(f, 0, SEEK_SET);
-//            
-//            im4m = malloc(size);
-//            fread(im4m, size, 1, f);
-//            fclose(f);
-//        }
-//        
-//        // Create img4 and write it to file
-//        {
-//            size_t s = 0;
-//            char * img4new = makeIMG4WithIM4PAndIM4M(im4p, im4m,&s);
-//            FILE *f = fopen(createdImg4FilePath, "w");
-//            fwrite(img4new, s, 1, f);
-//            fclose(f);
-//        }
-//        return 0;
-//        
-//    }
-//    
-//    // read img4 from disk to print and extract data
-//    
-//    img4FilePath = malloc(strlen(argv[argc-1])+1);
-//    strcpy(img4FilePath, argv[argc-1]);
-//    
-//    
-//    FILE *f = fopen(img4FilePath, "r");
-//    if (!f) {
-//        printf("ERROR: Unable to open %s\n",img4FilePath);
-//        return -1;
-//    }
-//    fseek(f, 0, SEEK_END);
-//    size_t size = ftell(f);
-//    fseek(f, 0, SEEK_SET);
-//    
-//    char * buf = malloc(size);
-//    fread(buf, size, 1, f);
-//    if (extract_flag) {
-//        if (sequenceHasName(buf, "IMG4")) {
-//            // Extract an img4
-//            if (extractedFilePath) {
-//                // Find im4p payload and write it to the file
-//                int elemsInIMG4 = asn1ElementsInObject(buf);
-//                // Go through all elems one by one until you find an im4p
-//                for (int i=1;i<elemsInIMG4; i++) {
-//                    char* elem = (char*)asn1ElementAtIndex(buf, i);
-//                    if (sequenceHasName(elem, "IM4P")){
-//                        // Write im4p to file
-//                        extractFileFromIM4P(elem, extractedFilePath);
-//                        break;
-//                    }
-//                    
-//                }
-//            }
-//            if (im4mFilePath) {
-//                // Find im4m inside the img4 and write it to the file
-//                int errorcode = extractElementFromIMG4(buf, "IM4M", im4mFilePath);
-//                if(errorcode)printf("im4m extraction error=%d\n",errorcode);
-//            }
-//            if (im4pFilePath) {
-//                int errorcode = extractElementFromIMG4(buf, "IM4P", im4pFilePath);
-//                if(errorcode)printf("im4p extraction error=%d\n",errorcode);
-//                
-//            }
-//        }
-//    }
-//    
-//    if (sequenceHasName(buf, "IMG4")){
-//        printElemsInIMG4(buf,0);
-//    }else if(sequenceHasName(buf, "IM4P")){
-//        printIM4P(buf);
-//    }else if(sequenceHasName(buf, "IM4M")){
-//        printIM4M(buf,0);
-//    }else if (sequenceHasName(buf, "IM4R")){
-//        printIM4R(buf);
-//    }
-//    
-//    
-//    
-//    free(buf);
-//    fclose(f);
-//    
-//    /*// free arguments
-//    if (img4FilePath) free(img4FilePath);
-//    if (extractedFilePath) free(extractedFilePath);
-//    if (createdImg4FilePath) free(createdImg4FilePath);
-//    if (im4mFilePath) free(im4mFilePath);
-//    if (im4pFilePath) free(im4pFilePath);
-//    if (im4rNonce) free(im4rNonce);*/
-//    
+    if (argc-optind == 1) {
+        argc -= optind;
+        argv += optind;
+        
+        img4File = argv[0];
+    }else if (shshFile){
+        im4m = im4mFormShshFile(shshFile);
+    }else if (!img4File){
+        cmd_help();
+        return -1;
+    }
+    
+    buf = readFromFile(img4File);
+    if (!buf && !(buf = im4m)){
+        printf("[Error] reading file failed %s\n",buf);
+        return -1;
+    }
+    
+    if (flags & FLAG_EXTRACT) {
+        char *im4pbuf = NULL;
+        if (!im4mFile && !im4pFile && !extractFile){
+            printf("[Error] you need to specify at least one of --outfile --im4p --im4m\n");
+            cmd_help();
+            goto error;
+        }
+        if (sequenceHasName(buf, "IMG4")){
+            if (im4mFile) {
+                if (extractElementFromIMG4(buf, "IM4M", im4mFile)) printf("[Error] extracting IM4M failed\n");
+                else printf("[Success] extracted IM4M to %s\n",im4mFile);
+            }
+            if (im4pFile) {
+                if (extractElementFromIMG4(buf, "IM4P", im4pFile)) printf("[Error] extracting IM4P failed\n");
+                else printf("[Success] extracted IM4P to %s\n",im4pFile);
+            }
+            if (extractFile){
+                im4pbuf = getElementFromIMG4(buf, "IM4P");
+            }
+        }else if(sequenceHasName(buf, "IM4P")){
+            im4pbuf = buf;
+        }else{
+            char *name;
+            size_t nameLen;
+            getSequenceName(buf, &name, &nameLen);
+            printf("[Error] can't extract elements from ");
+            putStr(name, nameLen);
+            printf("\n");
+        }
+        if (im4pbuf) {
+            if (extractFileFromIM4P(buf, im4pFile)) printf("[Error] extracting payload from IM4P failed\n");
+            else printf("[Success] extracted IM4P payload to %s\n",im4pFile);
+        }
+        
+        
+        //creating
+    }else if (flags & FLAG_EXTRACT){
+        
+        printf("building img4 with: ");
+        if (im4pFile) if ((im4p = readFromFile(im4pFile))) printf("IM4P ");
+        if (im4mFile) if ((im4m = readFromFile(im4pFile))) printf("IM4M ");
+        if (!im4m && ! im4p) printf("<empty>");
+        printf("\n");
+        
+        size_t bufSize;
+        buf = makeIMG4(im4p, im4m, &bufSize);
+        FILE *f = fopen(img4File, "w");
+        if (!f) {
+            printf("[Error] creating file %s failed\n",img4File);
+            goto error;
+        }
+        fwrite(buf, bufSize, 1, f);
+        fclose(f);
+        printf("[Success] created IMG4\n");
+    
+        //printing
+    }else if (sequenceHasName(buf, "IMG4")){
+        printElemsInIMG4(buf,(flags & FLAG_MANPONLY), (flags & FLAG_IM4PONLY));
+    }else if(sequenceHasName(buf, "IM4P")){
+        printIM4P(buf);
+    }else if(sequenceHasName(buf, "IM4M")){
+        printIM4M(buf,(flags & FLAG_MANPONLY));
+    }else if (sequenceHasName(buf, "IM4R")){
+        printIM4R(buf);
+    }
+   
+error:
+    safeFree(buf);
+    safeFree(im4m);
+    safeFree(im4p);
+    
     return 0;
 }
