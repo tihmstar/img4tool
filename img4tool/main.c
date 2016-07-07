@@ -166,7 +166,7 @@ int main(int argc, const char * argv[]) {
     if (flags & FLAG_EXTRACT) {
         char *im4pbuf = NULL;
         if (!im4mFile && !im4pFile && !extractFile){
-            printf("[Error] you need to specify at least one of --outfile --im4p --im4m\n");
+            printf("[Error] you need to specify at least one of --outfile --im4p --im4m when using -e\n");
             cmd_help();
             goto error;
         }
