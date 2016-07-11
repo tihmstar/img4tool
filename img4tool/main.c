@@ -63,13 +63,13 @@ char *readFromFile(const char *filePath){
 
 #define FLAG_EXTRACT    1 << 0
 #define FLAG_CREATE     1 << 1
-#define FLAG_MANPONLY   1 << 2
+#define FLAG_ALL        1 << 2
 #define FLAG_IM4PONLY   1 << 3
 
 static struct option longopts[] = {
     { "help",           no_argument,        NULL, 'h' },
     { "extract",        no_argument,        NULL, 'e' },
-    { "manp-only",      no_argument,        NULL, 'n' },
+    { "print-all",      no_argument,        NULL, 'a' },
     { "im4p-only",      no_argument,        NULL, 'i' },
     { "shsh",           required_argument,  NULL, 's' },
     { "im4p",           required_argument,  NULL, 'p' },
@@ -84,8 +84,8 @@ void cmd_help(){
     printf("Parses img4, im4p, im4m files\n\n");
     
     printf("  -h, --help                prints usage information\n");
-    printf("  -n, --manp-only           print only MANP from IM4M (useful for getting personalized infos)\n");
-    printf("  -i, --im4p-only           print only IM4P (prints both when combined with -n)\n");
+    printf("  -a, --print-all           print everything from IM4M\n");
+    printf("  -i, --im4p-only           print only IM4P\n");
     printf("  -e, --extract             extracts im4p payload,im4m,im4p\n");
     printf("  -o, --outfile             output path for extracting im4p payload (does nothing without -e)\n");
     printf("  -s, --shsh    PATH        Filepath for shsh (for reading im4m)\n");
@@ -112,10 +112,10 @@ int main(int argc, const char * argv[]) {
     char *im4m = NULL;
     char *im4p = NULL;
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "hns:em:p:o:c:i", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:i", longopts, &optindex)) > 0) {
         switch (opt) {
-            case 'n':
-                flags |= FLAG_MANPONLY;
+            case 'a':
+                flags |= FLAG_ALL;
                 break;
             case 'i':
                 flags |= FLAG_IM4PONLY;
@@ -199,11 +199,11 @@ int main(int argc, const char * argv[]) {
         
         
         //creating
-    }else if (flags & FLAG_EXTRACT){
+    }else if (flags & FLAG_CREATE){
         
         printf("building img4 with: ");
         if (im4pFile) if ((im4p = readFromFile(im4pFile))) printf("IM4P ");
-        if (im4mFile) if ((im4m = readFromFile(im4pFile))) printf("IM4M ");
+        if (im4mFile) if ((im4m = readFromFile(im4mFile))) printf("IM4M ");
         if (!im4m && ! im4p) printf("<empty>");
         printf("\n");
         
@@ -220,16 +220,17 @@ int main(int argc, const char * argv[]) {
     
         //printing
     }else if (sequenceHasName(buf, "IMG4")){
-        printElemsInIMG4(buf,(flags & FLAG_MANPONLY), (flags & FLAG_IM4PONLY));
+        printElemsInIMG4(buf,(flags & FLAG_ALL), (flags & FLAG_IM4PONLY));
     }else if(sequenceHasName(buf, "IM4P")){
         printIM4P(buf);
     }else if(sequenceHasName(buf, "IM4M")){
-        printIM4M(buf,(flags & FLAG_MANPONLY));
+        printIM4M(buf,(flags & FLAG_ALL));
     }else if (sequenceHasName(buf, "IM4R")){
         printIM4R(buf);
     }
    
 error:
+    if (im4m == buf) im4m = NULL;
     safeFree(buf);
     safeFree(im4m);
     safeFree(im4p);

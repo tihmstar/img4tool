@@ -95,14 +95,14 @@ t_asn1Tag *asn1ElementAtIndex(char *buf, int index);
 //img4
 void printIM4P(char *buf);
 void printIM4R(char *buf);
-void printIM4M(char *buf, bool manpOnly);
-void printMANB(char *buf, bool manpOnly);
+void printIM4M(char *buf, bool printAll);
+void printMANB(char *buf, bool printAll);
 
 int sequenceHasName(char *buf, char *name);
 int getSequenceName(char *buf,char**name, size_t *nameLen);
 size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes);
 int extractFileFromIM4P(char *buf, const char *dstFilename);
-void printElemsInIMG4(char *buf, bool manpOnly, bool im4pOnly);
+void printElemsInIMG4(char *buf, bool printAll, bool im4pOnly);
 
 char *getElementFromIMG4(char *buf, char* element);
 int extractElementFromIMG4(char *buf, char* element, const char *dstFilename);

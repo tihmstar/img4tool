@@ -387,7 +387,6 @@ char *asn1PrepandTag(char *buf, t_asn1Tag tag){
     ret[0] = *(char*)&tag;
     int nSizeBytes = asn1MakeSize(ret+1, len.sizeBytes + len.dataLen +1);
     memcpy(ret + nSizeBytes+1, buf, len.sizeBytes + len.dataLen +1);
-    free(buf);
     return ret;
 }
 
@@ -432,6 +431,7 @@ char *makeIMG4(char *im4p, char *im4m, size_t *size){
         t_asn1ElemLen retlen = asn1Len(sequence+1);
         *size = 1+ retlen.dataLen + retlen.sizeBytes;
     }
+    free(im4m); //only freeing local copy, not actually freeing outside im4m buffer
     
     return sequence;
 }
@@ -466,7 +466,7 @@ char *getValueForTagInSet(char *set, size_t tag){
 #undef reterror
 }
 
-void printElemsInIMG4(char *buf, bool manpOnly, bool im4pOnly){
+void printElemsInIMG4(char *buf, bool printAll, bool im4pOnly){
 #define reterror(a...) {error(a); goto error;}
     char *magic;
     size_t l;
@@ -488,9 +488,9 @@ void printElemsInIMG4(char *buf, bool manpOnly, bool im4pOnly){
         
         putStr(magic, l);printf(": ---------\n");
         
-        if (!manpOnly && !im4pOnly && strncmp("IM4R", magic, l) == 0) printIM4R(tag);
-        if ((!im4pOnly || (manpOnly && im4pOnly)) && strncmp("IM4M", magic, l) == 0) printIM4M(tag,manpOnly);
-        if ((!manpOnly || (manpOnly && im4pOnly)) && strncmp("IM4P", magic, l) == 0) printIM4P(tag);
+        if (!im4pOnly && strncmp("IM4R", magic, l) == 0) printIM4R(tag);
+        if (!im4pOnly && strncmp("IM4M", magic, l) == 0) printIM4M(tag,printAll);
+        if (strncmp("IM4P", magic, l) == 0) printIM4P(tag);
         putchar('\n');
     }
     
@@ -525,7 +525,6 @@ void printIM4R(char *buf){
     elems = asn1ElementsInObject((char*)set);
     if (elems<2) reterror("expecting at least 2 elements\n");
     
-    printf("\t");
     printI5AString(asn1ElementAtIndex((char*)set, 0));
     printf(": ");
     printHexString(asn1ElementAtIndex((char*)set, 1));
@@ -560,7 +559,7 @@ char *getIM4MFromIMG4(char *buf){
     return (strncmp("IM4M", magic, 4) == 0) ? ret : NULL;
 }
 
-void printIM4M(char *buf, bool manpOnly){
+void printIM4M(char *buf, bool printAll){
 #define reterror(a ...){error(a);goto error;}
     
     char *magic;
@@ -586,17 +585,17 @@ void printIM4M(char *buf, bool manpOnly){
         printf("\n");
         char *manbseq = (char*)privtag+sb;
         manbseq+= asn1Len(manbseq).sizeBytes+1;
-        printMANB(manbseq, manpOnly);
-        if (manpOnly) return;
+        printMANB(manbseq, printAll);
+        if (!printAll) return;
     }
-    if (--elems>0){
-        printf("signed hash: ");
-        printHexString(asn1ElementAtIndex(buf, 3));
-        putchar('\n');
-    }
-    if (--elems>0){
-#warning TODO print apple certificate?
-    }
+//    if (--elems>0){
+//        printf("signed hash: ");
+//        printHexString(asn1ElementAtIndex(buf, 3));
+//        putchar('\n');
+//    }
+//    if (--elems>0){
+//#warning TODO print apple certificate?
+//    }
     
     
 error:
@@ -658,7 +657,7 @@ void asn1PrintRecKeyVal(char *buf){
     
 }
 
-void printMANB(char *buf, bool manpOnly){
+void printMANB(char *buf, bool printAll){
 #define reterror(a ...){error(a);goto error;}
     
     char *magic;
@@ -683,9 +682,8 @@ void printMANB(char *buf, bool manpOnly){
         manbElem += asn1Len((char*)manbElem).sizeBytes;
         
         asn1PrintRecKeyVal((char*)manbElem);
-        if (manpOnly && strncmp((char*)&privTag, "PNAM", 4) == 0){
-            printf("only printing MANP\n");
-            return;
+        if (!printAll && strncmp((char*)&privTag, "PNAM", 4) == 0){
+            break;
         }
     }
     
