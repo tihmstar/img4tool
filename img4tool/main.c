@@ -106,6 +106,7 @@ int main(int argc, const char * argv[]) {
     const char *im4mFile = NULL;
     const char *shshFile = NULL;
     const char *extractFile = NULL;
+    const char *createFile = NULL;
     
     
     char *buf = NULL;
@@ -134,7 +135,7 @@ int main(int argc, const char * argv[]) {
                 break;
             case 'c':
                 flags |= FLAG_CREATE;
-                img4File = optarg;
+                createFile = optarg;
                 break;
             case 'e':
                 flags |= FLAG_EXTRACT;
@@ -157,11 +158,19 @@ int main(int argc, const char * argv[]) {
         return -1;
     }
     
-    buf = readFromFile(img4File);
-    if (!buf && !(buf = im4m)){
-        printf("[Error] reading file failed %s\n",buf);
-        return -1;
+    if (!(flags & FLAG_CREATE)){
+        buf = readFromFile(img4File);
+        if (!buf && !(buf = im4m)){
+            printf("[Error] reading file failed %s\n",buf);
+            return -1;
+        }
+        if (*(unsigned char*)buf != 0x30) {
+            printf("[Error] file %s doesn't seem to be img4, im4p, im4m or im4r file\n",img4File);
+            return -5;
+        }
     }
+    
+    
     
     if (flags & FLAG_EXTRACT) {
         char *im4pbuf = NULL;
@@ -202,14 +211,14 @@ int main(int argc, const char * argv[]) {
     }else if (flags & FLAG_CREATE){
         
         printf("building img4 with: ");
-        if (im4pFile) if ((im4p = readFromFile(im4pFile))) printf("IM4P ");
-        if (im4mFile) if ((im4m = readFromFile(im4mFile))) printf("IM4M ");
+        if (im4pFile && (im4p = readFromFile(im4pFile))) printf("IM4P ");
+        if (im4m || (im4mFile && (im4m = readFromFile(im4mFile)))) printf("IM4M ");
         if (!im4m && ! im4p) printf("<empty>");
         printf("\n");
         
         size_t bufSize;
         buf = makeIMG4(im4p, im4m, &bufSize);
-        FILE *f = fopen(img4File, "w");
+        FILE *f = fopen(createFile, "w");
         if (!f) {
             printf("[Error] creating file %s failed\n",img4File);
             goto error;

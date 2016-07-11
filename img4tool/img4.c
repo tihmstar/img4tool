@@ -415,7 +415,7 @@ char *makeIMG4(char *im4p, char *im4m, size_t *size){
     elem0.tagNumber = 0;
     elem0.tagClass = kASN1TagClassContextSpecific;
     elem0.isConstructed = 1;
-    im4m = asn1PrepandTag(im4m, elem0);
+    if (im4m) im4m = asn1PrepandTag(im4m, elem0);
     
     char *sequence = malloc(2);
     sequence[0] = 0x30;
