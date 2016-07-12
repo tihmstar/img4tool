@@ -202,8 +202,8 @@ int main(int argc, const char * argv[]) {
             printf("\n");
         }
         if (im4pbuf) {
-            if (extractFileFromIM4P(buf, im4pFile)) printf("[Error] extracting payload from IM4P failed\n");
-            else printf("[Success] extracted IM4P payload to %s\n",im4pFile);
+            if (extractFileFromIM4P(im4pbuf, extractFile)) printf("[Error] extracting payload from IM4P failed\n");
+            else printf("[Success] extracted IM4P payload to %s\n",extractFile);
         }
         
         
