@@ -60,6 +60,34 @@ char *readFromFile(const char *filePath){
     return ret;
 }
 
+char *parseNonce(const char *nonce){
+    size_t noncelen = 8;
+    
+    char *ret = malloc((noncelen+1)*sizeof(char));
+    memset(ret, 0, noncelen+1);
+    int nlen = 0;
+    
+    int next = strlen(nonce)%2 == 0;
+    char tmp = 0;
+    while (*nonce) {
+        char c = *(nonce++);
+        
+        tmp *=16;
+        if (c >= '0' && c<='9') {
+            tmp += c - '0';
+        }else if (c >= 'a' && c <= 'f'){
+            tmp += 10 + c - 'a';
+        }else if (c >= 'A' && c <= 'F'){
+            tmp += 10 + c - 'A';
+        }else {
+            free(ret);
+            return 0; //ERROR parsing failed
+        }
+        if ((next =! next) && nlen < noncelen) ret[nlen++] = tmp,tmp=0;
+    }
+    
+    return ret;
+}
 
 #define FLAG_EXTRACT    1 << 0
 #define FLAG_CREATE     1 << 1
@@ -74,6 +102,7 @@ static struct option longopts[] = {
     { "shsh",           required_argument,  NULL, 's' },
     { "im4p",           required_argument,  NULL, 'p' },
     { "im4m",           required_argument,  NULL, 'm' },
+    { "im4r",           required_argument,  NULL, 'r' },
     { "outfile",        required_argument,  NULL, 'o' },
     { "create",         required_argument,  NULL, 'c' },
     { NULL, 0, NULL, 0 }
@@ -92,6 +121,7 @@ void cmd_help(){
     printf("  -c, --create  PATH        creates an img4 with the specified im4m, im4p\n");
     printf("  -m, --im4m    PATH        Filepath for im4m (reading or writing, depending on -e being set)\n");
     printf("  -p, --im4p    PATH        Filepath for im4p (reading or writing, depending on -e being set)\n");
+    printf("  -r, --im4r    <nonce>     nonce to be set for BNCN in im4r\n");
     printf("\n");
 }
 
@@ -112,6 +142,7 @@ int main(int argc, const char * argv[]) {
     char *buf = NULL;
     char *im4m = NULL;
     char *im4p = NULL;
+    char *im4r = NULL;
     
     while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:i", longopts, &optindex)) > 0) {
         switch (opt) {
@@ -129,6 +160,9 @@ int main(int argc, const char * argv[]) {
                 break;
             case 'p':
                 im4pFile = optarg;
+                break;
+            case 'r':
+                im4r = parseNonce(optarg);
                 break;
             case 'o':
                 extractFile = optarg;
@@ -213,11 +247,12 @@ int main(int argc, const char * argv[]) {
         printf("building img4 with: ");
         if (im4pFile && (im4p = readFromFile(im4pFile))) printf("IM4P ");
         if (im4m || (im4mFile && (im4m = readFromFile(im4mFile)))) printf("IM4M ");
-        if (!im4m && ! im4p) printf("<empty>");
+        if (im4r) printf("IM4R ");
+        if (!im4m && !im4p && !im4r) printf("<empty>");
         printf("\n");
         
         size_t bufSize;
-        buf = makeIMG4(im4p, im4m, &bufSize);
+        buf = makeIMG4(im4p, im4m, im4r, &bufSize);
         FILE *f = fopen(createFile, "w");
         if (!f) {
             printf("[Error] creating file %s failed\n",img4File);
@@ -243,6 +278,7 @@ error:
     safeFree(buf);
     safeFree(im4m);
     safeFree(im4p);
+    safeFree(im4r);
     
     return 0;
 }

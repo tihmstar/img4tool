@@ -321,7 +321,7 @@ char *getElementFromIMG4(char *buf, char* element){
         }
         
         if (elemen->tagNumber == kASN1TagSEQUENCE && sequenceHasName((char*)elemen, element)) {
-            return element;
+            return (char*)elemen;
         }
     }
     reterror("element %s not found in IMG4\n",element);
@@ -410,7 +410,18 @@ char *asn1AppendToTag(char *buf, char *toappend){
     return ret;
 }
 
-char *makeIMG4(char *im4p, char *im4m, size_t *size){
+char *makeIM4RWithNonce(char *nonce){
+    char template[] = {0xA1, 0x23, 0x30, 0x21, 0x16, 0x04, 0x49, 0x4D,
+                       0x34, 0x52, 0x31, 0x19, 0xFF, 0x84, 0x92, 0xB9,
+                       0x86, 0x4E, 0x12, 0x30, 0x10, 0x16, 0x04, 0x42,
+                       0x4E, 0x43, 0x4E, 0x04, 0x08};
+    char *ret = malloc(sizeof(template)+8);
+    strncpy(ret, template,sizeof(template));
+    strncpy(ret+sizeof(template), nonce, 8);
+    return ret;
+}
+
+char *makeIMG4(char *im4p, char *im4m, char *im4r, size_t *size){
     t_asn1Tag elem0;
     elem0.tagNumber = 0;
     elem0.tagClass = kASN1TagClassContextSpecific;
@@ -426,6 +437,11 @@ char *makeIMG4(char *im4p, char *im4m, size_t *size){
     sequence = asn1AppendToTag(sequence, iA5String_IMG4);
     if (im4p) sequence = asn1AppendToTag(sequence, im4p);
     if (im4m) sequence = asn1AppendToTag(sequence, im4m);
+    if (im4r) {
+        char *noncebuf = makeIM4RWithNonce(im4r);
+        sequence = asn1AppendToTag(sequence, noncebuf);
+        free(noncebuf);
+    }
     
     if (size){
         t_asn1ElemLen retlen = asn1Len(sequence+1);

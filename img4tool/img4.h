@@ -106,7 +106,7 @@ void printElemsInIMG4(char *buf, bool printAll, bool im4pOnly);
 
 char *getElementFromIMG4(char *buf, char* element);
 int extractElementFromIMG4(char *buf, char* element, const char *dstFilename);
-char *makeIMG4(char *im4p, char *im4m, size_t *size);
+char *makeIMG4(char *im4p, char *im4m, char *im4r, size_t *size);
 
 
 char *getIM4PFromIMG4(char *buf);
