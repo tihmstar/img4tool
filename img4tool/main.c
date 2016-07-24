@@ -144,7 +144,7 @@ int main(int argc, const char * argv[]) {
     char *im4p = NULL;
     char *im4r = NULL;
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:i", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:", longopts, &optindex)) > 0) {
         switch (opt) {
             case 'a':
                 flags |= FLAG_ALL;
