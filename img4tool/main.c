@@ -105,6 +105,7 @@ static struct option longopts[] = {
     { "im4r",           required_argument,  NULL, 'r' },
     { "outfile",        required_argument,  NULL, 'o' },
     { "create",         required_argument,  NULL, 'c' },
+    { "rename-payload", required_argument,  NULL, 'n' },
     { NULL, 0, NULL, 0 }
 };
 
@@ -122,11 +123,12 @@ void cmd_help(){
     printf("  -m, --im4m    PATH        Filepath for im4m (reading or writing, depending on -e being set)\n");
     printf("  -p, --im4p    PATH        Filepath for im4p (reading or writing, depending on -e being set)\n");
     printf("  -r, --im4r    <nonce>     nonce to be set for BNCN in im4r\n");
+    printf("  -n, --rename-payload NAME rename IM4P payload (NAME must be exactly 4 bytes)\n");
     printf("\n");
 }
 
 int main(int argc, const char * argv[]) {
-    
+    int error = 0;
     int optindex = 0;
     int opt = 0;
     
@@ -137,6 +139,7 @@ int main(int argc, const char * argv[]) {
     const char *shshFile = NULL;
     const char *extractFile = NULL;
     const char *createFile = NULL;
+    const char *newPayloadName = NULL;
     
     
     char *buf = NULL;
@@ -144,7 +147,7 @@ int main(int argc, const char * argv[]) {
     char *im4p = NULL;
     char *im4r = NULL;
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:n:", longopts, &optindex)) > 0) {
         switch (opt) {
             case 'a':
                 flags |= FLAG_ALL;
@@ -160,6 +163,12 @@ int main(int argc, const char * argv[]) {
                 break;
             case 'p':
                 im4pFile = optarg;
+                break;
+            case 'n':
+                if (strlen(newPayloadName = optarg) != 4){
+                    printf("[Error] new payload name must be exaclty 4 Bytes (currently=\"%s\")\n",newPayloadName);
+                    exit(-2);
+                }
                 break;
             case 'r':
                 im4r = parseNonce(optarg);
@@ -187,9 +196,9 @@ int main(int argc, const char * argv[]) {
         img4File = argv[0];
     }else if (shshFile){
         im4m = im4mFormShshFile(shshFile);
-    }else if (!img4File){
+    }else if (!img4File && !(flags & FLAG_CREATE)){
         cmd_help();
-        return -1;
+        return -2;
     }
     
     if (!(flags & FLAG_CREATE)){
@@ -204,9 +213,46 @@ int main(int argc, const char * argv[]) {
         }
     }
     
-    
-    
-    if (flags & FLAG_EXTRACT) {
+    if (newPayloadName){
+        
+        FILE *f = fopen(img4File, "r");
+        if (!f){
+            printf("[Error] reading file failed\n");
+            error= -8;
+            goto error;
+        }
+        fseek(f, 0, SEEK_END);
+        size_t size = ftell(f);
+        fseek(f, 0, SEEK_SET);
+        
+        buf = malloc(size);
+        if (buf) fread(buf, size, 1, f);
+        fclose(f);
+        
+        
+        char *im4pbuf = NULL;
+        if (sequenceHasName(buf, "IMG4")){
+            im4pbuf = getElementFromIMG4(buf, "IM4P");
+        }else if (sequenceHasName(buf, "IM4P")){
+            im4pbuf = buf;
+        }
+        if (!im4pbuf){
+            printf("[Error] can't rename IM4P because it wasn't found\n");
+            error = -6;
+            goto error;
+        }
+        if (replaceNameInIM4P(im4pbuf, newPayloadName)){
+            printf("[Error] renaming failed\n");
+            error = -7;
+            goto error;
+        }
+        
+        f = fopen(img4File, "w");
+        fwrite(buf, size, 1, f);
+        fclose(f);
+        printf("[Success] renamed IM4P\n");
+        
+    }else if (flags & FLAG_EXTRACT) {
         char *im4pbuf = NULL;
         if (!im4mFile && !im4pFile && !extractFile){
             printf("[Error] you need to specify at least one of --outfile --im4p --im4m when using -e\n");
@@ -280,5 +326,5 @@ error:
     safeFree(im4p);
     safeFree(im4r);
     
-    return 0;
+    return error;
 }

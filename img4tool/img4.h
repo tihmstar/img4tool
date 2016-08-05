@@ -111,4 +111,7 @@ char *makeIMG4(char *im4p, char *im4m, char *im4r, size_t *size);
 
 char *getIM4PFromIMG4(char *buf);
 char *getIM4MFromIMG4(char *buf);
+
+int replaceNameInIM4P(char *buf, const char *newName);
+
 #endif /* img4_h */

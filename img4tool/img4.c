@@ -452,6 +452,30 @@ char *makeIMG4(char *im4p, char *im4m, char *im4r, size_t *size){
     return sequence;
 }
 
+int replaceNameInIM4P(char *buf, const char *newName){
+    
+    if (asn1ElementsInObject(buf)<2){
+        error("not enough objects in sequence\n");
+        return -1;
+    }
+    
+    t_asn1Tag *nameTag = asn1ElementAtIndex(buf, 1);
+    
+    if (nameTag->tagNumber != kASN1TagIA5String){
+        error("nameTag is not IA5String\n");
+        return -2;
+    }
+    t_asn1ElemLen len;
+    if ((len = asn1Len((char*)nameTag+1)).dataLen !=4){
+        error("nameTag has not a length of 4 Bytes, actual len=%ld\n",len.dataLen);
+        return -2;
+    }
+    
+    memmove(nameTag + 1 + len.sizeBytes, newName, 4);
+    
+    return 0;
+}
+
 
 char *getValueForTagInSet(char *set, size_t tag){
 #define reterror(a) return (error(a),NULL)
