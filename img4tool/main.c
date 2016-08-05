@@ -60,8 +60,8 @@ char *readFromFile(const char *filePath){
     return ret;
 }
 
-char *parseNonce(const char *nonce){
-    size_t noncelen = 8;
+char *parseNonce(const char *nonce,size_t noncelen){
+//    size_t noncelen = 8;
     
     char *ret = malloc((noncelen+1)*sizeof(char));
     memset(ret, 0, noncelen+1);
@@ -106,6 +106,7 @@ static struct option longopts[] = {
     { "outfile",        required_argument,  NULL, 'o' },
     { "create",         required_argument,  NULL, 'c' },
     { "rename-payload", required_argument,  NULL, 'n' },
+    { "raw",            required_argument,  NULL, '1' },
     { NULL, 0, NULL, 0 }
 };
 
@@ -124,6 +125,8 @@ void cmd_help(){
     printf("  -p, --im4p    PATH        Filepath for im4p (reading or writing, depending on -e being set)\n");
     printf("  -r, --im4r    <nonce>     nonce to be set for BNCN in im4r\n");
     printf("  -n, --rename-payload NAME rename IM4P payload (NAME must be exactly 4 bytes)\n");
+    printf("      --raw     <bytes>     write bytes to file if combined with -c (does nothing else otherwise)\n");
+    
     printf("\n");
 }
 
@@ -140,6 +143,7 @@ int main(int argc, const char * argv[]) {
     const char *extractFile = NULL;
     const char *createFile = NULL;
     const char *newPayloadName = NULL;
+    const char *rawBytes = NULL;
     
     
     char *buf = NULL;
@@ -147,8 +151,11 @@ int main(int argc, const char * argv[]) {
     char *im4p = NULL;
     char *im4r = NULL;
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:n:", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:n:1:", longopts, &optindex)) > 0) {
         switch (opt) {
+            case '1':
+                rawBytes = optarg;
+                break;
             case 'a':
                 flags |= FLAG_ALL;
                 break;
@@ -171,7 +178,7 @@ int main(int argc, const char * argv[]) {
                 }
                 break;
             case 'r':
-                im4r = parseNonce(optarg);
+                im4r = parseNonce(optarg,8);
                 break;
             case 'o':
                 extractFile = optarg;
@@ -289,16 +296,22 @@ int main(int argc, const char * argv[]) {
         
         //creating
     }else if (flags & FLAG_CREATE){
+        size_t bufSize = 0;
         
-        printf("building img4 with: ");
-        if (im4pFile && (im4p = readFromFile(im4pFile))) printf("IM4P ");
-        if (im4m || (im4mFile && (im4m = readFromFile(im4mFile)))) printf("IM4M ");
-        if (im4r) printf("IM4R ");
-        if (!im4m && !im4p && !im4r) printf("<empty>");
-        printf("\n");
+        if (!rawBytes){
+            printf("building img4 with: ");
+            if (im4pFile && (im4p = readFromFile(im4pFile))) printf("IM4P ");
+            if (im4m || (im4mFile && (im4m = readFromFile(im4mFile)))) printf("IM4M ");
+            if (im4r) printf("IM4R ");
+            if (!im4m && !im4p && !im4r) printf("<empty>");
+            printf("\n");
+            
+            buf = makeIMG4(im4p, im4m, im4r, &bufSize);
+        }else{
+            bufSize = strlen(rawBytes)/2;
+            buf = parseNonce(rawBytes,bufSize);
+        }
         
-        size_t bufSize;
-        buf = makeIMG4(im4p, im4m, im4r, &bufSize);
         FILE *f = fopen(createFile, "w");
         if (!f) {
             printf("[Error] creating file %s failed\n",img4File);
@@ -306,7 +319,7 @@ int main(int argc, const char * argv[]) {
         }
         fwrite(buf, bufSize, 1, f);
         fclose(f);
-        printf("[Success] created IMG4\n");
+        printf("[Success] created %s\n",(rawBytes) ? "file" : "IMG4");
     
         //printing
     }else if (sequenceHasName(buf, "IMG4")){
