@@ -11,6 +11,9 @@ $(TARGET) : $(OBJECTS)
 		$(CC) $(CFLAGS) $(OBJECTS) $(LDFLAGS) -o $(TARGET)
 		@echo "Successfully built $(TARGET)"
 
+objects : $(OBJECTS)
+		@echo "Successfully compiled $(OBJECTS)"
+
 $(SRC_DIR)/%.o : $(SRC_DIR)/%.c
 		$(CC) $(CFLAGS)  $< -c -o $@
 
