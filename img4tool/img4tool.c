@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <plist/plist.h>
 #include "img4.h"
+#include "img4tool.h"
+#include "config.h"
 
 #define safeFree(buf) if (buf) free(buf), buf = NULL
 
@@ -61,7 +63,7 @@ char *readFromFile(const char *filePath){
 }
 
 char *parseNonce(const char *nonce,size_t noncelen){
-//    size_t noncelen = 8;
+    //    size_t noncelen = 8;
     
     char *ret = malloc((noncelen+1)*sizeof(char));
     memset(ret, 0, noncelen+1);
@@ -95,6 +97,8 @@ char *parseNonce(const char *nonce,size_t noncelen){
 #define FLAG_IM4PONLY   1 << 3
 #define FLAG_VERIFY     1 << 4
 
+
+#ifndef IMG4TOOL_NOMAIN
 static struct option longopts[] = {
     { "help",           no_argument,        NULL, 'h' },
     { "extract",        no_argument,        NULL, 'e' },
@@ -197,8 +201,8 @@ int main(int argc, const char * argv[]) {
                 flags |= FLAG_EXTRACT;
                 break;
             default:
-                 cmd_help();
-                 return -1;
+                cmd_help();
+                return -1;
         }
     }
     
@@ -326,7 +330,7 @@ int main(int argc, const char * argv[]) {
         fwrite(buf, bufSize, 1, f);
         fclose(f);
         printf("[Success] created %s\n",(rawBytes) ? "file" : "IMG4");
-    
+        
         //printing
     }else if (sequenceHasName(buf, "IMG4")){
         printElemsInIMG4(buf,(flags & FLAG_ALL), (flags & FLAG_IM4PONLY));
@@ -350,3 +354,4 @@ error:
     
     return error;
 }
+#endif

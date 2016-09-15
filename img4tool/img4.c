@@ -7,7 +7,7 @@
 //
 
 #include "img4.h"
-#include "all.h"
+#include "all_img4tool.h"
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/sha.h>
@@ -36,7 +36,7 @@ t_asn1ElemLen asn1Len(char buf[4]){
     return ret;
 }
 
-int asn1ElementsInObject(char *buf){
+int asn1ElementsInObject(const char *buf){
     int ret = 0;
     
     if (!((t_asn1Tag *)buf)->isConstructed) return 0;
@@ -86,7 +86,7 @@ char *ans1GetString(char *buf, char **outString, size_t *strlen){
     return buf+*strlen;
 }
 
-t_asn1Tag *asn1ElementAtIndex(char *buf, int index){
+t_asn1Tag *asn1ElementAtIndex(const char *buf, int index){
     
     if (!((t_asn1Tag *)buf)->isConstructed) return 0;
     t_asn1ElemLen len = asn1Len(++buf);
