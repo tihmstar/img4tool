@@ -14,6 +14,7 @@
 #ifdef __APPLE__
 #   include <CommonCrypto/CommonDigest.h>
 #   define SHA1(d, n, md) CC_SHA1(d, n, md)
+#   define SHA_DIGEST_LENGTH CC_SHA1_DIGEST_LENGTH
 #else
 #   include <openssl/sha.h>
 #endif // __APPLE__
