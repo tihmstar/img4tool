@@ -10,6 +10,9 @@
 #include "all.h"
 #include <stdlib.h>
 #include <string.h>
+#include <openssl/sha.h>
+
+#define safeFree(buf) if (buf) free(buf), buf = NULL
 
 t_asn1ElemLen asn1Len(char buf[4]){
     t_asn1Length *sTmp = (t_asn1Length *)buf;
@@ -732,6 +735,43 @@ error:
     return;
 #undef reterror
 }
+
+
+char *getSHA1ofSqeuence(char * buf){
+    if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSEQUENCE){
+        error("tag not seuqnece");
+        return 0;
+    }
+    t_asn1ElemLen bLen = asn1Len(buf+1);
+    size_t buflen = 1 + bLen.dataLen + bLen.sizeBytes;
+    char *ret = malloc(SHA_DIGEST_LENGTH);
+    
+    SHA1((unsigned char*)buf, buflen, (unsigned char *)ret);
+    
+    return 0;
+}
+
+int verifyIMG4(char *buf){
+    int error = 0;
+    char *im4pSHA = NULL;
+    if (!sequenceHasName(buf, "IMG4")){
+        error("not IM4G seuqnece\n");
+        return 0;
+    }
+    char *im4p = getIM4PFromIMG4(buf);
+    if (!im4p) goto error;
+    im4pSHA = getSHA1ofSqeuence(im4p);
+    
+    
+#warning TODO IMPLEMENT
+    error("THIS FEATURE IS NOT IMPLEMENTED YET");
+    
+error:
+    safeFree(im4pSHA);
+    return error;
+}
+
+
 
 
 

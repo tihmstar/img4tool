@@ -113,5 +113,6 @@ char *getIM4PFromIMG4(char *buf);
 char *getIM4MFromIMG4(char *buf);
 
 int replaceNameInIM4P(char *buf, const char *newName);
+int verifyIMG4(char *buf);
 
 #endif /* img4_h */

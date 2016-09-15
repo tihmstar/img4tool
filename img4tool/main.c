@@ -93,6 +93,7 @@ char *parseNonce(const char *nonce,size_t noncelen){
 #define FLAG_CREATE     1 << 1
 #define FLAG_ALL        1 << 2
 #define FLAG_IM4PONLY   1 << 3
+#define FLAG_VERIFY     1 << 4
 
 static struct option longopts[] = {
     { "help",           no_argument,        NULL, 'h' },
@@ -106,6 +107,7 @@ static struct option longopts[] = {
     { "outfile",        required_argument,  NULL, 'o' },
     { "create",         required_argument,  NULL, 'c' },
     { "rename-payload", required_argument,  NULL, 'n' },
+    { "verify",         no_argument,        NULL, 'v' },
     { "raw",            required_argument,  NULL, '1' },
     { NULL, 0, NULL, 0 }
 };
@@ -124,6 +126,7 @@ void cmd_help(){
     printf("  -m, --im4m    PATH        Filepath for im4m (reading or writing, depending on -e being set)\n");
     printf("  -p, --im4p    PATH        Filepath for im4p (reading or writing, depending on -e being set)\n");
     printf("  -r, --im4r    <nonce>     nonce to be set for BNCN in im4r\n");
+    printf("  -v, --verify              verify IMG4, IM4P or IM4M\n");
     printf("  -n, --rename-payload NAME rename IM4P payload (NAME must be exactly 4 bytes)\n");
     printf("      --raw     <bytes>     write bytes to file if combined with -c (does nothing else otherwise)\n");
     
@@ -151,7 +154,7 @@ int main(int argc, const char * argv[]) {
     char *im4p = NULL;
     char *im4r = NULL;
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:n:1:", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:n:1:v", longopts, &optindex)) > 0) {
         switch (opt) {
             case '1':
                 rawBytes = optarg;
@@ -161,6 +164,9 @@ int main(int argc, const char * argv[]) {
                 break;
             case 'i':
                 flags |= FLAG_IM4PONLY;
+                break;
+            case 'v':
+                flags |= FLAG_VERIFY;
                 break;
             case 's':
                 shshFile = optarg;
@@ -330,6 +336,9 @@ int main(int argc, const char * argv[]) {
         printIM4M(buf,(flags & FLAG_ALL));
     }else if (sequenceHasName(buf, "IM4R")){
         printIM4R(buf);
+    }
+    if (flags & FLAG_VERIFY) {
+        printf("IMG4 is %s\n",verifyIMG4(buf) ? "invalid" : "valid");
     }
    
 error:
