@@ -10,6 +10,7 @@
 #include "all_img4tool.h"
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 
 #ifdef __APPLE__
 #   include <CommonCrypto/CommonDigest.h>
