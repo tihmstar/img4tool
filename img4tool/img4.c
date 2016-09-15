@@ -10,7 +10,13 @@
 #include "all_img4tool.h"
 #include <stdlib.h>
 #include <string.h>
-#include <openssl/sha.h>
+
+#ifdef __APPLE__
+#   include <CommonCrypto/CommonDigest.h>
+#   define SHA1(d, n, md) CC_SHA1(d, n, md)
+#else
+#   include <openssl/sha.h>
+#endif // __APPLE__
 
 #define safeFree(buf) if (buf) free(buf), buf = NULL
 
