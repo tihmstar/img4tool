@@ -14,7 +14,7 @@
 
 #define safeFree(buf) if (buf) free(buf), buf = NULL
 
-t_asn1ElemLen asn1Len(char buf[4]){
+t_asn1ElemLen asn1Len(const char buf[4]){
     t_asn1Length *sTmp = (t_asn1Length *)buf;
     size_t outSize = 0;
     int sizeBytes_ = 0;
@@ -764,7 +764,7 @@ int verifyIMG4(char *buf){
     
     
 #warning TODO IMPLEMENT
-    error("THIS FEATURE IS NOT IMPLEMENTED YET");
+    error("THIS FEATURE IS NOT IMPLEMENTED YET\n");
     
 error:
     safeFree(im4pSHA);

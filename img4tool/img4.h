@@ -92,7 +92,7 @@ typedef enum{
 #endif
 
 //asn1
-t_asn1ElemLen asn1Len(char buf[4]);
+t_asn1ElemLen asn1Len(const char buf[4]);
 char *ans1GetString(char *buf, char **outString, size_t *strlen);
 int asn1ElementsInObject(const char *buf);
 t_asn1Tag *asn1ElementAtIndex(const char *buf, int index);
