@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <stdint.h>
 
 #ifdef __APPLE__
 #   include <CommonCrypto/CommonDigest.h>
@@ -250,7 +251,7 @@ void printNumber(t_asn1Tag *tag){
         return;
     }
     t_asn1ElemLen len = asn1Len((char*)++tag);
-    uint num = 0;
+    uint32_t num = 0;
     while (len.sizeBytes--) {
         num *=0x100;
         num += *(unsigned char*)++tag;
