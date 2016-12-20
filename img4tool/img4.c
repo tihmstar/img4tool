@@ -663,12 +663,17 @@ void asn1PrintValue(t_asn1Tag *tag){
     }else if (tag->tagNumber == kASN1TagINTEGER){
         t_asn1ElemLen len = asn1Len((char*)tag+1);
         unsigned char *num = (unsigned char*)tag+1 + len.sizeBytes;
-        long pnum = 0;
+        uint64_t pnum = 0;
         while (len.dataLen--) {
             pnum *=0x100;
             pnum += *num++;
+            
+            //ungly workaround for WIN32
+            if (sizeof(uint64_t) != 8) printf("%02x",num[-1]);
+            
         }
-        printf("%ld",pnum);
+        if (sizeof(uint64_t) == 8) printf("%llu",pnum);
+        else printf(" (hex)");
     }else if (tag->tagNumber == kASN1TagBOOLEAN){
         printf("%s",(*(char*)tag+2 == 0) ? "false" : "true");
     }else{

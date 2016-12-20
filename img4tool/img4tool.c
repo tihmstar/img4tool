@@ -21,6 +21,7 @@
 
 char *im4mFormShshFile(const char *shshfile){
     FILE *f = fopen(shshfile,"rb");
+    if (!f) return NULL;
     fseek(f, 0, SEEK_END);
     
     size_t fSize = ftell(f);
@@ -154,6 +155,10 @@ int main(int argc, const char * argv[]) {
     const char *newPayloadName = NULL;
     const char *rawBytes = NULL;
     
+    if (sizeof(uint64_t) != 8){
+        printf("[FATAL] sizeof(uint64_t) != 8 (size is %lu byte). This program might function incorrectly\n",sizeof(uint64_t));
+//        return 64;
+    }
     
     char *buf = NULL;
     char *im4m = NULL;
@@ -214,7 +219,9 @@ int main(int argc, const char * argv[]) {
         
         img4File = argv[0];
     }else if (shshFile){
-        im4m = im4mFormShshFile(shshFile);
+        if (!(im4m = im4mFormShshFile(shshFile))){
+            printf("[Error] reading file failed\n");
+        }
     }else if (!img4File && !(flags & FLAG_CREATE)){
         cmd_help();
         return -2;
