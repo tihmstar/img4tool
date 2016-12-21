@@ -121,7 +121,8 @@ static struct option longopts[] = {
 
 void cmd_help(){
     printf("Usage: img4tool [OPTIONS] FILE\n");
-    printf("Parses img4, im4p, im4m files\n\n");
+    printf("Parses img4, im4p, im4m files\n");
+     printf("Version: "VERSION_COMMIT_SHA" - "VERSION_COMMIT_COUNT"\n\n");
     
     printf("  -h, --help                prints usage information\n");
     printf("  -a, --print-all           print everything from IM4M\n");
