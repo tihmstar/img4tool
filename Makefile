@@ -10,7 +10,7 @@ OBJECTS += $(SRC_DIR)/img4tool.o $(SRC_DIR)/img4.o
 all : $(TARGET)
 
 set_version :
-        ./setBuildVersion.sh
+	./setBuildVersion.sh
 
 $(TARGET) : set_version $(OBJECTS)
 		$(CC) $(CFLAGS) $(OBJECTS) $(LDFLAGS) -o $(TARGET)
