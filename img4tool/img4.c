@@ -45,39 +45,6 @@ t_asn1ElemLen asn1Len(const char buf[4]){
     return ret;
 }
 
-int asn1ElementsInObject(const char *buf){
-    int ret = 0;
-    
-    if (!((t_asn1Tag *)buf)->isConstructed) return 0;
-    t_asn1ElemLen len = asn1Len(++buf);
-    
-    buf +=len.sizeBytes;
-    if (*buf == kASN1TagPrivate){
-        size_t sb;
-        asn1GetPrivateTagnum((t_asn1Tag*)buf,&sb);
-        buf+=sb;
-        len.dataLen-=sb;
-    }else buf++;
-    
-    while (len.dataLen) {
-        t_asn1ElemLen sublen = asn1Len(buf);
-        size_t toadd =sublen.dataLen + sublen.sizeBytes;
-        len.dataLen -=toadd;
-        buf +=toadd;
-        ret ++;
-        if (len.dataLen <=1) break;
-        if (*buf == kASN1TagPrivate){
-            size_t sb;
-            asn1GetPrivateTagnum((t_asn1Tag*)buf,&sb);
-            buf+=sb+1;
-            len.dataLen-=sb+1;
-        }
-        buf++,len.dataLen--;
-        
-    }
-    return ret;
-}
-
 char *ans1GetString(char *buf, char **outString, size_t *strlen){
     
     t_asn1Tag *tag = (t_asn1Tag *)buf;
@@ -95,14 +62,17 @@ char *ans1GetString(char *buf, char **outString, size_t *strlen){
     return buf+*strlen;
 }
 
-t_asn1Tag *asn1ElementAtIndex(const char *buf, int index){
+int asn1ElementAtIndexWithCounter(const char *buf, int index, t_asn1Tag **tagret){
+    int ret = 0;
     
     if (!((t_asn1Tag *)buf)->isConstructed) return 0;
     t_asn1ElemLen len = asn1Len(++buf);
     
     buf +=len.sizeBytes;
-    if (index == 0) return (t_asn1Tag *)buf;
-    
+    if (index == 0 && tagret){
+        *tagret = (t_asn1Tag *)buf;
+        return 1;
+    }
     if (*buf == kASN1TagPrivate){
         size_t sb;
         asn1GetPrivateTagnum((t_asn1Tag*)buf,&sb);
@@ -115,20 +85,33 @@ t_asn1Tag *asn1ElementAtIndex(const char *buf, int index){
         size_t toadd =sublen.dataLen + sublen.sizeBytes;
         len.dataLen -=toadd;
         buf +=toadd;
-        if (!len.dataLen) break;
-        if (--index == 0) return (t_asn1Tag*)buf;
+        ret ++;
+        if (len.dataLen <=1) break;
+        if (--index == 0 && tagret){
+            *tagret = (t_asn1Tag*)buf;
+            return ret;
+        }
         if (*buf == kASN1TagPrivate){
             size_t sb;
             asn1GetPrivateTagnum((t_asn1Tag*)buf,&sb);
-            buf+=sb+1;
-            len.dataLen-=sb+1;
-        }
-        buf++,len.dataLen--;
+            buf+=sb;
+            len.dataLen-=sb;
+            
+        } else buf++,len.dataLen--;
         
     }
-    return NULL;
+    return ret;
 }
 
+int asn1ElementsInObject(const char *buf){
+    return asn1ElementAtIndexWithCounter(buf, -1, NULL);
+}
+
+t_asn1Tag *asn1ElementAtIndex(const char *buf, int index){
+    t_asn1Tag *ret;
+    asn1ElementAtIndexWithCounter(buf, index, &ret);
+    return ret;
+}
 
 int getSequenceName(char *buf,char**name, size_t *nameLen){
 #define reterror(a ...){error(a); err = -1; goto error;}
@@ -152,6 +135,15 @@ size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes){
     size_t sb = 1;
     t_asn1ElemLen taglen = asn1Len((char*)++tag);
     taglen.sizeBytes-=1;
+    if (taglen.sizeBytes != 4){
+        /* 
+         WARNING: seems like apple's private tag is always 4 bytes long
+         i first assumed 0x84 can be parsed as long size with 4 bytes, 
+         but 0x86 also seems to be 4 bytes size even if one would assume it means 6 bytes size.
+         This opens the question what the 4 or 6 nibble means.
+        */
+        taglen.sizeBytes = 4;
+    }
     size_t tagname =0;
     do {
         tagname *=0x100;

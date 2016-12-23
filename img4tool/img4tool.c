@@ -222,7 +222,8 @@ int main(int argc, const char * argv[]) {
         img4File = argv[0];
     }else if (shshFile){
         if (!(im4m = im4mFormShshFile(shshFile))){
-            printf("[Error] reading file failed\n");
+            printf("[Error] reading file failed %s\n",shshFile);
+            return -1;
         }
     }else if (!img4File && !(flags & FLAG_CREATE)){
         cmd_help();
@@ -232,7 +233,7 @@ int main(int argc, const char * argv[]) {
     if (!(flags & FLAG_CREATE)){
         buf = readFromFile(img4File);
         if (!buf && !(buf = im4m)){
-            printf("[Error] reading file failed %s\n",buf);
+            printf("[Error] reading file failed %s\n",img4File);
             return -1;
         }
         if (*(unsigned char*)buf != 0x30) {
