@@ -8,6 +8,7 @@ AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_LIBTOOL
 CFLAGS+=" -std=c11"
 AC_PROG_INSTALL
 
@@ -29,6 +30,16 @@ AC_TYPE_UINT64_T
 AC_FUNC_ERROR_AT_LINE
 AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memmove memset])
+
+case $CFLAGS in
+  *IMG4TOOL_NOMAIN*)
+    nomain=true
+  ;;
+  *)
+  ;;
+esac
+
+AM_CONDITIONAL(NOMAIN, test x$nomain == xtrue)
 
 AC_CONFIG_FILES([Makefile img4tool/Makefile])
 AC_OUTPUT
