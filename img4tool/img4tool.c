@@ -100,6 +100,7 @@ char *parseNonce(const char *nonce,size_t noncelen){
 #define FLAG_ALL        1 << 2
 #define FLAG_IM4PONLY   1 << 3
 #define FLAG_VERIFY     1 << 4
+#define FLAG_CONVERT    1 << 5
 
 
 #ifndef IMG4TOOL_NOMAIN
@@ -117,6 +118,7 @@ static struct option longopts[] = {
     { "rename-payload", required_argument,  NULL, 'n' },
     { "verify",         no_argument,        NULL, 'v' },
     { "raw",            required_argument,  NULL, '1' },
+    { "convert",        no_argument,        NULL, '2' },
     { NULL, 0, NULL, 0 }
 };
 
@@ -130,7 +132,7 @@ void cmd_help(){
     printf("  -i, --im4p-only           print only IM4P\n");
     printf("  -e, --extract             extracts im4p payload,im4m,im4p\n");
     printf("  -o, --outfile             output path for extracting im4p payload (does nothing without -e)\n");
-    printf("  -s, --shsh    PATH        Filepath for shsh (for reading im4m)\n");
+    printf("  -s, --shsh    PATH        Filepath for shsh (for reading/writing im4m)\n");
     printf("  -c, --create  PATH        creates an img4 with the specified im4m, im4p\n");
     printf("  -m, --im4m    PATH        Filepath for im4m (reading or writing, depending on -e being set)\n");
     printf("  -p, --im4p    PATH        Filepath for im4p (reading or writing, depending on -e being set)\n");
@@ -138,6 +140,7 @@ void cmd_help(){
     printf("  -v, --verify              verify IMG4, IM4P or IM4M\n");
     printf("  -n, --rename-payload NAME rename IM4P payload (NAME must be exactly 4 bytes)\n");
     printf("      --raw     <bytes>     write bytes to file if combined with -c (does nothing else otherwise)\n");
+    printf("      --convert             convert IM4M file to .shsh (use with -s)\n");
     
     printf("\n");
 }
@@ -174,6 +177,9 @@ int main(int argc, const char * argv[]) {
                 break;
             case 'a':
                 flags |= FLAG_ALL;
+                break;
+            case '2':
+                flags |= FLAG_CONVERT;
                 break;
             case 'i':
                 flags |= FLAG_IM4PONLY;
@@ -220,7 +226,7 @@ int main(int argc, const char * argv[]) {
         argv += optind;
         
         img4File = argv[0];
-    }else if (shshFile){
+    }else if (shshFile && !(flags & FLAG_CONVERT)){
         if (!(im4m = im4mFormShshFile(shshFile))){
             printf("[Error] reading file failed %s\n",shshFile);
             return -1;
@@ -280,6 +286,67 @@ int main(int argc, const char * argv[]) {
         fwrite(buf, size, 1, f);
         fclose(f);
         printf("[Success] renamed IM4P\n");
+        
+    }else if (flags & FLAG_CONVERT){
+        if (!shshFile) {
+            printf("[Error] --convert also requires output to be defined with -s\n");
+            error = -9;
+            goto error;
+        }
+        
+        FILE *im4m = fopen(img4File, "rb");
+        if (!im4m){
+            printf("[Error] reading file failed\n");
+            error= -8;
+            goto error;
+        }
+        fseek(im4m, 0, SEEK_END);
+        size_t size = ftell(im4m);
+        fseek(im4m, 0, SEEK_SET);
+        
+        buf = malloc(size);
+        if (buf) fread(buf, size, 1, im4m);
+        fclose(im4m);
+        
+        plist_t newshsh = plist_new_dict();
+        if (!newshsh){
+            printf("[Error] can't alloc new plist\n");
+            error = -10;
+            goto error;
+        }
+        
+        plist_t data = plist_new_data(buf, size);
+        
+        plist_dict_set_item(newshsh, "ApImg4Ticket", data);
+        
+        char *xml = NULL;
+        uint32_t xmlSize = 0;
+        plist_to_xml(newshsh, &xml, &xmlSize);
+        
+        if (!xml){
+            printf("[Error] plist to xml failed\n"),error=-11;
+        }else{
+            FILE *f = NULL;
+            if ((f = fopen(shshFile, "r"))){
+                printf("[Error] shshFile=%s already exists, not overwriting\n",shshFile),error=-12;
+                fclose(f);
+            }else{
+                f = fopen(shshFile, "w");
+                if (!f){
+                    printf("[Error] failed to open shshfile for writing\n"),error=-13;
+                }else{
+                    if (fwrite(xml, 1, xmlSize, f) != xmlSize)
+                        printf("[Error] saving shsh file failed!\n"),error=-14;
+                    else
+                        printf("Successfully converted IM4M to .shsh\n");
+                    fclose(f);
+                }
+            }
+            free(xml);
+        }
+        
+        
+        plist_free(newshsh);
         
     }else if (flags & FLAG_EXTRACT) {
         char *im4pbuf = NULL;
