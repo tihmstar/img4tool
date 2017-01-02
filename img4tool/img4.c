@@ -481,7 +481,7 @@ int replaceNameInIM4P(char *buf, const char *newName){
 }
 
 
-char *getValueForTagInSet(char *set, size_t tag){
+char *getValueForTagInSet(char *set, uint32_t tag){
 #define reterror(a) return (error(a),NULL)
     
     if (((t_asn1Tag*)set)->tagNumber != kASN1TagSET) reterror("not a SET\n");
@@ -757,24 +757,266 @@ char *getSHA1ofSqeuence(char * buf){
     return 0;
 }
 
-int verifyIMG4(char *buf){
-    int error = 0;
-    char *im4pSHA = NULL;
-    if (!sequenceHasName(buf, "IMG4")){
-        error("not IM4G seuqnece\n");
-        return 0;
+int hasBuildidentityElementWithHash(plist_t identity, char *hash, uint64_t hashSize){
+#define reterror(a ...){rt=0;error(a);goto error;}
+#define skipelem(e) if (strcmp(key, e) == 0) {warning("skipping element=%s\n",key);goto skip;}
+    int rt = 0;
+    plist_dict_iter dictIterator = NULL;
+    
+    plist_t manifest = plist_dict_get_item(identity, "Manifest");
+    if (!manifest)
+        reterror("can't find Manifest\n");
+    
+    plist_t node = NULL;
+    char *key = NULL;
+    plist_dict_new_iter(manifest, &dictIterator);
+    plist_dict_next_item(manifest, dictIterator, &key, &node);
+    do {
+        skipelem("BasebandFirmware")
+        skipelem("ftap")
+        skipelem("ftsp")
+        skipelem("rfta")
+        skipelem("rfts")
+        
+        plist_t digest = plist_dict_get_item(node, "Digest");
+        if (!digest || plist_get_node_type(digest) != PLIST_DATA)
+            reterror("can't find digest for key=%s\n",key);
+        
+        char *dgstData = NULL;
+        uint64_t len = 0;
+        plist_get_data_val(digest, &dgstData, &len);
+        if (!dgstData)
+            reterror("can't get dgstData for key=%s.\n",key);
+        
+        if (len == hashSize && memcmp(dgstData, hash, len) == 0)
+            rt = 1;
+        
+        free(dgstData);
+    skip:
+        plist_dict_next_item(manifest, dictIterator, &key, &node);
+    } while (!rt && node);
+error:
+    free(dictIterator),dictIterator = NULL;
+    return rt;
+#undef reterror
+}
+
+plist_t findAnyBuildidentityForFilehash(plist_t identities, char *hash, uint64_t hashSize){
+#define skipelem(e) if (strcmp(key, e) == 0) {warning("skipping element=%s\n",key);goto skip;}
+#define reterror(a ...){rt=NULL;error(a);goto error;}
+    plist_t rt = NULL;
+    plist_dict_iter dictIterator = NULL;
+    
+    for (int i=0; !rt && i<plist_array_get_size(identities); i++) {
+        plist_t idi = plist_array_get_item(identities, i);
+        
+        plist_t manifest = plist_dict_get_item(idi, "Manifest");
+        if (!manifest)
+            reterror("can't find Manifest. i=%d\n",i);
+        
+        plist_t node = NULL;
+        char *key = NULL;
+        plist_dict_new_iter(manifest, &dictIterator);
+        plist_dict_next_item(manifest, dictIterator, &key, &node);
+        do {
+            skipelem("BasebandFirmware")
+            skipelem("ftap")
+            skipelem("ftsp")
+            skipelem("rfta")
+            skipelem("rfts")
+            
+            plist_t digest = plist_dict_get_item(node, "Digest");
+            if (!digest || plist_get_node_type(digest) != PLIST_DATA)
+                reterror("can't find digest for key=%s. i=%d\n",key,i);
+            
+            char *dgstData = NULL;
+            uint64_t len = 0;
+            plist_get_data_val(digest, &dgstData, &len);
+            if (!dgstData)
+                reterror("can't get dgstData for key=%s. i=%d\n",key,i);
+            
+            if (len == hashSize && memcmp(dgstData, hash, len) == 0)
+                rt = idi;
+            
+            free(dgstData);
+        skip:
+            plist_dict_next_item(manifest, dictIterator, &key, &node);
+        } while (!rt && node);
+        
+        free(dictIterator),dictIterator = NULL;
     }
-    char *im4p = getIM4PFromIMG4(buf);
-    if (!im4p) goto error;
-    im4pSHA = getSHA1ofSqeuence(im4p);
+    
+error:
+    if (dictIterator) free(dictIterator);
+    return rt;
+#undef reterror
+#undef skipelem
+}
+
+plist_t getBuildIdentityForIM4M(char *buf, const plist_t buildmanifest){
+#define reterror(a ...){rt=NULL;error(a);goto error;}
+#define skipelem(e) if (strncmp(elemNameStr, e, 4) == 0) {warning("skipping element=%s\n",e);continue;}
+
+    plist_t manifest = plist_copy(buildmanifest);
+    plist_t rt = NULL;
+    
+    if (!sequenceHasName(buf, "IM4M"))
+        reterror("can't find IM4M tag\n");
+    
+    char *im4mset = (char *)asn1ElementAtIndex(buf, 2);
+    if (!im4mset)
+        reterror("can't find im4mset\n");
+    char *manbSeq = getValueForTagInSet(im4mset, *(uint32_t*)"BNAM");
+    if (!manbSeq)
+        reterror("can't find manbSeq\n");
+    
+    char *manbSet = (char*)asn1ElementAtIndex(manbSeq, 1);
+    if (!manbSet)
+        reterror("can't find manbSet\n");
+    
+    plist_t identities = plist_dict_get_item(manifest, "BuildIdentities");
+    if (!identities)
+        reterror("can't find BuildIdentities\n");
     
     
+    for (int i=0; i<asn1ElementsInObject(manbSet); i++) {
+        t_asn1Tag *curr = asn1ElementAtIndex(manbSet, i);
+        
+        size_t sb;
+        if (asn1GetPrivateTagnum(curr, &sb) == *(uint32_t*)"PNAM")
+            continue;
+        char *cSeq = (char*)curr+sb;
+        cSeq += asn1Len(cSeq).sizeBytes;
+        
+        t_asn1Tag *elemName = asn1ElementAtIndex(cSeq, 0);
+        t_asn1ElemLen elemNameLen = asn1Len((char*)elemName+1);
+        char *elemNameStr = (char*)elemName + elemNameLen.sizeBytes+1;
+        
+        skipelem("ftsp");
+        skipelem("ftap");
+        skipelem("rfta");
+        skipelem("rfts");
+        
+        
+        char *elemSet = (char*)asn1ElementAtIndex(cSeq, 1);
+        if (!elemSet)
+            reterror("can't find elemSet. i=%d\n",i);
+        
+        char *dgstSeq = getValueForTagInSet(elemSet, *(uint32_t*)"TSGD");
+        if (!dgstSeq)
+            reterror("can't find dgstSeq. i=%d\n",i);
+        
+        
+        t_asn1Tag *dgst = asn1ElementAtIndex(dgstSeq, 1);
+        if (!dgst || dgst->tagNumber != kASN1TagOCTET)
+            reterror("can't find DGST. i=%d\n",i);
+        
+        t_asn1ElemLen lenDGST = asn1Len((char*)dgst+1);
+        char *dgstData = (char*)dgst+lenDGST.sizeBytes+1;
+        
+        
+        if (rt){
+            if (!hasBuildidentityElementWithHash(rt, dgstData, lenDGST.dataLen)){
+                //remove identity we are not looking for and start comparing all hashes again
+                plist_array_remove_item(identities, plist_array_get_item_index(rt));
+                i=-1;
+                rt = NULL;
+            }
+        }else{
+            if (!(rt = findAnyBuildidentityForFilehash(identities, dgstData, lenDGST.dataLen)))
+                reterror("can't find any identity which matches all hashes inside IM4M\n");
+        }
+    }
+    
+    plist_t finfo = plist_dict_get_item(rt, "Info");
+    plist_t fdevclass = plist_dict_get_item(finfo, "DeviceClass");
+    plist_t fresbeh = plist_dict_get_item(finfo, "RestoreBehavior");
+    
+    if (!finfo || !fdevclass || !fresbeh)
+        reterror("found buildidentiy, but can't read information\n");
+    
+    plist_t origIdentities = plist_dict_get_item(buildmanifest, "BuildIdentities");
+    
+    for (int i=0; i<plist_array_get_size(origIdentities); i++) {
+        plist_t curr = plist_array_get_item(origIdentities, i);
+    
+        plist_t cinfo = plist_dict_get_item(curr, "Info");
+        plist_t cdevclass = plist_dict_get_item(cinfo, "DeviceClass");
+        plist_t cresbeh = plist_dict_get_item(cinfo, "RestoreBehavior");
+        
+        if (plist_compare_node_value(cresbeh, fresbeh) && plist_compare_node_value(cdevclass, fdevclass)) {
+            rt = curr;
+            goto error;
+        }
+    }
+    //fails if loop ended without jumping to error
+    reterror("found indentity, but failed to match it with orig copy\n");
+    
+error:
+    plist_free(manifest);
+    return rt;
+#undef reterror
+}
+
+
+int verifyIMG4(char *buf, plist_t buildmanifest){
+    int error = 0;
+#define reterror(a ...){error=1;error(a);goto error;}
+    char *im4pSHA = NULL;
+    if (sequenceHasName(buf, "IMG4")){
+        //verify IMG4
+        char *im4p = getIM4PFromIMG4(buf);
+        if (!im4p) goto error;
+        im4pSHA = getSHA1ofSqeuence(im4p);
+        
+        error("THIS FEATURE IS NOT IMPLEMENTED YET\n");
+        
 #warning TODO IMPLEMENT
-    error("THIS FEATURE IS NOT IMPLEMENTED YET\n");
+        //TODO: set buf to IM4M here
+    }
     
+    if (!sequenceHasName(buf, "IM4M"))
+        reterror("unable to find IM4M tag");
+    plist_t identity = getBuildIdentityForIM4M(buf, buildmanifest);
+    
+    printf("\n");
+    if (identity){
+        plist_t info = plist_dict_get_item(identity, "Info");
+        printf("IM4M is valid for the given BuildManifest for the following restore:\n");
+        plist_dict_iter iter = NULL;
+        plist_dict_new_iter(info, &iter);
+        
+        plist_type t;
+        plist_t node = NULL;
+        char *key = NULL;
+        
+        while (plist_dict_next_item(info, iter, &key, &node),node) {
+            char *str = NULL;
+            switch (t = plist_get_node_type(node)) {
+                case PLIST_STRING:
+                    plist_get_string_val(node, &str);
+                    printf("%s : %s\n",key,str);
+                    break;
+                case PLIST_BOOLEAN:
+                    plist_get_bool_val(node, (uint8_t*)&t);
+                    printf("%s : %s\n",key,((uint8_t)t) ? "YES" : "NO" );
+                default:
+                    break;
+            }
+            if (str) free(str);
+        }
+        if (iter) free(iter);
+        
+    }else{
+        printf("IM4M is not valid for any restore within the Buildmanifest\n");
+        error = 1;
+    }
+        
+    printf("\n");
 error:
     safeFree(im4pSHA);
     return error;
+#undef reterror
 }
 
 

@@ -14,6 +14,7 @@ extern "C" {
 #endif
 
 #include <stdio.h>
+#include <plist/plist.h>
 #define LEN_XTND  0x80		/* Indefinite or long form */
 typedef unsigned char byte;
 
@@ -98,7 +99,7 @@ int asn1ElementsInObject(const char *buf);
 t_asn1Tag *asn1ElementAtIndex(const char *buf, int index);
 
 
-char *getValueForTagInSet(char *set, size_t tag);
+char *getValueForTagInSet(char *set, uint32_t tag);
 
 
 //img4
@@ -122,7 +123,7 @@ char *getIM4PFromIMG4(char *buf);
 char *getIM4MFromIMG4(char *buf);
 
 int replaceNameInIM4P(char *buf, const char *newName);
-int verifyIMG4(char *buf);
+int verifyIMG4(char *buf, plist_t buildmanifest);
 
 #ifdef __cplusplus
 }

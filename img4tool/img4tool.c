@@ -66,6 +66,32 @@ char *readFromFile(const char *filePath){
     return ret;
 }
 
+plist_t readPlistFromFile(const char *filePath){
+    FILE *f = fopen(filePath, "r");
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    
+    char *buf = malloc(size);
+    if (!buf)
+        return fclose(f),NULL;
+    
+    fread(buf, size, 1, f);
+    fclose(f);
+    
+    plist_t rt = NULL;
+    
+    if (memcmp(buf, "bplist00", 8) == 0)
+        plist_from_bin(buf, (uint32_t)size, &rt);
+    else
+        plist_from_xml(buf, (uint32_t)size, &rt);
+    
+    free(buf);
+    
+    return rt;
+}
+
 char *parseNonce(const char *nonce,size_t noncelen){
     //    size_t noncelen = 8;
     
@@ -116,7 +142,7 @@ static struct option longopts[] = {
     { "outfile",        required_argument,  NULL, 'o' },
     { "create",         required_argument,  NULL, 'c' },
     { "rename-payload", required_argument,  NULL, 'n' },
-    { "verify",         no_argument,        NULL, 'v' },
+    { "verify",         required_argument,  NULL, 'v' },
     { "raw",            required_argument,  NULL, '1' },
     { "convert",        no_argument,        NULL, '2' },
     { NULL, 0, NULL, 0 }
@@ -127,20 +153,20 @@ void cmd_help(){
     printf("Parses img4, im4p, im4m files\n");
      printf("Version: "VERSION_COMMIT_SHA" - "VERSION_COMMIT_COUNT"\n\n");
     
-    printf("  -h, --help                prints usage information\n");
-    printf("  -a, --print-all           print everything from IM4M\n");
-    printf("  -i, --im4p-only           print only IM4P\n");
-    printf("  -e, --extract             extracts im4p payload,im4m,im4p\n");
-    printf("  -o, --outfile             output path for extracting im4p payload (does nothing without -e)\n");
-    printf("  -s, --shsh    PATH        Filepath for shsh (for reading/writing im4m)\n");
-    printf("  -c, --create  PATH        creates an img4 with the specified im4m, im4p\n");
-    printf("  -m, --im4m    PATH        Filepath for im4m (reading or writing, depending on -e being set)\n");
-    printf("  -p, --im4p    PATH        Filepath for im4p (reading or writing, depending on -e being set)\n");
-    printf("  -r, --im4r    <nonce>     nonce to be set for BNCN in im4r\n");
-    printf("  -v, --verify              verify IMG4, IM4P or IM4M\n");
-    printf("  -n, --rename-payload NAME rename IM4P payload (NAME must be exactly 4 bytes)\n");
-    printf("      --raw     <bytes>     write bytes to file if combined with -c (does nothing else otherwise)\n");
-    printf("      --convert             convert IM4M file to .shsh (use with -s)\n");
+    printf("  -h, --help\t\t\tprints usage information\n");
+    printf("  -a, --print-all\t\tprint everything from IM4M\n");
+    printf("  -i, --im4p-only\t\tprint only IM4P\n");
+    printf("  -e, --extract\t\t\textracts im4p payload,im4m,im4p\n");
+    printf("  -o, --outfile\t\t\toutput path for extracting im4p payload (does nothing without -e)\n");
+    printf("  -s, --shsh    PATH\t\tFilepath for shsh (for reading/writing im4m)\n");
+    printf("  -c, --create  PATH\t\tcreates an img4 with the specified im4m, im4p\n");
+    printf("  -m, --im4m    PATH\t\tFilepath for im4m (reading or writing, depending on -e being set)\n");
+    printf("  -p, --im4p    PATH\t\tFilepath for im4p (reading or writing, depending on -e being set)\n");
+    printf("  -r, --im4r    <nonce>\t\tnonce to be set for BNCN in im4r\n");
+    printf("  -v, --verify BUILDMANIFEST\tverify IMG4, IM4M\n");
+    printf("  -n, --rename-payload NAME\trename IM4P payload (NAME must be exactly 4 bytes)\n");
+    printf("      --raw     <bytes>\t\twrite bytes to file if combined with -c (does nothing else otherwise)\n");
+    printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
     
     printf("\n");
 }
@@ -170,7 +196,10 @@ int main(int argc, const char * argv[]) {
     char *im4p = NULL;
     char *im4r = NULL;
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:n:1:v", longopts, &optindex)) > 0) {
+    const char *buildmanifestPath = NULL;
+    plist_t buildManifest = NULL;
+    
+    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:n:1:v:", longopts, &optindex)) > 0) {
         switch (opt) {
             case '1':
                 rawBytes = optarg;
@@ -186,6 +215,7 @@ int main(int argc, const char * argv[]) {
                 break;
             case 'v':
                 flags |= FLAG_VERIFY;
+                buildmanifestPath = optarg;
                 break;
             case 's':
                 shshFile = optarg;
@@ -246,6 +276,14 @@ int main(int argc, const char * argv[]) {
             printf("[Error] file %s doesn't seem to be img4, im4p, im4m or im4r file\n",img4File);
             return -5;
         }
+    }
+    
+    if (buildmanifestPath) {
+        if (!(buildManifest = readPlistFromFile(buildmanifestPath))){
+            error("failed to read buildmanifest from %s\n",buildmanifestPath);
+            goto error;
+        }
+        
     }
     
     if (newPayloadName){
@@ -421,11 +459,12 @@ int main(int argc, const char * argv[]) {
         printIM4R(buf);
     }
     if (flags & FLAG_VERIFY) {
-        printf("IMG4 is %s\n",verifyIMG4(buf) ? "invalid" : "valid");
+        printf("[IMG4TOOL] file is %s!\n",verifyIMG4(buf,buildManifest) ? "invalid" : "valid");
     }
    
 error:
     if (im4m == buf) im4m = NULL;
+    if (buildManifest) plist_free(buildManifest);
     safeFree(buf);
     safeFree(im4m);
     safeFree(im4p);
