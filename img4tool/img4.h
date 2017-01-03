@@ -108,8 +108,8 @@ void printIM4R(char *buf);
 void printIM4M(char *buf, bool printAll);
 void printMANB(char *buf, bool printAll);
 
-int sequenceHasName(char *buf, char *name);
-int getSequenceName(char *buf,char**name, size_t *nameLen);
+int sequenceHasName(const char *buf, char *name);
+int getSequenceName(const char *buf,char**name, size_t *nameLen);
 size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes);
 int extractFileFromIM4P(char *buf, const char *dstFilename);
 void printElemsInIMG4(char *buf, bool printAll, bool im4pOnly);
@@ -125,7 +125,7 @@ char *getIM4MFromIMG4(char *buf);
 int replaceNameInIM4P(char *buf, const char *newName);
 int verifyIMG4(char *buf, plist_t buildmanifest);
     
-plist_t getBuildIdentityForIM4M(char *buf, const plist_t buildmanifest);
+plist_t getBuildIdentityForIM4M(const char *buf, const plist_t buildmanifest);
 
 
 #ifdef __cplusplus

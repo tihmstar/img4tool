@@ -113,7 +113,7 @@ t_asn1Tag *asn1ElementAtIndex(const char *buf, int index){
     return ret;
 }
 
-int getSequenceName(char *buf,char**name, size_t *nameLen){
+int getSequenceName(const char *buf,char**name, size_t *nameLen){
 #define reterror(a ...){error(a); err = -1; goto error;}
     int err = 0;
     if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSEQUENCE) reterror("not a SEQUENCE");
@@ -303,7 +303,7 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
     return 0;
 }
 
-int sequenceHasName(char *buf, char *name){
+int sequenceHasName(const char *buf, char *name){
     char *magic;
     size_t l;
     getSequenceName(buf, &magic, &l);
@@ -853,7 +853,7 @@ error:
 #undef skipelem
 }
 
-plist_t getBuildIdentityForIM4M(char *buf, const plist_t buildmanifest){
+plist_t getBuildIdentityForIM4M(const char *buf, const plist_t buildmanifest){
 #define reterror(a ...){rt=NULL;error(a);goto error;}
 #define skipelem(e) if (strncmp(elemNameStr, e, 4) == 0) {warning("skipping element=%s\n",e);continue;}
 
