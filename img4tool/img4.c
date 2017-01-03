@@ -958,6 +958,33 @@ error:
 #undef reterror
 }
 
+void printGeneralBuildIdentityInformation(plist_t buildidentity){
+    plist_t info = plist_dict_get_item(buildidentity, "Info");
+    plist_dict_iter iter = NULL;
+    plist_dict_new_iter(info, &iter);
+    
+    plist_type t;
+    plist_t node = NULL;
+    char *key = NULL;
+    
+    while (plist_dict_next_item(info, iter, &key, &node),node) {
+        char *str = NULL;
+        switch (t = plist_get_node_type(node)) {
+            case PLIST_STRING:
+                plist_get_string_val(node, &str);
+                printf("%s : %s\n",key,str);
+                break;
+            case PLIST_BOOLEAN:
+                plist_get_bool_val(node, (uint8_t*)&t);
+                printf("%s : %s\n",key,((uint8_t)t) ? "YES" : "NO" );
+            default:
+                break;
+        }
+        if (str) free(str);
+    }
+    if (iter) free(iter);
+}
+
 
 int verifyIMG4(char *buf, plist_t buildmanifest){
     int error = 0;
@@ -981,31 +1008,8 @@ int verifyIMG4(char *buf, plist_t buildmanifest){
     
     printf("\n");
     if (identity){
-        plist_t info = plist_dict_get_item(identity, "Info");
         printf("IM4M is valid for the given BuildManifest for the following restore:\n");
-        plist_dict_iter iter = NULL;
-        plist_dict_new_iter(info, &iter);
-        
-        plist_type t;
-        plist_t node = NULL;
-        char *key = NULL;
-        
-        while (plist_dict_next_item(info, iter, &key, &node),node) {
-            char *str = NULL;
-            switch (t = plist_get_node_type(node)) {
-                case PLIST_STRING:
-                    plist_get_string_val(node, &str);
-                    printf("%s : %s\n",key,str);
-                    break;
-                case PLIST_BOOLEAN:
-                    plist_get_bool_val(node, (uint8_t*)&t);
-                    printf("%s : %s\n",key,((uint8_t)t) ? "YES" : "NO" );
-                default:
-                    break;
-            }
-            if (str) free(str);
-        }
-        if (iter) free(iter);
+        printGeneralBuildIdentityInformation(identity);
         
     }else{
         printf("IM4M is not valid for any restore within the Buildmanifest\n");
