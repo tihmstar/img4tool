@@ -124,6 +124,9 @@ char *getIM4MFromIMG4(char *buf);
 
 int replaceNameInIM4P(char *buf, const char *newName);
 int verifyIMG4(char *buf, plist_t buildmanifest);
+    
+plist_t getBuildIdentityForIM4M(char *buf, const plist_t buildmanifest);
+
 
 #ifdef __cplusplus
 }
