@@ -13,6 +13,12 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+
+#warning TODO adjust this for __APPLE__
+#include <openssl/x509.h>
+#include <openssl/evp.h>
+
+
 #ifdef __APPLE__
 #   include <CommonCrypto/CommonDigest.h>
 #   define SHA1(d, n, md) CC_SHA1(d, n, md)
@@ -22,6 +28,9 @@
 #endif // __APPLE__
 
 #define safeFree(buf) if (buf) free(buf), buf = NULL
+#define assure(a) do{ if ((a) == 0){err=1; goto error;} }while(0)
+#define retassure(retcode, a) do{ if ((a) == 0){err=retcode; goto error;} }while(0)
+#define asn1Tag(a) ((t_asn1Tag*)a)
 
 t_asn1ElemLen asn1Len(const char buf[4]){
     t_asn1Length *sTmp = (t_asn1Length *)buf;
@@ -107,10 +116,10 @@ int asn1ElementsInObject(const char *buf){
     return asn1ElementAtIndexWithCounter(buf, -1, NULL);
 }
 
-t_asn1Tag *asn1ElementAtIndex(const char *buf, int index){
+char *asn1ElementAtIndex(const char *buf, int index){
     t_asn1Tag *ret;
     asn1ElementAtIndexWithCounter(buf, index, &ret);
-    return ret;
+    return (char*)ret;
 }
 
 int getSequenceName(const char *buf,char**name, size_t *nameLen){
@@ -221,15 +230,15 @@ void printKBAGOctet(char *octet){
         
         if (elems--){
             //integer (currently unknown?)
-            t_asn1Tag *num = asn1ElementAtIndex(s, 0);
+            t_asn1Tag *num = (t_asn1Tag*)asn1ElementAtIndex(s, 0);
             if (num->tagNumber != kASN1TagINTEGER) warning("skipping unexpected tag\n");
             else{
                 char n = *(char*)(num+2);
                 printf("num: %d\n",n);
             }
         }
-        if (elems--)printHexString(asn1ElementAtIndex(s, 1)),putchar('\n');
-        if (elems--)printHexString(asn1ElementAtIndex(s, 2)),putchar('\n');
+        if (elems--)printHexString((t_asn1Tag*)asn1ElementAtIndex(s, 1)),putchar('\n');
+        if (elems--)printHexString((t_asn1Tag*)asn1ElementAtIndex(s, 2)),putchar('\n');
     }
     
 error:
@@ -260,11 +269,11 @@ void printIM4P(char *buf){
     if (strncmp("IM4P", magic, l)) reterror("unexpected \"%.*s\", expected \"IM4P\"\n",(int)l,magic);
     
     int elems = asn1ElementsInObject(buf);
-    if (--elems>0) printStringWithKey("type: ",asn1ElementAtIndex(buf, 1));
-    if (--elems>0) printStringWithKey("desc: ",asn1ElementAtIndex(buf, 2));
+    if (--elems>0) printStringWithKey("type: ",(t_asn1Tag*)asn1ElementAtIndex(buf, 1));
+    if (--elems>0) printStringWithKey("desc: ",(t_asn1Tag*)asn1ElementAtIndex(buf, 2));
     if (--elems>0) {
         //data
-        t_asn1Tag *data =asn1ElementAtIndex(buf, 3);
+        t_asn1Tag *data = (t_asn1Tag*)asn1ElementAtIndex(buf, 3);
         if (data->tagNumber != kASN1TagOCTET) warning("skipped an unexpected tag where OCTETSTING was expected\n");
         else printf("size: 0x%08zx\n",asn1Len((char*)data+1).dataLen);
     }
@@ -288,9 +297,9 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
         return -2;
     }
     
-    t_asn1Tag *dataTag = asn1ElementAtIndex(buf, 3)+1;
-    t_asn1ElemLen dlen = asn1Len((char*)dataTag);
-    char *data = (char*)dataTag+dlen.sizeBytes;
+    char *dataTag = asn1ElementAtIndex(buf, 3)+1;
+    t_asn1ElemLen dlen = asn1Len(dataTag);
+    char *data = dataTag+dlen.sizeBytes;
     
     FILE *f = fopen(dstFilename, "wb");
     if (!f) {
@@ -317,14 +326,14 @@ char *getElementFromIMG4(char *buf, char* element){
     int elems = asn1ElementsInObject(buf);
     for (int i=0; i<elems; i++) {
         
-        t_asn1Tag *elemen = asn1ElementAtIndex(buf, i);
+        char *elemen = asn1ElementAtIndex(buf, i);
         
-        if (elemen->tagNumber != kASN1TagSEQUENCE && elemen->tagClass == kASN1TagClassContextSpecific) {
+        if (asn1Tag(elemen)->tagNumber != kASN1TagSEQUENCE && asn1Tag(elemen)->tagClass == kASN1TagClassContextSpecific) {
             //assuming we found a "subcontainer"
             elemen += asn1Len((char*)elemen+1).sizeBytes+1;
         }
         
-        if (elemen->tagNumber == kASN1TagSEQUENCE && sequenceHasName((char*)elemen, element)) {
+        if (asn1Tag(elemen)->tagNumber == kASN1TagSEQUENCE && sequenceHasName(elemen, element)) {
             return (char*)elemen;
         }
     }
@@ -463,14 +472,14 @@ int replaceNameInIM4P(char *buf, const char *newName){
         return -1;
     }
     
-    t_asn1Tag *nameTag = asn1ElementAtIndex(buf, 1);
+    char *nameTag = asn1ElementAtIndex(buf, 1);
     
-    if (nameTag->tagNumber != kASN1TagIA5String){
+    if (asn1Tag(nameTag)->tagNumber != kASN1TagIA5String){
         error("nameTag is not IA5String\n");
         return -2;
     }
     t_asn1ElemLen len;
-    if ((len = asn1Len((char*)nameTag+1)).dataLen !=4){
+    if ((len = asn1Len(nameTag+1)).dataLen !=4){
         error("nameTag has not a length of 4 Bytes, actual len=%ld\n",len.dataLen);
         return -2;
     }
@@ -555,7 +564,7 @@ void printIM4R(char *buf){
     int elems = asn1ElementsInObject(buf);
     if (elems<2) reterror("expecting at least 2 elements\n");
     
-    t_asn1Tag *set = asn1ElementAtIndex(buf, 1);
+    t_asn1Tag *set = (t_asn1Tag*)asn1ElementAtIndex(buf, 1);
     if (set->tagNumber != kASN1TagSET) reterror("expecting SET type\n");
     
     set += asn1Len((char*)set+1).sizeBytes+1;
@@ -569,9 +578,9 @@ void printIM4R(char *buf){
     elems = asn1ElementsInObject((char*)set);
     if (elems<2) reterror("expecting at least 2 elements\n");
     
-    printI5AString(asn1ElementAtIndex((char*)set, 0));
+    printI5AString((t_asn1Tag*)asn1ElementAtIndex((char*)set, 0));
     printf(": ");
-    printHexString(asn1ElementAtIndex((char*)set, 1));
+    printHexString((t_asn1Tag*)asn1ElementAtIndex((char*)set, 1));
     putchar('\n');
     
 error:
@@ -616,11 +625,11 @@ void printIM4M(char *buf, bool printAll){
     
     if (--elems>0) {
         printf("Version: ");
-        printNumber(asn1ElementAtIndex(buf, 1));
+        printNumber((t_asn1Tag*)asn1ElementAtIndex(buf, 1));
         putchar('\n');
     }
     if (--elems>0) {
-        t_asn1Tag *manbset = asn1ElementAtIndex(buf, 2);
+        t_asn1Tag *manbset = (t_asn1Tag*)asn1ElementAtIndex(buf, 2);
         if (manbset->tagNumber != kASN1TagSET) reterror("expecting SET\n");
         
         t_asn1Tag *privtag = manbset + asn1Len((char*)manbset+1).sizeBytes+1;
@@ -632,15 +641,6 @@ void printIM4M(char *buf, bool printAll){
         printMANB(manbseq, printAll);
         if (!printAll) return;
     }
-//    if (--elems>0){
-//        printf("signed hash: ");
-//        printHexString(asn1ElementAtIndex(buf, 3));
-//        putchar('\n');
-//    }
-//    if (--elems>0){
-//#warning TODO print apple certificate?
-//    }
-    
     
 error:
     return;
@@ -681,9 +681,9 @@ void asn1PrintRecKeyVal(char *buf){
             error("expecting 2 elements found %d\n",i);
             return;
         }
-        printI5AString(asn1ElementAtIndex(buf, 0));
+        printI5AString((t_asn1Tag*)asn1ElementAtIndex(buf, 0));
         printf(": ");
-        asn1PrintRecKeyVal((char*)asn1ElementAtIndex(buf, 1));
+        asn1PrintRecKeyVal(asn1ElementAtIndex(buf, 1));
         printf("\n");
         return;
     }else if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSET){
@@ -719,7 +719,7 @@ void printMANB(char *buf, bool printAll){
     char *manbSeq = (char*)asn1ElementAtIndex(buf, 1);
     
     for (int i=0; i<asn1ElementsInObject(manbSeq); i++) {
-        t_asn1Tag *manbElem = asn1ElementAtIndex(manbSeq, i);
+        t_asn1Tag *manbElem = (t_asn1Tag*)asn1ElementAtIndex(manbSeq, i);
         size_t privTag = 0;
         if (*(char*)manbElem == kASN1TagPrivate) {
             size_t sb;
@@ -751,10 +751,10 @@ char *getSHA1ofSqeuence(char * buf){
     t_asn1ElemLen bLen = asn1Len(buf+1);
     size_t buflen = 1 + bLen.dataLen + bLen.sizeBytes;
     char *ret = malloc(SHA_DIGEST_LENGTH);
+    if (ret)
+        SHA1((unsigned char*)buf, (unsigned int)buflen, (unsigned char *)ret);
     
-    SHA1((unsigned char*)buf, buflen, (unsigned char *)ret);
-    
-    return 0;
+    return ret;
 }
 
 int hasBuildidentityElementWithHash(plist_t identity, char *hash, uint64_t hashSize){
@@ -985,41 +985,84 @@ void printGeneralBuildIdentityInformation(plist_t buildidentity){
     if (iter) free(iter);
 }
 
+int verify_signature(char *data, char *sig, char *certificate){
+    //return 0 if signature valid, 1 if invalid, <0 if error occured
+    int err = 0;
+    EVP_MD_CTX *mdctx = NULL;
+#define reterror(a ...){err=1;error(a);goto error;}
+    
+    t_asn1ElemLen dataSize = asn1Len(data+1);
+    t_asn1ElemLen sigSize = asn1Len(sig+1);
+    t_asn1ElemLen certSize = asn1Len(certificate+1);
+
+    X509 *cert = d2i_X509(NULL, (const unsigned char**)&certificate, certSize.dataLen + certSize.sizeBytes + 1);
+    EVP_PKEY *certpubkey = X509_get_pubkey(cert);
+    
+    retassure(-1, mdctx = EVP_MD_CTX_create());
+    
+    retassure(-2, EVP_DigestVerifyInit(mdctx, NULL, EVP_sha1(), NULL, certpubkey) == 1);
+    
+    retassure(-3,EVP_DigestVerifyUpdate(mdctx, data, dataSize.dataLen + dataSize.sizeBytes +1) == 1);
+    
+    err = (EVP_DigestVerifyFinal(mdctx, (unsigned char*)sig+1 + sigSize.sizeBytes, sigSize.dataLen) != 1);
+    
+error:
+    if(mdctx) EVP_MD_CTX_destroy(mdctx);
+    return err;
+}
 
 int verifyIMG4(char *buf, plist_t buildmanifest){
-    int error = 0;
-#define reterror(a ...){error=1;error(a);goto error;}
+    //return 0 on valid file, positive value on invalid file, negative value when errors occured
+    int err = 0;
+#define reterror(code,a ...){error(a);err=code;goto error;}
     char *im4pSHA = NULL;
     if (sequenceHasName(buf, "IMG4")){
         //verify IMG4
         char *im4p = getIM4PFromIMG4(buf);
-        if (!im4p) goto error;
-        im4pSHA = getSHA1ofSqeuence(im4p);
         
-        error("THIS FEATURE IS NOT IMPLEMENTED YET\n");
+        im4pSHA = getSHA1ofSqeuence(im4p);
+
+        if (!im4p) goto error;
+                reterror(-99,"THIS FEATURE IS NOT IMPLEMENTED YET\n");
         
 #warning TODO IMPLEMENT
         //TODO: set buf to IM4M here
     }
     
     if (!sequenceHasName(buf, "IM4M"))
-        reterror("unable to find IM4M tag");
-    plist_t identity = getBuildIdentityForIM4M(buf, buildmanifest);
+        reterror(-1,"unable to find IM4M tag");
     
+    retassure(-1,asn1ElementsInObject(buf) == 5);
+    
+    char *im4m = asn1ElementAtIndex(buf, 2);
+    char *sig = asn1ElementAtIndex(buf, 3);
+    char *certs = asn1ElementAtIndex(buf, 4);
+    
+    
+    retassure(-2, asn1ElementsInObject(certs) == 2);
+    
+    char *bootAuthority = asn1ElementAtIndex(certs, 0);
+    char *tssAuthority = asn1ElementAtIndex(certs, 1);
+    
+    if ((err = verify_signature(im4m, sig, tssAuthority)))
+        reterror((err < 0) ? err : 1, "Signature verification of IM4M failed with error=%d\n",err);
+    
+    
+#warning TODO verify certificate chain
+    
+    plist_t identity = getBuildIdentityForIM4M(buf, buildmanifest);
     printf("\n");
     if (identity){
         printf("IM4M is valid for the given BuildManifest for the following restore:\n");
         printGeneralBuildIdentityInformation(identity);
         
     }else{
-        printf("IM4M is not valid for any restore within the Buildmanifest\n");
-        error = 1;
+        reterror(2,"IM4M is not valid for any restore within the Buildmanifest\n");
     }
-        
-    printf("\n");
+
 error:
     safeFree(im4pSHA);
-    return error;
+    return err;
 #undef reterror
 }
 
