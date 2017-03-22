@@ -12,8 +12,8 @@
 #define error(a ...) printf("[Error] %s: ",__func__),printf(a)
 #define warning(a ...) printf("[Warning] %s: ",__func__),printf(a)
 
-#define VERSION_COMMIT_COUNT "undefined version number" //"66"
-#define VERSION_COMMIT_SHA "undefined version commit"   //"f3e5dc1fc85510856b8aebda4451cdfcbbc4706b"
+#define VERSION_COMMIT_COUNT "85"
+#define VERSION_COMMIT_SHA "17060e500a853a9b4ed860f246d3aa0a90258e31"
 
 
 #endif /* all_h */

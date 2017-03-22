@@ -49,7 +49,7 @@ char *im4mFormShshFile(const char *shshfile){
     
     plist_free(shshplist);
     
-    return im4m;
+    return im4msize ? im4m : NULL;
 }
 
 char *readFromFile(const char *filePath){
@@ -407,6 +407,20 @@ int main(int argc, const char * argv[]) {
             }
         }else if(sequenceHasName(buf, "IM4P")){
             im4pbuf = buf;
+        }else if(sequenceHasName(buf, "IM4M")){
+            
+            FILE *f = fopen(im4mFile, "wb");
+            if (!f) {
+                error("can't open file %s\n",im4mFile);
+                return -1;
+            }
+            
+            t_asn1ElemLen len = asn1Len((char*)buf+1);
+            size_t flen = len.dataLen + len.sizeBytes +1;
+            fwrite(buf, flen, 1, f);
+            fclose(f);
+            printf("[Success] extracted IM4M to %s\n",im4mFile);
+
         }else{
             char *name;
             size_t nameLen;
