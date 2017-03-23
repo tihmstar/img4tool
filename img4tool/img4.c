@@ -1047,6 +1047,28 @@ int find_dgst_cb(char elemNameStr[4], char *dgstData, size_t dgstDataLen, void *
     return memcmp(dgstData, state, dgstDataLen) == 0 ? -255 : 0; //-255 is not an error in this case, but indicates that we found our hash
 }
 
+int verifyIM4MSignature(const char *buf){
+    int err = 0;
+#define reterror(code,a ...){error(a);err=code;goto error;}
+ 
+    retassure(-1,asn1ElementsInObject(buf) == 5);
+    char *im4m = asn1ElementAtIndex(buf, 2);
+    char *sig = asn1ElementAtIndex(buf, 3);
+    char *certs = asn1ElementAtIndex(buf, 4);
+    
+    
+    retassure(-2, asn1ElementsInObject(certs) == 2);
+    
+    char *bootAuthority = asn1ElementAtIndex(certs, 0);
+    char *tssAuthority = asn1ElementAtIndex(certs, 1);
+    
+    err = verify_signature(im4m, sig, tssAuthority);
+    
+error:
+    return err;
+#undef reterror
+}
+
 int verifyIMG4(char *buf, plist_t buildmanifest){
     //return 0 on valid file, positive value on invalid file, negative value when errors occured
     int err = 0;
@@ -1065,8 +1087,6 @@ int verifyIMG4(char *buf, plist_t buildmanifest){
     if (!sequenceHasName(buf, "IM4M"))
         reterror(-1,"unable to find IM4M tag");
     
-    retassure(-2,asn1ElementsInObject(buf) == 5);
-    
     if (im4pSHA){
         if (doForDGSTinIM4M(buf, im4pSHA, find_dgst_cb) == -255)
             printf("[OK] IM4P is valid for the attached IM4M\n");
@@ -1074,18 +1094,7 @@ int verifyIMG4(char *buf, plist_t buildmanifest){
             reterror(1,"IM4P can't be verified by IM4M\n");
     }
     
-    
-    char *im4m = asn1ElementAtIndex(buf, 2);
-    char *sig = asn1ElementAtIndex(buf, 3);
-    char *certs = asn1ElementAtIndex(buf, 4);
-    
-    
-    retassure(-3, asn1ElementsInObject(certs) == 2);
-    
-    char *bootAuthority = asn1ElementAtIndex(certs, 0);
-    char *tssAuthority = asn1ElementAtIndex(certs, 1);
-    
-    if ((err = verify_signature(im4m, sig, tssAuthority))){
+    if ((err = verifyIM4MSignature(buf))){
         reterror((err < 0) ? err : 2, "Signature verification of IM4M failed with error=%d\n",err);
     }else
         printf("[OK] IM4M signature is verified by TssAuthority\n");

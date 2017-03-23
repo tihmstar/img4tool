@@ -123,6 +123,7 @@ char *getIM4PFromIMG4(char *buf);
 char *getIM4MFromIMG4(char *buf);
 
 int replaceNameInIM4P(char *buf, const char *newName);
+int verifyIM4MSignature(const char *buf);
 int verifyIMG4(char *buf, plist_t buildmanifest);
     
 plist_t getBuildIdentityForIM4M(const char *buf, const plist_t buildmanifest);
