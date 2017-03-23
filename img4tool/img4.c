@@ -759,7 +759,8 @@ char *getSHA1ofSqeuence(char * buf){
 
 int hasBuildidentityElementWithHash(plist_t identity, char *hash, uint64_t hashSize){
 #define reterror(a ...){rt=0;error(a);goto error;}
-#define skipelem(e) if (strcmp(key, e) == 0) {warning("skipping element=%s\n",key);goto skip;}
+#define skipelem(e) if (strcmp(key, e) == 0) {/*warning("skipping element=%s\n",key);*/goto skip;} //seems to work as it is, we don't need to see that warning anymore
+
     int rt = 0;
     plist_dict_iter dictIterator = NULL;
     
@@ -798,11 +799,12 @@ int hasBuildidentityElementWithHash(plist_t identity, char *hash, uint64_t hashS
 error:
     free(dictIterator),dictIterator = NULL;
     return rt;
+#undef skipelem
 #undef reterror
 }
 
 plist_t findAnyBuildidentityForFilehash(plist_t identities, char *hash, uint64_t hashSize){
-#define skipelem(e) if (strcmp(key, e) == 0) {warning("skipping element=%s\n",key);goto skip;}
+#define skipelem(e) if (strcmp(key, e) == 0) {/*warning("skipping element=%s\n",key);*/goto skip;} //seems to work as it is, we don't need to see that warning anymore
 #define reterror(a ...){rt=NULL;error(a);goto error;}
     plist_t rt = NULL;
     plist_dict_iter dictIterator = NULL;
@@ -853,82 +855,111 @@ error:
 #undef skipelem
 }
 
-plist_t getBuildIdentityForIM4M(const char *buf, const plist_t buildmanifest){
-#define reterror(a ...){rt=NULL;error(a);goto error;}
-#define skipelem(e) if (strncmp(elemNameStr, e, 4) == 0) {warning("skipping element=%s\n",e);continue;}
-
-    plist_t manifest = plist_copy(buildmanifest);
-    plist_t rt = NULL;
+int doForDGSTinIM4M(const char *im4m, void *state, int (*loop_cb)(char elemNameStr[4], char *dgstData, size_t dgstDataLen, void *state)){
+    int err = 0;
+#define reterror(code, msg ...) do {error(msg);err=code;goto error;}while(0)
     
-    if (!sequenceHasName(buf, "IM4M"))
-        reterror("can't find IM4M tag\n");
+    if (!sequenceHasName(im4m, "IM4M"))
+        reterror(-1,"can't find IM4M tag\n");
     
-    char *im4mset = (char *)asn1ElementAtIndex(buf, 2);
+    char *im4mset = (char *)asn1ElementAtIndex(im4m, 2);
     if (!im4mset)
-        reterror("can't find im4mset\n");
+        reterror(-2,"can't find im4mset\n");
     char *manbSeq = getValueForTagInSet(im4mset, *(uint32_t*)"BNAM");
     if (!manbSeq)
-        reterror("can't find manbSeq\n");
+        reterror(-3,"can't find manbSeq\n");
     
     char *manbSet = (char*)asn1ElementAtIndex(manbSeq, 1);
     if (!manbSet)
-        reterror("can't find manbSet\n");
-    
-    plist_t identities = plist_dict_get_item(manifest, "BuildIdentities");
-    if (!identities)
-        reterror("can't find BuildIdentities\n");
-    
+        reterror(-4,"can't find manbSet\n");
     
     for (int i=0; i<asn1ElementsInObject(manbSet); i++) {
-        t_asn1Tag *curr = asn1ElementAtIndex(manbSet, i);
+        char *curr = asn1ElementAtIndex(manbSet, i);
         
         size_t sb;
-        if (asn1GetPrivateTagnum(curr, &sb) == *(uint32_t*)"PNAM")
+        if (asn1GetPrivateTagnum((t_asn1Tag*)curr, &sb) == *(uint32_t*)"PNAM")
             continue;
         char *cSeq = (char*)curr+sb;
         cSeq += asn1Len(cSeq).sizeBytes;
         
-        t_asn1Tag *elemName = asn1ElementAtIndex(cSeq, 0);
-        t_asn1ElemLen elemNameLen = asn1Len((char*)elemName+1);
-        char *elemNameStr = (char*)elemName + elemNameLen.sizeBytes+1;
-        
-        skipelem("ftsp");
-        skipelem("ftap");
-        skipelem("rfta");
-        skipelem("rfts");
-        
+        char *elemName = asn1ElementAtIndex(cSeq, 0);
+        t_asn1ElemLen elemNameLen = asn1Len(elemName+1);
+        char *elemNameStr = elemName + elemNameLen.sizeBytes+1;
         
         char *elemSet = (char*)asn1ElementAtIndex(cSeq, 1);
         if (!elemSet)
-            reterror("can't find elemSet. i=%d\n",i);
+            reterror(-5, "can't find elemSet. i=%d\n",i);
         
         char *dgstSeq = getValueForTagInSet(elemSet, *(uint32_t*)"TSGD");
         if (!dgstSeq)
-            reterror("can't find dgstSeq. i=%d\n",i);
+            reterror(-6, "can't find dgstSeq. i=%d\n",i);
         
         
-        t_asn1Tag *dgst = asn1ElementAtIndex(dgstSeq, 1);
-        if (!dgst || dgst->tagNumber != kASN1TagOCTET)
-            reterror("can't find DGST. i=%d\n",i);
+        char *dgst = asn1ElementAtIndex(dgstSeq, 1);
+        if (!dgst || asn1Tag(dgst)->tagNumber != kASN1TagOCTET)
+            reterror(-7, "can't find DGST. i=%d\n",i);
         
         t_asn1ElemLen lenDGST = asn1Len((char*)dgst+1);
         char *dgstData = (char*)dgst+lenDGST.sizeBytes+1;
         
         
-        if (rt){
-            if (!hasBuildidentityElementWithHash(rt, dgstData, lenDGST.dataLen)){
-                //remove identity we are not looking for and start comparing all hashes again
-                plist_array_remove_item(identities, plist_array_get_item_index(rt));
-                i=-1;
-                rt = NULL;
+        if ((err = loop_cb(elemNameStr, dgstData, lenDGST.dataLen, state))){
+            if (err > 0){ //restart loop if err > 0
+                i = -1;
+                err = 0;
+                continue;
             }
-        }else{
-            if (!(rt = findAnyBuildidentityForFilehash(identities, dgstData, lenDGST.dataLen)))
-                reterror("can't find any identity which matches all hashes inside IM4M\n");
+            break;
         }
     }
     
-    plist_t finfo = plist_dict_get_item(rt, "Info");
+error:
+    return err;
+#undef reterror
+}
+
+
+int im4m_buildidentity_check_cb(char elemNameStr[4], char *dgstData, size_t dgstDataLen, struct {plist_t rt; plist_t identities;} *state){
+#define skipelem(e) if (strncmp(e, elemNameStr,4) == 0) return 0
+    skipelem("ftsp");
+    skipelem("ftap");
+    skipelem("rfta");
+    skipelem("rfts");
+    
+    if (state->rt){
+        if (!hasBuildidentityElementWithHash(state->rt, dgstData, dgstDataLen)){
+            //remove identity we are not looking for and start comparing all hashes again
+            plist_array_remove_item(state->identities, plist_array_get_item_index(state->rt));
+            state->rt = NULL;
+            return 1; //trigger loop restart
+        }
+    }else{
+        if (!(state->rt = findAnyBuildidentityForFilehash(state->identities, dgstData, dgstDataLen)))
+            return (error("can't find any identity which matches all hashes inside IM4M\n"),-1);
+        
+    }
+    
+#undef skipelem
+    return 0;
+}
+
+plist_t getBuildIdentityForIM4M(const char *buf, const plist_t buildmanifest){
+#define reterror(a ...){state.rt=NULL;error(a);goto error;}
+#define skipelem(e) if (strncmp(elemNameStr, e, 4) == 0) {/*warning("skipping element=%s\n",e);*/continue;} //seems to work as it is, we don't need to see that warning anymore
+
+    plist_t manifest = plist_copy(buildmanifest);
+    
+    struct {plist_t rt; plist_t identities;} state;
+    state.rt = NULL;
+    
+    state.identities = plist_dict_get_item(manifest, "BuildIdentities");
+    if (!state.identities)
+        reterror("can't find BuildIdentities\n");
+    
+    
+    doForDGSTinIM4M(buf, (void*)&state, (int (*)(char[4], char *, size_t, void *))im4m_buildidentity_check_cb);
+    
+    plist_t finfo = plist_dict_get_item(state.rt, "Info");
     plist_t fdevclass = plist_dict_get_item(finfo, "DeviceClass");
     plist_t fresbeh = plist_dict_get_item(finfo, "RestoreBehavior");
     
@@ -945,7 +976,7 @@ plist_t getBuildIdentityForIM4M(const char *buf, const plist_t buildmanifest){
         plist_t cresbeh = plist_dict_get_item(cinfo, "RestoreBehavior");
         
         if (plist_compare_node_value(cresbeh, fresbeh) && plist_compare_node_value(cdevclass, fdevclass)) {
-            rt = curr;
+            state.rt = curr;
             goto error;
         }
     }
@@ -954,7 +985,7 @@ plist_t getBuildIdentityForIM4M(const char *buf, const plist_t buildmanifest){
     
 error:
     plist_free(manifest);
-    return rt;
+    return state.rt;
 #undef reterror
 }
 
@@ -1009,6 +1040,11 @@ int verify_signature(char *data, char *sig, char *certificate){
 error:
     if(mdctx) EVP_MD_CTX_destroy(mdctx);
     return err;
+#undef reterror
+}
+
+int find_dgst_cb(char elemNameStr[4], char *dgstData, size_t dgstDataLen, void *state){
+    return memcmp(dgstData, state, dgstDataLen) == 0 ? -255 : 0; //-255 is not an error in this case, but indicates that we found our hash
 }
 
 int verifyIMG4(char *buf, plist_t buildmanifest){
@@ -1019,45 +1055,50 @@ int verifyIMG4(char *buf, plist_t buildmanifest){
     if (sequenceHasName(buf, "IMG4")){
         //verify IMG4
         char *im4p = getIM4PFromIMG4(buf);
-        
         im4pSHA = getSHA1ofSqeuence(im4p);
 
         if (!im4p) goto error;
-                reterror(-99,"THIS FEATURE IS NOT IMPLEMENTED YET\n");
         
-#warning TODO IMPLEMENT
-        //TODO: set buf to IM4M here
+        buf = getElementFromIMG4(buf, "IM4M");
     }
     
     if (!sequenceHasName(buf, "IM4M"))
         reterror(-1,"unable to find IM4M tag");
     
-    retassure(-1,asn1ElementsInObject(buf) == 5);
+    retassure(-2,asn1ElementsInObject(buf) == 5);
+    
+    if (im4pSHA){
+        if (doForDGSTinIM4M(buf, im4pSHA, find_dgst_cb) == -255)
+            printf("[OK] IM4P is valid for the attached IM4M\n");
+        else
+            reterror(1,"IM4P can't be verified by IM4M\n");
+    }
+    
     
     char *im4m = asn1ElementAtIndex(buf, 2);
     char *sig = asn1ElementAtIndex(buf, 3);
     char *certs = asn1ElementAtIndex(buf, 4);
     
     
-    retassure(-2, asn1ElementsInObject(certs) == 2);
+    retassure(-3, asn1ElementsInObject(certs) == 2);
     
     char *bootAuthority = asn1ElementAtIndex(certs, 0);
     char *tssAuthority = asn1ElementAtIndex(certs, 1);
     
-    if ((err = verify_signature(im4m, sig, tssAuthority)))
-        reterror((err < 0) ? err : 1, "Signature verification of IM4M failed with error=%d\n",err);
-    
+    if ((err = verify_signature(im4m, sig, tssAuthority))){
+        reterror((err < 0) ? err : 2, "Signature verification of IM4M failed with error=%d\n",err);
+    }else
+        printf("[OK] IM4M signature is verified by TssAuthority\n");
     
 #warning TODO verify certificate chain
     
     plist_t identity = getBuildIdentityForIM4M(buf, buildmanifest);
-    printf("\n");
     if (identity){
-        printf("IM4M is valid for the given BuildManifest for the following restore:\n");
+        printf("[OK] IM4M is valid for the given BuildManifest for the following restore:\n\n");
         printGeneralBuildIdentityInformation(identity);
         
     }else{
-        reterror(2,"IM4M is not valid for any restore within the Buildmanifest\n");
+        reterror(3,"IM4M is not valid for any restore within the Buildmanifest\n");
     }
 
 error:
