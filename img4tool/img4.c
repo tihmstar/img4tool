@@ -778,6 +778,10 @@ int hasBuildidentityElementWithHash(plist_t identity, char *hash, uint64_t hashS
         skipelem("ftsp")
         skipelem("rfta")
         skipelem("rfts")
+        skipelem("SE,Bootloader")
+        skipelem("SE,Firmware")
+        skipelem("SE,MigrationOS")
+        skipelem("SE,OS")
         
         plist_t digest = plist_dict_get_item(node, "Digest");
         if (!digest || plist_get_node_type(digest) != PLIST_DATA)
@@ -1016,7 +1020,7 @@ void printGeneralBuildIdentityInformation(plist_t buildidentity){
     if (iter) free(iter);
 }
 
-int verify_signature(char *data, char *sig, char *certificate){
+int verify_signature(char *data, char *sig, char *certificate, int useSHA384){
     //return 0 if signature valid, 1 if invalid, <0 if error occured
     int err = 0;
     EVP_MD_CTX *mdctx = NULL;
@@ -1031,7 +1035,7 @@ int verify_signature(char *data, char *sig, char *certificate){
     
     retassure(-1, mdctx = EVP_MD_CTX_create());
     
-    retassure(-2, EVP_DigestVerifyInit(mdctx, NULL, EVP_sha1(), NULL, certpubkey) == 1);
+    retassure(-2, EVP_DigestVerifyInit(mdctx, NULL, (useSHA384) ? EVP_sha384() : EVP_sha1(), NULL, certpubkey) == 1);
     
     retassure(-3,EVP_DigestVerifyUpdate(mdctx, data, dataSize.dataLen + dataSize.sizeBytes +1) == 1);
     
@@ -1056,13 +1060,13 @@ int verifyIM4MSignature(const char *buf){
     char *sig = asn1ElementAtIndex(buf, 3);
     char *certs = asn1ElementAtIndex(buf, 4);
     
+    int elems = 0;
+    retassure(-2, (elems = asn1ElementsInObject(certs)) >=1); //iPhone7 has 1 cert, while pre-iPhone7 have 2 certs
     
-    retassure(-2, asn1ElementsInObject(certs) == 2);
+//    char *bootAuthority = asn1ElementAtIndex(certs, 0); //does not exist on iPhone7
+    char *tssAuthority = asn1ElementAtIndex(certs, elems-1); //is always last item
     
-    char *bootAuthority = asn1ElementAtIndex(certs, 0);
-    char *tssAuthority = asn1ElementAtIndex(certs, 1);
-    
-    err = verify_signature(im4m, sig, tssAuthority);
+    err = verify_signature(im4m, sig, tssAuthority, elems < 2); //use SHA384 if elems is 2 otherwise use SHA1
     
 error:
     return err;
