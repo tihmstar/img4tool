@@ -78,37 +78,35 @@ int asn1ElementAtIndexWithCounter(const char *buf, int index, t_asn1Tag **tagret
     t_asn1ElemLen len = asn1Len(++buf);
     
     buf +=len.sizeBytes;
-    if (index == 0 && tagret){
-        *tagret = (t_asn1Tag *)buf;
-        return 1;
-    }
-    if (*buf == kASN1TagPrivate){
-        size_t sb;
-        asn1GetPrivateTagnum((t_asn1Tag*)buf,&sb);
-        buf+=sb;
-        len.dataLen-=sb;
-    }else buf++;
     
+#warning TODO add lenght and range checks
     while (len.dataLen) {
+        if (ret == index && tagret){
+            *tagret = (t_asn1Tag*)buf;
+            return ret;
+        }
+        
+        if (*buf == kASN1TagPrivate) {
+            size_t sb;
+            asn1GetPrivateTagnum((t_asn1Tag*)buf,&sb);
+            buf+=sb;
+            len.dataLen-=sb;
+        }else if (*buf == (char)0x9F){
+            //buf is element in set and it's value is encoded in the next byte
+            t_asn1ElemLen l = asn1Len(++buf);
+            if (l.sizeBytes > 1) l.dataLen += 0x80;
+            buf += l.sizeBytes;
+            len.dataLen -= 1 + l.sizeBytes;
+        }else
+            buf++,len.dataLen--;
+        
         t_asn1ElemLen sublen = asn1Len(buf);
         size_t toadd =sublen.dataLen + sublen.sizeBytes;
         len.dataLen -=toadd;
         buf +=toadd;
         ret ++;
-        if (len.dataLen <=1) break;
-        if (--index == 0 && tagret){
-            *tagret = (t_asn1Tag*)buf;
-            return ret;
-        }
-        if (*buf == kASN1TagPrivate){
-            size_t sb;
-            asn1GetPrivateTagnum((t_asn1Tag*)buf,&sb);
-            buf+=sb;
-            len.dataLen-=sb;
-            
-        } else buf++,len.dataLen--;
-        
     }
+    
     return ret;
 }
 
