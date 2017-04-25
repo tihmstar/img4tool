@@ -118,7 +118,7 @@ char *getElementFromIMG4(char *buf, char* element);
 int extractElementFromIMG4(char *buf, char* element, const char *dstFilename);
 char *makeIMG4(char *im4p, char *im4m, char *im4r, size_t *size);
 
-
+char *getBNCHFromIM4M(const char* im4m, size_t *nonceSize);
 char *getIM4PFromIMG4(char *buf);
 char *getIM4MFromIMG4(char *buf);
 

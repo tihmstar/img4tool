@@ -1071,6 +1071,55 @@ error:
 #undef reterror
 }
 
+char *getBNCHFromIM4M(const char* im4m, size_t *nonceSize){
+#define reterror(a ...){error(a);ret=NULL;goto error;}
+    char *ret = NULL;
+    char *mainSet = NULL;
+    char *manbSet = NULL;
+    char *manpSet = NULL;
+    char *nonceOctet = NULL;
+    char *bnch = NULL;
+    char *manb = NULL;
+    char *manp = NULL;
+    
+    if (!im4m) reterror("Got empty IM4M\n");
+    
+    if (asn1ElementsInObject(im4m)< 3){
+        error("unexpected number of Elements in IM4M sequence\n");
+        goto error;
+    }
+    mainSet = asn1ElementAtIndex(im4m, 2);
+    
+    manb = getValueForTagInSet((char*)mainSet, *(uint32_t*)"BNAM"); //MANB priv Tag
+    if (asn1ElementsInObject(manb)< 2){
+        error("unexpected number of Elements in MANB sequence\n");
+        goto error;
+    }
+    manbSet = asn1ElementAtIndex(manb, 1);
+    
+    manp = getValueForTagInSet((char*)manbSet, *(uint32_t*)"PNAM"); //MANP priv Tag
+    if (asn1ElementsInObject(manp)< 2){
+        error("unexpected number of Elements in MANP sequence\n");
+        goto error;
+    }
+    manpSet = asn1ElementAtIndex(manp, 1);
+    
+    bnch = getValueForTagInSet((char*)manpSet, *(uint32_t*)"HCNB"); //BNCH priv Tag
+    if (asn1ElementsInObject(bnch)< 2){
+        error("unexpected number of Elements in BNCH sequence\n");
+        goto error;
+    }
+    nonceOctet = (char*)asn1ElementAtIndex(bnch, 1);
+    nonceOctet++;
+    
+    ret = nonceOctet + asn1Len(nonceOctet).sizeBytes;
+    if (nonceSize) *nonceSize = asn1Len(nonceOctet).dataLen;
+    
+error:
+    return ret;
+    
+}
+
 int verifyIMG4(char *buf, plist_t buildmanifest){
     //return 0 on valid file, positive value on invalid file, negative value when errors occured
     int err = 0;
@@ -1103,14 +1152,19 @@ int verifyIMG4(char *buf, plist_t buildmanifest){
     
 #warning TODO verify certificate chain
     
-    plist_t identity = getBuildIdentityForIM4M(buf, buildmanifest);
-    if (identity){
-        printf("[OK] IM4M is valid for the given BuildManifest for the following restore:\n\n");
-        printGeneralBuildIdentityInformation(identity);
-        
+    if (buildmanifest) {
+        plist_t identity = getBuildIdentityForIM4M(buf, buildmanifest);
+        if (identity){
+            printf("[OK] IM4M is valid for the given BuildManifest for the following restore:\n\n");
+            printGeneralBuildIdentityInformation(identity);
+            
+        }else{
+            reterror(3,"IM4M is not valid for any restore within the Buildmanifest\n");
+        }
     }else{
-        reterror(3,"IM4M is not valid for any restore within the Buildmanifest\n");
+        warning("No BuildManifest specified, can't verify restore type of APTicket\n");
     }
+    
 
 error:
     safeFree(im4pSHA);

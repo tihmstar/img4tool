@@ -15,7 +15,7 @@ extern "C" {
 
 #include <stdlib.h>
 
-char *im4mFormShshFile(const char *shshfile);
+char *im4mFormShshFile(const char *shshfile, char **generator);
 char *readFromFile(const char *filePath);
 char *parseNonce(const char *nonce,size_t noncelen);
 

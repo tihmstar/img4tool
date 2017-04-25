@@ -18,9 +18,20 @@
 #include "config.h"
 #endif
 
-#define safeFree(buf) if (buf) free(buf), buf = NULL
+#ifdef __APPLE__
+#   include <CommonCrypto/CommonDigest.h>
+#   define SHA1(d, n, md) CC_SHA1(d, n, md)
+#   define SHA384(d, n, md) CC_SHA384(d, n, md)
+#else
+#   include <openssl/sha.h>
+#endif // __APPLE__
 
-char *im4mFormShshFile(const char *shshfile){
+
+#define safeFree(buf) if (buf) free(buf), buf = NULL
+#define swapchar(a,b) ((a) ^= (b),(b) ^= (a),(a) ^= (b)) //swaps a and b, unless they are the same variable
+
+
+char *im4mFormShshFile(const char *shshfile, char **generator){
     FILE *f = fopen(shshfile,"rb");
     if (!f) return NULL;
     fseek(f, 0, SEEK_END);
@@ -46,6 +57,11 @@ char *im4mFormShshFile(const char *shshfile){
     uint64_t im4msize=0;
     
     plist_get_data_val(ticket, &im4m, &im4msize);
+    
+    if (generator){
+        if ((ticket = plist_dict_get_item(shshplist, "generator")))
+            plist_get_string_val(ticket, generator);
+    }
     
     plist_free(shshplist);
     
@@ -170,6 +186,38 @@ void cmd_help(){
     printf("\n");
 }
 
+static int parseHex(const char *nonce, size_t *parsedLen, char *ret, size_t *retSize){
+    size_t nonceLen = strlen(nonce);
+    nonceLen = nonceLen/2 + nonceLen%2; //one byte more if len is odd
+    
+    if (retSize) *retSize = (nonceLen+1)*sizeof(char);
+    if (!ret) return 0;
+    
+    memset(ret, 0, nonceLen+1);
+    unsigned int nlen = 0;
+    
+    int next = strlen(nonce)%2 == 0;
+    char tmp = 0;
+    while (*nonce) {
+        char c = *(nonce++);
+        
+        tmp *=16;
+        if (c >= '0' && c<='9') {
+            tmp += c - '0';
+        }else if (c >= 'a' && c <= 'f'){
+            tmp += 10 + c - 'a';
+        }else if (c >= 'A' && c <= 'F'){
+            tmp += 10 + c - 'A';
+        }else{
+            return -1; //ERROR parsing failed
+        }
+        if ((next =! next) && nlen < nonceLen) ret[nlen++] = tmp,tmp=0;
+    }
+    
+    if (parsedLen) *parsedLen = nlen;
+    return 0;
+}
+
 int main(int argc, const char * argv[]) {
     printf("Version: "VERSION_COMMIT_SHA" - "VERSION_COMMIT_COUNT"\n");
     int error = 0;
@@ -185,6 +233,7 @@ int main(int argc, const char * argv[]) {
     const char *createFile = NULL;
     const char *newPayloadName = NULL;
     const char *rawBytes = NULL;
+    char *generator = NULL;
     
     if (sizeof(uint64_t) != 8){
         printf("[FATAL] sizeof(uint64_t) != 8 (size is %lu byte). This program might function incorrectly\n",sizeof(uint64_t));
@@ -215,7 +264,7 @@ int main(int argc, const char * argv[]) {
                 break;
             case 'v':
                 flags |= FLAG_VERIFY;
-                buildmanifestPath = optarg;
+                if (strcmp(buildmanifestPath = optarg,"NULL") == 0) buildmanifestPath = NULL;
                 break;
             case 's':
                 shshFile = optarg;
@@ -257,7 +306,7 @@ int main(int argc, const char * argv[]) {
         
         img4File = argv[0];
     }else if (shshFile && !(flags & FLAG_CONVERT)){
-        if (!(im4m = im4mFormShshFile(shshFile))){
+        if (!(im4m = im4mFormShshFile(shshFile, &generator))){
             printf("[Error] reading file failed %s\n",shshFile);
             return -1;
         }
@@ -473,12 +522,47 @@ int main(int argc, const char * argv[]) {
         printIM4R(buf);
     }
     if (flags & FLAG_VERIFY) {
-        printf("[IMG4TOOL] file is %s!\n",verifyIMG4(buf,buildManifest) ? "invalid" : "valid");
+        unsigned char genHash[48]; //SHA384 digest length
+        size_t bnchSize = 0;
+        int isIM4M = 0;
+        if (sequenceHasName(buf, "IMG4") || (isIM4M = sequenceHasName(buf, "IM4M"))){
+            char *bnch = getBNCHFromIM4M(isIM4M ? buf : getIM4MFromIMG4(buf), &bnchSize);
+            if (generator) {
+                if (strlen(generator) == 18 && generator[0] == '0' && generator[1] == 'x') {
+                    unsigned char zz[9] = {0};
+                    parseHex(generator+2, NULL, (char*)zz, NULL);
+                    swapchar(zz[0], zz[7]);
+                    swapchar(zz[1], zz[6]);
+                    swapchar(zz[2], zz[5]);
+                    swapchar(zz[3], zz[4]);
+                    
+                    if (bnchSize == 32)
+                        SHA384(zz, 8, genHash);
+                    else
+                        SHA1(zz, 8, genHash);
+                    if (memcmp(genHash, bnch, bnchSize) == 0) {
+                        printf("[OK] verified generator \"%s\" to be valid for BNCH \"",generator);
+                    }else{
+                        printf("[Error] generator does not generate same nonce as inside IM4M, but instead it'll generate \"");
+                    }
+                    
+                    for (int i=0; i<bnchSize; i++)
+                        printf("%02x",*(unsigned char*)(bnch+i));
+                    printf("\"\n");
+                }else
+                    printf("[Error] generator \"%s\" is invalid\n",generator);
+            }
+            printf("[IMG4TOOL] file is %s!\n",verifyIMG4(buf,buildManifest) ? "invalid" : "valid");
+            
+        }
+        else
+            printf("[Error] can't verify non IM4M file\n"),error = -15;
     }
    
 error:
     if (im4m == buf) im4m = NULL;
     if (buildManifest) plist_free(buildManifest);
+    safeFree(generator);
     safeFree(buf);
     safeFree(im4m);
     safeFree(im4p);
