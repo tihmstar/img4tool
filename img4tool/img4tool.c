@@ -30,20 +30,6 @@
 #define safeFree(buf) if (buf) free(buf), buf = NULL
 #define swapchar(a,b) ((a) ^= (b),(b) ^= (a),(a) ^= (b)) //swaps a and b, unless they are the same variable
 
-
-#define MAX_PRINT_LEN 64*1024
-void debug_plist(plist_t plist) {
-    uint32_t size = 0;
-    char* data = NULL;
-    plist_to_xml(plist, &data, &size);
-    if (size <= MAX_PRINT_LEN)
-        printf("%s:printing %i bytes plist:\n%s", __FILE__, size, data);
-    else
-        printf("%s:supressed printing %i bytes plist...\n", __FILE__, size);
-    free(data);
-}
-
-
 char *im4mFormShshFile(const char *shshfile, char **generator){
     FILE *f = fopen(shshfile,"rb");
     if (!f) return NULL;
@@ -159,6 +145,18 @@ char *parseNonce(const char *nonce,size_t noncelen){
 
 
 #ifndef IMG4TOOL_NOMAIN
+#define MAX_PRINT_LEN 64*1024
+void debug_plist(plist_t plist) {
+    uint32_t size = 0;
+    char* data = NULL;
+    plist_to_xml(plist, &data, &size);
+    if (size <= MAX_PRINT_LEN)
+        printf("%s:printing %i bytes plist:\n%s", __FILE__, size, data);
+    else
+        printf("%s:supressed printing %i bytes plist...\n", __FILE__, size);
+    free(data);
+}
+
 static struct option longopts[] = {
     { "help",           no_argument,        NULL, 'h' },
     { "extract",        no_argument,        NULL, 'e' },
