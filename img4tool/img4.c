@@ -780,6 +780,7 @@ int hasBuildidentityElementWithHash(plist_t identity, char *hash, uint64_t hashS
         skipelem("SE,Firmware")
         skipelem("SE,MigrationOS")
         skipelem("SE,OS")
+        skipelem("SE,UpdatePayload")
         
         plist_t digest = plist_dict_get_item(node, "Digest");
         if (!digest || plist_get_node_type(digest) != PLIST_DATA)
@@ -1079,16 +1080,19 @@ char *getBNCHFromIM4M(const char* im4m, size_t *nonceSize){
     char *manpSet = NULL;
     char *nonceOctet = NULL;
     char *bnch = NULL;
+    size_t bnchSize = 0;
     char *manb = NULL;
     char *manp = NULL;
-    
+    char *certs = NULL;
+
     if (!im4m) reterror("Got empty IM4M\n");
     
-    if (asn1ElementsInObject(im4m)< 3){
-        error("unexpected number of Elements in IM4M sequence\n");
+    if (asn1ElementsInObject(im4m) != 5) {
+        error("unexpected number of Elements (%d) in IM4M sequence\n", asn1ElementsInObject(im4m));
         goto error;
     }
     mainSet = asn1ElementAtIndex(im4m, 2);
+    certs = asn1ElementAtIndex(im4m, 4);
     
     manb = getValueForTagInSet((char*)mainSet, *(uint32_t*)"BNAM"); //MANB priv Tag
     if (asn1ElementsInObject(manb)< 2){
@@ -1113,7 +1117,12 @@ char *getBNCHFromIM4M(const char* im4m, size_t *nonceSize){
     nonceOctet++;
     
     ret = nonceOctet + asn1Len(nonceOctet).sizeBytes;
-    if (nonceSize) *nonceSize = asn1Len(nonceOctet).dataLen;
+    bnchSize = asn1Len(nonceOctet).dataLen;
+    // iPhone 7 and above use 32 byte nonce
+    if (bnchSize != (asn1ElementsInObject(certs) == 1 ? 32 : 20)) {
+        reterror("BNCH size incorrect\n");
+    }
+    if (nonceSize) *nonceSize = bnchSize;
     
 error:
     return ret;

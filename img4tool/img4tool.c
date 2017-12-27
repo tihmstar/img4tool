@@ -539,7 +539,7 @@ int main(int argc, const char * argv[]) {
         if (sequenceHasName(buf, "IMG4") || (isIM4M = sequenceHasName(buf, "IM4M"))){
             char *bnch = getBNCHFromIM4M(isIM4M ? buf : getIM4MFromIMG4(buf), &bnchSize);
             if (generator) {
-                if (strlen(generator) == 18 && generator[0] == '0' && generator[1] == 'x') {
+                if (bnch && strlen(generator) == 18 && generator[0] == '0' && generator[1] == 'x') {
                     unsigned char zz[9] = {0};
                     parseHex(generator+2, NULL, (char*)zz, NULL);
                     swapchar(zz[0], zz[7]);
@@ -560,10 +560,16 @@ int main(int argc, const char * argv[]) {
                     for (int i=0; i<bnchSize; i++)
                         printf("%02x",*(unsigned char*)(bnch+i));
                     printf("\"\n");
-                }else
-                    printf("[Error] generator \"%s\" is invalid\n",generator);
+                } else if (bnch) {
+                    printf("[Error] generator \"%s\" is invalid\n", generator);
+                    error = -16;
+                } else {
+                    printf("[Error] Failed to validate generator.\n");
+                    error = -17;
+                }
             }
-            printf("[IMG4TOOL] file is %s!\n",verifyIMG4(buf,buildManifest) ? "invalid" : "valid");
+            if (!error)
+                printf("[IMG4TOOL] file is %s!\n",verifyIMG4(buf,buildManifest) ? "invalid" : "valid");
             
         }
         else
