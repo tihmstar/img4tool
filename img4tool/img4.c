@@ -12,7 +12,7 @@
 #include <string.h>
 #include <sys/types.h>
 #include <stdint.h>
-
+#include "lzssdec.h"
 
 #warning TODO adjust this for __APPLE__
 #include <openssl/x509.h>
@@ -299,6 +299,12 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
     t_asn1ElemLen dlen = asn1Len(dataTag);
     char *data = dataTag+dlen.sizeBytes;
     
+    char *kernel = NULL;
+    if ((kernel = tryLZSS(data, &dlen.dataLen))){
+        data = kernel;
+        printf("Kernelcache detected, uncompressing...\n");
+    }
+    
     FILE *f = fopen(dstFilename, "wb");
     if (!f) {
         error("can't open file %s\n",dstFilename);
@@ -306,6 +312,9 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
     }
     fwrite(data, dlen.dataLen, 1, f);
     fclose(f);
+    
+    if (kernel)
+        free(kernel);
     
     return 0;
 }
