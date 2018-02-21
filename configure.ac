@@ -28,7 +28,6 @@ AC_TYPE_UINT64_T
 
 # Checks for library functions.
 AC_FUNC_ERROR_AT_LINE
-AC_FUNC_MALLOC
 AC_CHECK_FUNCS([memmove memset])
 
 case $CFLAGS in
