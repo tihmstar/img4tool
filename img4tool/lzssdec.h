@@ -9,6 +9,7 @@
 #define lzssdec_h
 
 #include <stdint.h>
+#include <stdlib.h>
 
 char *tryLZSS(char *compressed, size_t *filesize);
 
