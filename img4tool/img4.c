@@ -15,9 +15,10 @@
 #include "lzssdec.h"
 
 #warning TODO adjust this for __APPLE__
+#ifndef IMG4TOOL_NOOPENSSL
 #include <openssl/x509.h>
 #include <openssl/evp.h>
-
+#endif
 
 #ifdef __APPLE__
 #   include <CommonCrypto/CommonDigest.h>
@@ -1028,6 +1029,7 @@ void printGeneralBuildIdentityInformation(plist_t buildidentity){
 }
 
 int verify_signature(char *data, char *sig, char *certificate, int useSHA384){
+#ifndef IMG4TOOL_NOOPENSSL
     //return 0 if signature valid, 1 if invalid, <0 if error occured
     int err = 0;
     EVP_MD_CTX *mdctx = NULL;
@@ -1052,6 +1054,10 @@ error:
     if(mdctx) EVP_MD_CTX_destroy(mdctx);
     return err;
 #undef reterror
+#else
+    printf("[FATAL!] can't verify signature, because img4tool was compiled without openssl\n");
+    return 0;
+#endif
 }
 
 int find_dgst_cb(char elemNameStr[4], char *dgstData, size_t dgstDataLen, void *state){

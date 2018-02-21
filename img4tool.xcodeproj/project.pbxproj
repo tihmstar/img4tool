@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		871209991E83D57F00240643 /* libcrypto.1.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 871209981E83D57F00240643 /* libcrypto.1.0.0.dylib */; };
+		87192823200677F8005144BB /* lzssdec.c in Sources */ = {isa = PBXBuildFile; fileRef = 87192822200677F8005144BB /* lzssdec.c */; };
 		877A50DC1D2AB28A0058331C /* libplist.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 877A50DB1D2AB28A0058331C /* libplist.3.dylib */; };
 		8783074A1D1149E400866EF5 /* img4.c in Sources */ = {isa = PBXBuildFile; fileRef = 878307481D1149E400866EF5 /* img4.c */; };
 		87AD68BE1D8AD1E80094A99F /* img4tool.c in Sources */ = {isa = PBXBuildFile; fileRef = 87AD68BC1D8AD1E80094A99F /* img4tool.c */; };
@@ -27,6 +28,8 @@
 
 /* Begin PBXFileReference section */
 		871209981E83D57F00240643 /* libcrypto.1.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.1.0.0.dylib; path = ../../../../usr/local/Cellar/openssl/1.0.2k/lib/libcrypto.1.0.0.dylib; sourceTree = "<group>"; };
+		87192821200677F8005144BB /* lzssdec.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lzssdec.h; sourceTree = "<group>"; };
+		87192822200677F8005144BB /* lzssdec.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lzssdec.c; sourceTree = "<group>"; };
 		877A50DB1D2AB28A0058331C /* libplist.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libplist.3.dylib; path = ../../../../usr/local/lib/libplist.3.dylib; sourceTree = "<group>"; };
 		8783073E1D11499E00866EF5 /* img4tool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = img4tool; sourceTree = BUILT_PRODUCTS_DIR; };
 		878307481D1149E400866EF5 /* img4.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = img4.c; sourceTree = "<group>"; };
@@ -79,6 +82,8 @@
 			isa = PBXGroup;
 			children = (
 				87AD68BF1D8AD1F80094A99F /* all_img4tool.h */,
+				87192821200677F8005144BB /* lzssdec.h */,
+				87192822200677F8005144BB /* lzssdec.c */,
 				878307491D1149E400866EF5 /* img4.h */,
 				878307481D1149E400866EF5 /* img4.c */,
 				87AD68BD1D8AD1E80094A99F /* img4tool.h */,
@@ -144,6 +149,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				8783074A1D1149E400866EF5 /* img4.c in Sources */,
+				87192823200677F8005144BB /* lzssdec.c in Sources */,
 				87AD68BE1D8AD1E80094A99F /* img4tool.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
