@@ -14,19 +14,17 @@
 #include <stdint.h>
 #include "lzssdec.h"
 
-#warning TODO adjust this for __APPLE__
 #ifndef IMG4TOOL_NOOPENSSL
-#include <openssl/x509.h>
-#include <openssl/evp.h>
-#endif
-
-#ifdef __APPLE__
+#   include <openssl/x509.h>
+#   include <openssl/evp.h>
+#   include <openssl/sha.h>
+#elif defined(__APPLE__)
 #   include <CommonCrypto/CommonDigest.h>
 #   define SHA1(d, n, md) CC_SHA1(d, n, md)
 #   define SHA_DIGEST_LENGTH CC_SHA1_DIGEST_LENGTH
 #else
-#   include <openssl/sha.h>
-#endif // __APPLE__
+#   error openssl is required on non-Apple
+#endif
 
 #define safeFree(buf) if (buf) free(buf), buf = NULL
 #define assure(a) do{ if ((a) == 0){err=1; goto error;} }while(0)
