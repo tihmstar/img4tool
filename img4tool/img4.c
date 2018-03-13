@@ -1139,7 +1139,7 @@ char *getBNCHFromIM4M(const char* im4m, size_t *nonceSize){
     
 error:
     return ret;
-    
+#undef reterror
 }
 
 int verifyIMG4(char *buf, plist_t buildmanifest){
