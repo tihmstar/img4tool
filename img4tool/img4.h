@@ -129,6 +129,7 @@ int verifyIMG4(char *buf, plist_t buildmanifest);
 plist_t getBuildIdentityForIM4M(const char *buf, const plist_t buildmanifest);
 void printGeneralBuildIdentityInformation(plist_t buildidentity);
 
+char* extractKernelFromIM4P(const char* buf, const char** compname, size_t *len);
 
 #ifdef __cplusplus
 }
