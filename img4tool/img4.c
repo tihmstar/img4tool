@@ -14,6 +14,10 @@
 #include <stdint.h>
 #include "lzssdec.h"
 
+#ifdef IMG4TOOL_LZFSE
+#include <lzfse.h>
+#endif
+
 #ifndef IMG4TOOL_NOOPENSSL
 #   include <openssl/x509.h>
 #   include <openssl/evp.h>
@@ -299,11 +303,54 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
     char *data = dataTag+dlen.sizeBytes;
     
     char *kernel = NULL;
-    if ((kernel = tryLZSS(data, &dlen.dataLen))){
-        data = kernel;
-        printf("Kernelcache detected, uncompressing...\n");
+    const char* comp = NULL;
+
+    if (strncmp(data, "complzss", 8) == 0) {
+        comp = "lzss";
+
+        if ((kernel = tryLZSS(data, &dlen.dataLen))){
+            data = kernel;
+        }
+    } else if (strncmp(data, "bvx2", 4) == 0) {
+        comp = "lzfse";
+#ifdef IMG4TOOL_LZFSE
+        char *compTag = data + dlen.dataLen;
+        char *fakeCompSizeTag = asn1ElementAtIndex(compTag, 0);
+        char *uncompSizeTag = asn1ElementAtIndex(compTag, 1);
+
+        size_t fake_src_size = ans1GetNumberFromTag(asn1Tag(fakeCompSizeTag));
+        size_t dst_size = ans1GetNumberFromTag(asn1Tag(uncompSizeTag));
+
+        size_t src_size = dlen.dataLen;
+
+        if (fake_src_size != 1) {
+            printf("fake_src_size not 1 but 0x%zx!\n", fake_src_size);
+        }
+
+        kernel = malloc(dst_size);
+
+        size_t uncomp_size = lzfse_decode_buffer(
+                (uint8_t*) kernel, dst_size,
+                (uint8_t*) data, src_size,
+                NULL);
+
+        if (uncomp_size != dst_size) {
+            printf("expected to decompress %zu bytes but only got %zu\n", dst_size, uncomp_size);
+            free(kernel);
+            kernel = NULL;
+        } else {
+            data = kernel;
+            dlen.dataLen = dst_size;
+        }
+#else
+        printf("Can't unpack data because img4tool was compiled without lzfse!\n");
+#endif
     }
-    
+
+    if (comp != NULL) {
+        printf("Kernelcache detected, uncompressing (%s): %s\n", comp, kernel ? "ok" : "failure");
+    }
+
     FILE *f = fopen(dstFilename, "wb");
     if (!f) {
         error("can't open file %s\n",dstFilename);
