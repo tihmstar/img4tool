@@ -9,13 +9,14 @@
 #ifndef all_h
 #define all_h
 
-#include <config.h>
-
 #define error(a ...) printf("[Error] %s: ",__func__),printf(a)
 #define warning(a ...) printf("[Warning] %s: ",__func__),printf(a)
 
-#define VERSION_COMMIT_COUNT "103"
-#define VERSION_COMMIT_SHA "3c153b91a0d60c28810e5992df4ba01ae5c8b541"
-
+#ifdef DEBUG //this is for developing with Xcode
+#define IMG4TOOL_VERSION_COMMIT_COUNT "Debug"
+#define IMG4TOOL_VERSION_COMMIT_SHA "Build: " __DATE__ " " __TIME__
+#else
+#include <config.h>
+#endif
 
 #endif /* all_h */

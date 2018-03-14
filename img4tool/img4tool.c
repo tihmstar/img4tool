@@ -230,7 +230,7 @@ static int parseHex(const char *nonce, size_t *parsedLen, char *ret, size_t *ret
 }
 
 int main(int argc, const char * argv[]) {
-    printf("Version: "VERSION_COMMIT_SHA" - "VERSION_COMMIT_COUNT"\n");
+    printf("Version: "IMG4TOOL_VERSION_COMMIT_SHA" - "IMG4TOOL_VERSION_COMMIT_COUNT"\n");
     int error = 0;
     int optindex = 0;
     int opt = 0;

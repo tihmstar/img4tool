@@ -14,7 +14,7 @@
 #include <stdint.h>
 #include "lzssdec.h"
 
-#ifdef IMG4TOOL_LZFSE
+#ifndef IMG4TOOL_NOLZFSE
 #include <lzfse.h>
 #endif
 
@@ -313,7 +313,7 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
         }
     } else if (strncmp(data, "bvx2", 4) == 0) {
         comp = "lzfse";
-#ifdef IMG4TOOL_LZFSE
+#ifndef IMG4TOOL_NOLZFSE
         char *compTag = data + dlen.dataLen;
         char *fakeCompSizeTag = asn1ElementAtIndex(compTag, 0);
         char *uncompSizeTag = asn1ElementAtIndex(compTag, 1);

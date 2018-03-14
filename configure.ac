@@ -12,6 +12,11 @@ AC_PROG_LIBTOOL
 CFLAGS+=" -std=c11"
 AC_PROG_INSTALL
 
+CFLAGS+=" -D IMG4TOOL_VERSION_COMMIT_COUNT=\\\"$(git rev-list --count HEAD | tr -d '\n')\\\""
+CFLAGS+=" -D IMG4TOOL_VERSION_COMMIT_SHA=\\\"$(git rev-parse HEAD | tr -d '\n')\\\""
+
+
+
 # Checks for libraries.
 PKG_CHECK_MODULES(libplist, libplist >= 1.0)
 
@@ -28,13 +33,13 @@ AS_IF([test "x$with_openssl" == xno],
       [AC_DEFINE([IMG4TOOL_NOOPENSSL], [1], [FUCKOFFYOUTRASHFIRE])])
 
 AC_ARG_WITH([lzfse],
-            [AS_HELP_STRING([--with-lzfse],
-            [enable lzfse decompression support])],
+            [AS_HELP_STRING([--without-lzfse],
+            [disable lzfse decompression support])],
           [],
-          [with_lzfse=no])
+          [with_lzfse=yes])
 
-AS_IF([test "x$with_lzfse" != xno],
-      [AC_DEFINE([IMG4TOOL_LZFSE], [], [FUCKYOUAUTOHEADER])])
+AS_IF([test "x$with_lzfse" == xno],
+      [AC_DEFINE([IMG4TOOL_NOLZFSE], [], [FUCKYOUAUTOHEADER])])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h])
