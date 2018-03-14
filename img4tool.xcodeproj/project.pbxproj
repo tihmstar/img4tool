@@ -11,8 +11,8 @@
 		87192823200677F8005144BB /* lzssdec.c in Sources */ = {isa = PBXBuildFile; fileRef = 87192822200677F8005144BB /* lzssdec.c */; };
 		877A50DC1D2AB28A0058331C /* libplist.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 877A50DB1D2AB28A0058331C /* libplist.3.dylib */; };
 		8783074A1D1149E400866EF5 /* img4.c in Sources */ = {isa = PBXBuildFile; fileRef = 878307481D1149E400866EF5 /* img4.c */; };
-		879ADF442059437A00B606EB /* liblzfse.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 879ADF432059437A00B606EB /* liblzfse.dylib */; };
 		87AD68BE1D8AD1E80094A99F /* img4tool.c in Sources */ = {isa = PBXBuildFile; fileRef = 87AD68BC1D8AD1E80094A99F /* img4tool.c */; };
+		87EC363220595E86007F7734 /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 87EC363120595E86007F7734 /* libcompression.tbd */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -39,6 +39,7 @@
 		87AD68BC1D8AD1E80094A99F /* img4tool.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = img4tool.c; sourceTree = "<group>"; };
 		87AD68BD1D8AD1E80094A99F /* img4tool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = img4tool.h; sourceTree = "<group>"; };
 		87AD68BF1D8AD1F80094A99F /* all_img4tool.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = all_img4tool.h; sourceTree = "<group>"; };
+		87EC363120595E86007F7734 /* libcompression.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcompression.tbd; path = usr/lib/libcompression.tbd; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,7 +47,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				879ADF442059437A00B606EB /* liblzfse.dylib in Frameworks */,
+				87EC363220595E86007F7734 /* libcompression.tbd in Frameworks */,
 				871209991E83D57F00240643 /* libcrypto.1.0.0.dylib in Frameworks */,
 				877A50DC1D2AB28A0058331C /* libplist.3.dylib in Frameworks */,
 			);
@@ -58,6 +59,7 @@
 		871209971E83D57E00240643 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				87EC363120595E86007F7734 /* libcompression.tbd */,
 				879ADF432059437A00B606EB /* liblzfse.dylib */,
 				871209981E83D57F00240643 /* libcrypto.1.0.0.dylib */,
 			);

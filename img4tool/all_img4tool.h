@@ -15,6 +15,7 @@
 #ifdef DEBUG //this is for developing with Xcode
 #define IMG4TOOL_VERSION_COMMIT_COUNT "Debug"
 #define IMG4TOOL_VERSION_COMMIT_SHA "Build: " __DATE__ " " __TIME__
+#define HAVE_LIBCOMPRESSION
 #else
 #include <config.h>
 #endif
