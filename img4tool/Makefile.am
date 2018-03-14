@@ -1,5 +1,14 @@
-AM_CFLAGS = $(libplist_CFLAGS) $(libplistmm_CFLAGS) $(libcrypto_CFLAGS)
-AM_LDFLAGS = $(libplist_LIBS) $(libplistmm_LDFLAGS) $(libcrypto_LIBS)
+AM_CFLAGS = $(libplist_CFLAGS) $(libplistmm_CFLAGS)
+AM_LDFLAGS = $(libplist_LIBS) $(libplistmm_LDFLAGS)
+
+if OPENSSL
+AM_CFLAGS += $(libcrypto_CFLAGS)
+AM_LDFLAGS += $(libcrypto_LIBS)
+endif
+
+if LZFSE
+AM_LDFLAGS += -llzfse
+endif
 
 if NOMAIN
 noinst_LTLIBRARIES = libimg4tool.la

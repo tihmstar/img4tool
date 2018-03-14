@@ -14,8 +14,27 @@ AC_PROG_INSTALL
 
 # Checks for libraries.
 PKG_CHECK_MODULES(libplist, libplist >= 1.0)
-PKG_CHECK_MODULES(libcrypto, libcrypto >= 1.0)
 
+AC_ARG_WITH([openssl],
+            [AS_HELP_STRING([--without-openssl],
+            [disable openssl (only works w/ apple)])],
+          [],
+          [with_openssl=yes])
+
+AS_IF([test "x$with_openssl" != xno],
+      [PKG_CHECK_MODULES(libcrypto, libcrypto >= 1.0)])
+
+AS_IF([test "x$with_openssl" == xno],
+      [AC_DEFINE([IMG4TOOL_NOOPENSSL], [1], [FUCKOFFYOUTRASHFIRE])])
+
+AC_ARG_WITH([lzfse],
+            [AS_HELP_STRING([--with-lzfse],
+            [enable lzfse decompression support])],
+          [],
+          [with_lzfse=no])
+
+AS_IF([test "x$with_lzfse" != xno],
+      [AC_DEFINE([IMG4TOOL_LZFSE], [], [FUCKYOUAUTOHEADER])])
 
 # Checks for header files.
 AC_CHECK_HEADERS([stdlib.h string.h])
@@ -39,6 +58,8 @@ case $CFLAGS in
 esac
 
 AM_CONDITIONAL(NOMAIN, test x$nomain == xtrue)
+AM_CONDITIONAL(OPENSSL, test x$with_openssl == xyes)
+AM_CONDITIONAL(LZFSE, test x$with_lzfse == xyes)
 
 AC_CONFIG_FILES([Makefile img4tool/Makefile])
 AC_OUTPUT
