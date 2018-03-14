@@ -6,10 +6,6 @@ AM_CFLAGS += $(libcrypto_CFLAGS)
 AM_LDFLAGS += $(libcrypto_LIBS)
 endif
 
-if LZFSE
-AM_LDFLAGS += -llzfse
-endif
-
 if NOMAIN
 noinst_LTLIBRARIES = libimg4tool.la
 libimg4tool_la_SOURCES = img4tool.c img4.c lzssdec.c

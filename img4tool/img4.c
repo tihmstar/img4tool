@@ -15,7 +15,15 @@
 #include "lzssdec.h"
 
 #ifndef IMG4TOOL_NOLZFSE
-#include <lzfse.h>
+#ifdef HAVE_LIBLZFSE
+#   include <lzfse.h>
+#elif defined(HAVE_LIBCOMPRESSION)
+#   include <compression.h>
+#   define lzfse_decode_buffer(src, src_size, dst, dst_size, scratch) \
+    compression_decode_buffer(src, src_size, dst, dst_size, scratch, COMPRESSION_LZFSE)
+#else
+#   error "either liblzfse or libcompression is needed"
+#endif
 #endif
 
 #ifndef IMG4TOOL_NOOPENSSL

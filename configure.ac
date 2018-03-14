@@ -38,6 +38,20 @@ AC_ARG_WITH([lzfse],
           [],
           [with_lzfse=yes])
 
+AS_IF([test "x$with_lzfse" != xno],
+      [
+        AC_CHECK_LIB([compression], [compression_decode_buffer],
+                     [LDFLAGS+=" -lcompression"
+                      AC_DEFINE([HAVE_LIBCOMPRESSION], [], [why doesnt it])
+                     ],
+          [AC_CHECK_LIB([lzfse], [lzfse_decode_buffer],
+                        [LDFLAGS+=" -llzfse"
+                         AC_DEFINE([HAVE_LIBLZFSE], [], [do this automatically])],
+            [AC_MSG_ERROR([Either libcompression or liblzfse is needed])])
+          ]
+        )
+      ])
+
 AS_IF([test "x$with_lzfse" == xno],
       [AC_DEFINE([IMG4TOOL_NOLZFSE], [], [FUCKYOUAUTOHEADER])])
 
