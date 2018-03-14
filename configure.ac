@@ -18,7 +18,6 @@ CFLAGS+=" -D IMG4TOOL_VERSION_COMMIT_SHA=\\\"$(git rev-parse HEAD | tr -d '\n')\
 
 
 # Checks for libraries.
-PKG_CHECK_MODULES(libplist, libplist >= 1.0)
 
 AC_ARG_WITH([openssl],
             [AS_HELP_STRING([--without-openssl],
@@ -77,6 +76,10 @@ case $CFLAGS in
 esac
 
 AM_CONDITIONAL(NOMAIN, test x$nomain == xtrue)
+
+AS_IF([test x$nomain != xtrue],
+  [PKG_CHECK_MODULES(libplist, libplist >= 1.0)])
+
 AM_CONDITIONAL(OPENSSL, test x$with_openssl == xyes)
 AM_CONDITIONAL(LZFSE, test x$with_lzfse == xyes)
 
