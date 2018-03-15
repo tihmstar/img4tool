@@ -410,7 +410,7 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
 int sequenceHasName(const char *buf, char *name){
     char *magic;
     size_t l;
-    getSequenceName(buf, &magic, &l);
+    if (getSequenceName(buf, &magic, &l)) return 0;
     return strncmp(name, magic, l) == 0;
 }
 
