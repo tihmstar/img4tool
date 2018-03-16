@@ -376,8 +376,8 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
 int sequenceHasName(const char *buf, char *name){
     char *magic;
     size_t l;
-    getSequenceName(buf, &magic, &l);
-    return strncmp(name, magic, l) == 0;
+    int err = getSequenceName(buf, &magic, &l);
+    return !err && strncmp(name, magic, l) == 0;
 }
 
 char *getElementFromIMG4(char *buf, char* element){
