@@ -134,7 +134,7 @@ char *asn1ElementAtIndex(const char *buf, int index){
 int getSequenceName(const char *buf,char**name, size_t *nameLen){
 #define reterror(a ...){error(a); err = -1; goto error;}
     int err = 0;
-    if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSEQUENCE) reterror("not a SEQUENCE");
+    if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSEQUENCE) reterror("not a SEQUENCE\n");
     int elems = asn1ElementsInObject(buf);
     if (!elems) reterror("no elements in SEQUENCE\n");
     size_t len;
@@ -410,8 +410,8 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
 int sequenceHasName(const char *buf, char *name){
     char *magic;
     size_t l;
-    if (getSequenceName(buf, &magic, &l)) return 0;
-    return strncmp(name, magic, l) == 0;
+    int err = getSequenceName(buf, &magic, &l);
+    return !err && strncmp(name, magic, l) == 0;
 }
 
 char *getElementFromIMG4(char *buf, char* element){
