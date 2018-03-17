@@ -299,26 +299,33 @@ error:
 #undef reterror
 }
 
-int extractFileFromIM4P(char *buf, const char *dstFilename){
+char* extractKernelFromIM4P(const char* buf, const char** compname, size_t *len) {
     int elems = asn1ElementsInObject(buf);
-    if (elems < 4){
-        error("not enough elements in SEQUENCE %d\n",elems);
-        return -2;
+    if (elems < 4) {
+        error("not enough elements in SEQUENCE: %d", elems);
+        return NULL;
     }
-    
+
+    char *name = NULL;
+    size_t namelen = 0;
+    char *krnl_tag = asn1ElementAtIndex(buf, 1);
+    char *rv = ans1GetString(krnl_tag, &name, &namelen);
+
+    if (rv == NULL || namelen != 4 || strncmp(name, "krnl", 4) != 0) {
+        printf("Not a krnl\n");
+        return NULL;
+    }
+
     char *dataTag = asn1ElementAtIndex(buf, 3)+1;
     t_asn1ElemLen dlen = asn1Len(dataTag);
     char *data = dataTag+dlen.sizeBytes;
-    
+
     char *kernel = NULL;
     const char* comp = NULL;
 
     if (strncmp(data, "complzss", 8) == 0) {
         comp = "lzss";
-
-        if ((kernel = tryLZSS(data, &dlen.dataLen))){
-            data = kernel;
-        }
+        kernel = tryLZSS(data, len);
     } else if (strncmp(data, "bvx2", 4) == 0) {
         comp = "lzfse";
 #ifndef IMG4TOOL_NOLZFSE
@@ -347,16 +354,43 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
             free(kernel);
             kernel = NULL;
         } else {
-            data = kernel;
-            dlen.dataLen = dst_size;
+            *len = dst_size;
         }
 #else
         printf("Can't unpack data because img4tool was compiled without lzfse!\n");
 #endif
     }
 
-    if (comp != NULL) {
-        printf("Kernelcache detected, uncompressing (%s): %s\n", comp, kernel ? "ok" : "failure");
+    *compname = comp;
+    return kernel;
+}
+
+int extractFileFromIM4P(char *buf, const char *dstFilename){
+    int elems = asn1ElementsInObject(buf);
+    if (elems < 4){
+        error("not enough elements in SEQUENCE %d\n",elems);
+        return -2;
+    }
+
+
+    char *dataTag = asn1ElementAtIndex(buf, 3)+1;
+    t_asn1ElemLen dlen = asn1Len(dataTag);
+    char *data = dataTag+dlen.sizeBytes;
+
+    char* kernel = NULL;
+    {
+        size_t kernel_len = 0;
+        const char* compname = NULL;
+        kernel = extractKernelFromIM4P(buf, &compname, &kernel_len);
+
+        if (compname != NULL) {
+            printf("Kernelcache detected, uncompressing (%s): %s\n", compname, kernel ? "ok" : "failure");
+        }
+
+        if (kernel != NULL) {
+            data = kernel;
+            dlen.dataLen = kernel_len;
+        }
     }
 
     FILE *f = fopen(dstFilename, "wb");
