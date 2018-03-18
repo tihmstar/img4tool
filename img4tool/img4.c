@@ -299,7 +299,7 @@ error:
 #undef reterror
 }
 
-char* extractKernelFromIM4P(const char* buf, const char** compname, size_t *len) {
+char* extractPayloadFromIM4P(const char* buf, const char** compname, size_t *len) {
     int elems = asn1ElementsInObject(buf);
     if (elems < 4) {
         error("not enough elements in SEQUENCE: %d", elems);
@@ -381,7 +381,7 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
     {
         size_t kernel_len = 0;
         const char* compname = NULL;
-        kernel = extractKernelFromIM4P(buf, &compname, &kernel_len);
+        kernel = extractPayloadFromIM4P(buf, &compname, &kernel_len);
 
         if (compname != NULL) {
             printf("Kernelcache detected, uncompressing (%s): %s\n", compname, kernel ? "ok" : "failure");
