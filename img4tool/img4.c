@@ -306,16 +306,6 @@ char* extractPayloadFromIM4P(const char* buf, const char** compname, size_t *len
         return NULL;
     }
 
-    char *name = NULL;
-    size_t namelen = 0;
-    char *krnl_tag = asn1ElementAtIndex(buf, 1);
-    char *rv = ans1GetString(krnl_tag, &name, &namelen);
-
-    if (rv == NULL || namelen != 4 || strncmp(name, "krnl", 4) != 0) {
-        printf("Not a krnl\n");
-        return NULL;
-    }
-
     char *dataTag = asn1ElementAtIndex(buf, 3)+1;
     t_asn1ElemLen dlen = asn1Len(dataTag);
     char *data = dataTag+dlen.sizeBytes;
