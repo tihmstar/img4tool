@@ -85,13 +85,17 @@ char *tryLZSS(char *compressed, size_t *filesize){
     struct compHeader *compHeader = (struct compHeader*)compressed;
     if (!compHeader) return NULL;
     int sig[2] = { 0xfeedfacf, 0x0100000c };
+    int sig2[2] = { 0xfeedface, 0x0000000c };
     
     char *decomp = malloc (ntohl(compHeader->uncompressedSize));
     
     char *feed = memmem(compressed+64, 1024, sig, sizeof(sig));
     
-    if (!feed)
-        return NULL;
+    if (!feed){
+        feed = memmem(compressed+64, 1024, sig2, sizeof(sig2));
+        if (!feed)
+            return NULL;
+    }
     
     feed--;
     int rc = decompress_lzss((void*)decomp, (void*)feed, ntohl(compHeader->compressedSize));
