@@ -32,7 +32,7 @@
 if match_length is greater than this */
 #define NIL       N     /* index for root of binary search trees */
 
-int decompress_lzss(u_int8_t *dst, u_int8_t *src, u_int32_t srclen){
+int decompressed_lzss(u_int8_t *dst, u_int8_t *src, u_int32_t srclen){
     /* ring buffer of size N, with extra F-1 bytes to aid string comparison */
     u_int8_t text_buf[N + F - 1];
     u_int8_t *dststart = dst;
@@ -98,7 +98,7 @@ char *tryLZSS(char *compressed, size_t *filesize){
     }
     
     feed--;
-    int rc = decompress_lzss((void*)decomp, (void*)feed, ntohl(compHeader->compressedSize));
+    int rc = decompressed_lzss((void*)decomp, (void*)feed, ntohl(compHeader->compressedSize));
     if (rc != ntohl(compHeader->uncompressedSize)) {
         return NULL;
     }
