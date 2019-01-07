@@ -187,8 +187,9 @@ void cmd_help(){
     printf("  -v, --verify BUILDMANIFEST\tverify IMG4, IM4M\n");
     printf("  -n, --rename-payload NAME\trename IM4P payload (NAME must be exactly 4 bytes)\n");
     printf("      --raw     <bytes>\t\twrite bytes to file if combined with -c (does nothing else otherwise)\n");
-    printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
-    printf("\n");
+    printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n\n");
+    printf("Homepage: https://github.com/s0uthwest/img4tool\n");
+    printf("Original project: https://github.com/tihmstar/img4tool\n");
 }
 
 static int parseHex(const char *nonce, size_t *parsedLen, char *ret, size_t *retSize){
