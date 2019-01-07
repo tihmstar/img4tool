@@ -15,6 +15,7 @@ img4tool/.DS_Store
 img4tool/.deps
 img4tool/.libs
 img4tool/img4tool
+img4tool/img4tool.exe
 img4tool/*.o
 img4tool/*.a
 img4tool/*.la
