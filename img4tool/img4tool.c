@@ -42,12 +42,10 @@ char *im4mFormShshFile(const char *shshfile, char **generator){
     
     plist_t shshplist = NULL;
     
-    
     if (memcmp(buf, "bplist00", 8) == 0)
         plist_from_bin(buf, (uint32_t)fSize, &shshplist);
     else
         plist_from_xml(buf, (uint32_t)fSize, &shshplist);
-    
     
     plist_t ticket = plist_dict_get_item(shshplist, "ApImg4Ticket");
     
@@ -142,7 +140,6 @@ char *parseNonce(const char *nonce,size_t noncelen){
 #define FLAG_VERIFY     1 << 4
 #define FLAG_CONVERT    1 << 5
 
-
 #ifndef IMG4TOOL_NOMAIN
 #define MAX_PRINT_LEN 64*1024
 void debug_plist(plist_t plist) {
@@ -177,22 +174,20 @@ static struct option longopts[] = {
 void cmd_help(){
     printf("Usage: img4tool [OPTIONS] FILE\n");
     printf("Parses img4, im4p, im4m files\n\n");
-    
     printf("  -h, --help\t\t\tprints usage information\n");
     printf("  -a, --print-all\t\tprint everything from IM4M\n");
     printf("  -i, --im4p-only\t\tprint only IM4P\n");
     printf("  -e, --extract\t\t\textracts im4p payload,im4m,im4p\n");
     printf("  -o, --outfile\t\t\toutput path for extracting im4p payload (does nothing without -e)\n");
-    printf("  -s, --shsh    PATH\t\tFilepath for shsh (for reading/writing im4m)\n");
+    printf("  -s, --shsh    PATH\t\tFilepath for signing blobs (for reading/writing im4m)\n");
     printf("  -c, --create  PATH\t\tcreates an img4 with the specified im4m, im4p\n");
     printf("  -m, --im4m    PATH\t\tFilepath for im4m (reading or writing, depending on -e being set)\n");
     printf("  -p, --im4p    PATH\t\tFilepath for im4p (reading or writing, depending on -e being set)\n");
-    printf("  -r, --im4r    <nonce>\t\tnonce to be set for BNCN in im4r\n");
+    printf("  -r, --im4r    <nonce>\t\tApNonce to be set for BNCN in im4r\n");
     printf("  -v, --verify BUILDMANIFEST\tverify IMG4, IM4M\n");
     printf("  -n, --rename-payload NAME\trename IM4P payload (NAME must be exactly 4 bytes)\n");
     printf("      --raw     <bytes>\t\twrite bytes to file if combined with -c (does nothing else otherwise)\n");
     printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
-    
     printf("\n");
 }
 
@@ -229,7 +224,7 @@ static int parseHex(const char *nonce, size_t *parsedLen, char *ret, size_t *ret
 }
 
 int main(int argc, const char * argv[]) {
-    printf("Version: "IMG4TOOL_VERSION_COMMIT_SHA" - "IMG4TOOL_VERSION_COMMIT_COUNT"\n");
+    printf("Version: "IMG4TOOL_VERSION_COMMIT_SHA" - "IMG4TOOL_VERSION_COMMIT_COUNT"\n"); // versioning
     int error = 0;
     int optindex = 0;
     int opt = 0;
@@ -247,7 +242,7 @@ int main(int argc, const char * argv[]) {
     
     if (sizeof(uint64_t) != 8){
         printf("[FATAL] sizeof(uint64_t) != 8 (size is %lu byte). This program might function incorrectly\n",sizeof(uint64_t));
-//        return 64;
+//      return 64;
     }
     
     char *buf = NULL;
@@ -361,7 +356,6 @@ int main(int argc, const char * argv[]) {
         if (buf) fread(buf, size, 1, f);
         fclose(f);
         
-        
         char *im4pbuf = NULL;
         if (sequenceHasName(buf, "IMG4")){
             im4pbuf = getElementFromIMG4(buf, "IM4P");
@@ -442,7 +436,6 @@ int main(int argc, const char * argv[]) {
             free(xml);
         }
         
-        
         plist_free(newshsh);
         
     }else if (flags & FLAG_EXTRACT) {
@@ -492,7 +485,6 @@ int main(int argc, const char * argv[]) {
             if (extractFileFromIM4P(im4pbuf, extractFile)) printf("[Error] extracting payload from IM4P failed\n");
             else printf("[Success] extracted IM4P payload to %s\n",extractFile);
         }
-        
         
         //creating
     }else if (flags & FLAG_CREATE){

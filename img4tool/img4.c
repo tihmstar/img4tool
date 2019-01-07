@@ -571,7 +571,6 @@ int replaceNameInIM4P(char *buf, const char *newName){
     return 0;
 }
 
-
 char *getValueForTagInSet(char *set, uint32_t tag){
 #define reterror(a) return (error(a),NULL)
     
@@ -835,7 +834,7 @@ char *getSHA1ofSqeuence(char * buf){
 
 int hasBuildidentityElementWithHash(plist_t identity, char *hash, uint64_t hashSize){
 #define reterror(a ...){rt=0;error(a);goto error;}
-#define skipelem(e) if (strcmp(key, e) == 0) {/*warning("skipping element=%s\n",key);*/goto skip;} //seems to work as it is, we don't need to see that warning anymore
+#define skipelem(e) if (strcmp(key, e) == 0) {/* warning("skipping element=%s\n",key); */goto skip;} //seems to work as it is, we don't need to see that warning anymore
 
     int rt = 0;
     plist_dict_iter dictIterator = NULL;
@@ -885,7 +884,7 @@ error:
 }
 
 plist_t findAnyBuildidentityForFilehash(plist_t identities, char *hash, uint64_t hashSize){
-#define skipelem(e) if (strcmp(key, e) == 0) {/*warning("skipping element=%s\n",key);*/goto skip;} //seems to work as it is, we don't need to see that warning anymore
+#define skipelem(e) if (strcmp(key, e) == 0) {/* warning("skipping element=%s\n",key); */goto skip;} //seems to work as it is, we don't need to see that warning anymore
 #define reterror(a ...){rt=NULL;error(a);goto error;}
     plist_t rt = NULL;
     plist_dict_iter dictIterator = NULL;
@@ -999,10 +998,16 @@ error:
 
 int im4m_buildidentity_check_cb(char elemNameStr[4], char *dgstData, size_t dgstDataLen, struct {plist_t rt; plist_t identities;} *state){
 #define skipelem(e) if (strncmp(e, elemNameStr,4) == 0) return 0
-    skipelem("ftsp");
+    skipelem("BasebandFirmware");
     skipelem("ftap");
+    skipelem("ftsp");
     skipelem("rfta");
     skipelem("rfts");
+    skipelem("SE,Bootloader");
+    skipelem("SE,Firmware");
+    skipelem("SE,MigrationOS");
+    skipelem("SE,OS");
+    skipelem("SE,UpdatePayload");
     
     if (state->rt){
         if (!hasBuildidentityElementWithHash(state->rt, dgstData, dgstDataLen)){
@@ -1022,7 +1027,7 @@ int im4m_buildidentity_check_cb(char elemNameStr[4], char *dgstData, size_t dgst
 
 plist_t getBuildIdentityForIM4M(const char *buf, const plist_t buildmanifest){
 #define reterror(a ...){state.rt=NULL;error(a);goto error;}
-#define skipelem(e) if (strncmp(elemNameStr, e, 4) == 0) {/*warning("skipping element=%s\n",e);*/continue;} //seems to work as it is, we don't need to see that warning anymore
+#define skipelem(e) if (strncmp(elemNameStr, e, 4) == 0) {/* warning("skipping element=%s\n",e); */continue;} //seems to work as it is, we don't need to see that warning anymore
 
     plist_t manifest = plist_copy(buildmanifest);
     
@@ -1140,7 +1145,7 @@ int verifyIM4MSignature(const char *buf){
     int elems = 0;
     retassure(-2, (elems = asn1ElementsInObject(certs)) >=1); //iPhone7 has 1 cert, while pre-iPhone7 have 2 certs
     
-//    char *bootAuthority = asn1ElementAtIndex(certs, 0); //does not exist on iPhone7
+//  char *bootAuthority = asn1ElementAtIndex(certs, 0); //does not exist on iPhone7
     char *tssAuthority = asn1ElementAtIndex(certs, elems-1); //is always last item
     
     err = verify_signature(im4m, sig, tssAuthority, elems < 2); //use SHA384 if elems is 2 otherwise use SHA1

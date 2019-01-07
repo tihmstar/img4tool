@@ -9,6 +9,7 @@
 #include "lzssdec.h"
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 /*  LZSS.C -- A Data Compression Program
     ***************************************************************

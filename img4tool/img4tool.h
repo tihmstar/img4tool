@@ -1,6 +1,6 @@
 //
 //  img4tool.h
-//  futurerestore
+//  img4tool
 //
 //  Created by tihmstar on 03.09.16.
 //  Copyright © 2016 tihmstar. All rights reserved.
