@@ -3,13 +3,14 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 46;
+	objectVersion = 47;
 	objects = {
 
 /* Begin PBXBuildFile section */
 		56DA633721E3347300821A21 /* libcrypto.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 56DA633621E3347300821A21 /* libcrypto.3.dylib */; };
 		56DA633921E3348200821A21 /* liblzfse.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 56DA633821E3348200821A21 /* liblzfse.dylib */; };
 		56DA633B21E3348E00821A21 /* libplist.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 56DA633A21E3348E00821A21 /* libplist.3.dylib */; };
+		56DA633D21E3357E00821A21 /* all.h in Sources */ = {isa = PBXBuildFile; fileRef = 56DA633521E3345C00821A21 /* all.h */; };
 		87192823200677F8005144BB /* lzssdec.c in Sources */ = {isa = PBXBuildFile; fileRef = 87192822200677F8005144BB /* lzssdec.c */; };
 		8783074A1D1149E400866EF5 /* img4.c in Sources */ = {isa = PBXBuildFile; fileRef = 878307481D1149E400866EF5 /* img4.c */; };
 		87AD68BE1D8AD1E80094A99F /* img4tool.c in Sources */ = {isa = PBXBuildFile; fileRef = 87AD68BC1D8AD1E80094A99F /* img4tool.c */; };
@@ -136,11 +137,10 @@
 				};
 			};
 			buildConfigurationList = 878307391D11499E00866EF5 /* Build configuration list for PBXProject "img4tool" */;
-			compatibilityVersion = "Xcode 3.2";
+			compatibilityVersion = "Xcode 6.3";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
 			);
 			mainGroup = 878307351D11499E00866EF5;
 			productRefGroup = 8783073F1D11499E00866EF5 /* Products */;
@@ -178,6 +178,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				56DA633D21E3357E00821A21 /* all.h in Sources */,
 				8783074A1D1149E400866EF5 /* img4.c in Sources */,
 				87192823200677F8005144BB /* lzssdec.c in Sources */,
 				87AD68BE1D8AD1E80094A99F /* img4tool.c in Sources */,
@@ -223,9 +224,20 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/include,
+					/opt/local/include,
+				);
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = (
+					/usr/local/lib,
+					/usr/local/opt/openssl/lib,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_BUNDLE_IDENTIFIER = net.tihmstar.img4tool;
+				PRODUCT_NAME = img4tool;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -260,8 +272,19 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = (
+					/usr/local/include,
+					/opt/local/include,
+				);
+				INSTALL_PATH = /usr/local/bin;
+				LIBRARY_SEARCH_PATHS = (
+					/usr/local/lib,
+					/usr/local/opt/openssl/lib,
+				);
 				MACOSX_DEPLOYMENT_TARGET = 10.11;
 				MTL_ENABLE_DEBUG_INFO = NO;
+				PRODUCT_BUNDLE_IDENTIFIER = net.tihmstar.img4tool;
+				PRODUCT_NAME = img4tool;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -277,8 +300,6 @@
 				LIBRARY_SEARCH_PATHS = (
 					/usr/local/lib,
 					/usr/local/opt/openssl/lib,
-					/usr/local/Cellar/openssl/1.0.2k/lib,
-					/usr/local/Cellar/lzfse/1.0/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = /usr/local/opt/openssl/include;
@@ -296,8 +317,6 @@
 				LIBRARY_SEARCH_PATHS = (
 					/usr/local/lib,
 					/usr/local/opt/openssl/lib,
-					/usr/local/Cellar/openssl/1.0.2k/lib,
-					/usr/local/Cellar/lzfse/1.0/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				USER_HEADER_SEARCH_PATHS = /usr/local/opt/openssl/include;
