@@ -1,9 +1,8 @@
 AC_PREREQ([2.69])
-AC_INIT([img4tool], [1.0.0], [tihmstar@gmail.com])
+AC_INIT([img4tool], [1.0.0], [https://github.com/s0uthwest/img4tool])
 AM_INIT_AUTOMAKE([foreign])
 
-
-AC_CONFIG_SRCDIR([img4tool/all_img4tool.h])
+AC_CONFIG_SRCDIR([img4tool/all.h])
 AC_CONFIG_HEADERS([config.h])
 
 # Checks for programs.
@@ -12,13 +11,11 @@ AC_PROG_LIBTOOL
 CFLAGS+=" -std=c11"
 AC_PROG_INSTALL
 
+# Version bump
 CFLAGS+=" -D IMG4TOOL_VERSION_COMMIT_COUNT=\\\"$(git rev-list --count HEAD | tr -d '\n')\\\""
 CFLAGS+=" -D IMG4TOOL_VERSION_COMMIT_SHA=\\\"$(git rev-parse HEAD | tr -d '\n')\\\""
 
-
-
 # Checks for libraries.
-
 AC_ARG_WITH([openssl],
             [AS_HELP_STRING([--without-openssl],
             [disable openssl (only works w/ apple)])],

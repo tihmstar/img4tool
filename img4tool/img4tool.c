@@ -1,5 +1,5 @@
 //
-//  main.c
+//  img4tool.c
 //  img4tool
 //
 //  Created by tihmstar on 15.06.16.
@@ -13,7 +13,7 @@
 #include <plist/plist.h>
 #include "img4.h"
 #include "img4tool.h"
-#include "all_img4tool.h"
+#include "all.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -25,7 +25,6 @@
 #else
 #   include <openssl/sha.h>
 #endif // __APPLE__
-
 
 #define safeFree(buf) if (buf) free(buf), buf = NULL
 #define swapchar(a,b) ((a) ^= (b),(b) ^= (a),(a) ^= (b)) //swaps a and b, unless they are the same variable

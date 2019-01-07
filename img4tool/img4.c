@@ -7,7 +7,7 @@
 //
 
 #include "img4.h"
-#include "all_img4tool.h"
+#include "all.h"
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>

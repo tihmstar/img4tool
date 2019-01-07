@@ -19,7 +19,6 @@ char *im4mFormShshFile(const char *shshfile, char **generator);
 char *readFromFile(const char *filePath);
 char *parseNonce(const char *nonce,size_t noncelen);
 
-    
 #ifdef __cplusplus
 }
 #endif
