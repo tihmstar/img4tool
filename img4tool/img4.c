@@ -820,7 +820,7 @@ error:
 
 char *getSHA1ofSqeuence(char * buf){
     if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSEQUENCE){
-        error("tag not seuqnece");
+        error("tag not sequence");
         return 0;
     }
     t_asn1ElemLen bLen = asn1Len(buf+1);
