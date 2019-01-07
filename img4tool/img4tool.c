@@ -189,7 +189,7 @@ void cmd_help(){
     printf("      --raw     <bytes>\t\twrite bytes to file if combined with -c (does nothing else otherwise)\n");
     printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n\n");
     printf("Homepage: https://github.com/s0uthwest/img4tool\n");
-    printf("Original project: https://github.com/tihmstar/img4tool\n");
+    printf("Original project: https://github.com/tihmstar/img4tool\n");
 }
 
 static int parseHex(const char *nonce, size_t *parsedLen, char *ret, size_t *retSize){
@@ -338,11 +338,9 @@ int main(int argc, const char * argv[]) {
             error("failed to read buildmanifest from %s\n",buildmanifestPath);
             goto error;
         }
-        
     }
     
     if (newPayloadName){
-        
         FILE *f = fopen(img4File, "r");
         if (!f){
             printf("[Error] reading file failed\n");
