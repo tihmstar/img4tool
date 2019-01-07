@@ -110,6 +110,7 @@
 				8783073A1D11499E00866EF5 /* Sources */,
 				8783073B1D11499E00866EF5 /* Frameworks */,
 				8783073C1D11499E00866EF5 /* CopyFiles */,
+				56DA633C21E334D200821A21 /* Version bump */,
 			);
 			buildRules = (
 			);
@@ -150,6 +151,27 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		56DA633C21E334D200821A21 /* Version bump */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Version bump";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "sed -i '.bak' \"s/.*IMG4TOOL_VERSION_COMMIT_COUNT.*/#define IMG4TOOL_VERSION_COMMIT_COUNT \\\"$(git rev-list --count HEAD)\\\"/\" ./img4tool/all.h 2>/dev/null || sed -i \"s/.*IMG4TOOL_VERSION_COMMIT_COUNT.*/#define IMG4TOOL_VERSION_COMMIT_COUNT \\\"$(git rev-list --count HEAD)\\\"/\" ./img4tool/all.h 2>/dev/null\nsed -i '.bak' \"s/.*IMG4TOOL_VERSION_COMMIT_SHA.*/#define IMG4TOOL_VERSION_COMMIT_SHA \\\"$(git rev-parse HEAD)\\\"/\" ./img4tool/all.h 2>/dev/null || sed -i \"s/.*IMG4TOOL_VERSION_COMMIT_SHA.*/#define IMG4TOOL_VERSION_COMMIT_SHA \\\"$(git rev-parse HEAD)\\\"/\" ./img4tool/all.h 2>/dev/null\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		8783073A1D11499E00866EF5 /* Sources */ = {
