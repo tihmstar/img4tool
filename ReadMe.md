@@ -4,11 +4,11 @@ _Parses img4, im4p, im4m files._
 Latest compiled version can be found [here](https://github.com/s0uthwest/img4tool/releases). Linux version goes later. Windows version is supported, but I will not compile it.
 
 ## Compiling
-Run command in terminal `autogen.sh && make`
+Run command in terminal `autogen.sh && make`.
 
 ## Dependencies
 * [openssl](https://github.com/openssl/openssl);
-* [lzfse](https://github.com/lzfse/lzfse);
+* [lzfse](https://github.com/lzfse/lzfse).
 
 ## Report an issue
 You can do it [here](https://github.com/s0uthwest/img4tool/issues).
@@ -17,5 +17,5 @@ You can do it [here](https://github.com/s0uthwest/img4tool/issues).
 Creator of [original project](https://github.com/tihmstar/img4tool) - [tihmstar](https://github.com/tihmstar).
 
 
-ReadMe created on:
+ReadMe updated on:
       2019-01-06
