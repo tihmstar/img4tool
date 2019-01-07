@@ -4,28 +4,27 @@
 //
 //  Code borrowed from: http://newosxbook.com/src.jl?tree=listings&file=joker.c
 //  Coded by Jonathan Levin (a.k.a @Morpheus______), http://newosxbook.com
+//
 
 #include "lzssdec.h"
 #include <string.h>
 #include <stdlib.h>
 
-/**************************************************************
- LZSS.C -- A Data Compression Program
- ***************************************************************
- 4/6/1989 Haruhiko Okumura
- Use, distribute, and modify this program freely.
- Please send me your improved versions.
- PC-VAN      SCIENCE
- NIFTY-Serve PAF01022
- CompuServe  74050,1022
- **************************************************************/
-/*
- *  lzss.c - Package for decompressing lzss compressed objects
+/*  LZSS.C -- A Data Compression Program
+    ***************************************************************
+    4/6/1989 Haruhiko Okumura
+    Use, distribute, and modify this program freely.
+    Please send me your improved versions.
+    PC-VAN      SCIENCE
+    NIFTY-Serve PAF01022
+    CompuServe  74050,1022    */
+
+/*  lzss.c - Package for decompressing lzss compressed objects
  *
  *  Copyright (c) 2003 Apple Computer, Inc.
  *
- *  DRI: Josh de Cesare
- */
+ *  DRI: Josh de Cesare  */
+
 #define N         4096  /* size of ring buffer - must be power of 2 */
 #define F         18    /* upper limit for match_length */
 #define THRESHOLD 2     /* encode string into position and length

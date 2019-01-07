@@ -90,7 +90,7 @@ int asn1ElementAtIndexWithCounter(const char *buf, int index, t_asn1Tag **tagret
     
     buf +=len.sizeBytes;
     
-#warning TODO add lenght and range checks
+/* TO-DO: add lenght and range checks */
     while (len.dataLen) {
         if (ret == index && tagret){
             *tagret = (t_asn1Tag*)buf;
@@ -154,12 +154,10 @@ size_t asn1GetPrivateTagnum(t_asn1Tag *tag, size_t *sizebytes){
     t_asn1ElemLen taglen = asn1Len((char*)++tag);
     taglen.sizeBytes-=1;
     if (taglen.sizeBytes != 4){
-        /* 
-         WARNING: seems like apple's private tag is always 4 bytes long
+      /* WARNING: seems like apple's private tag is always 4 bytes long
          i first assumed 0x84 can be parsed as long size with 4 bytes, 
          but 0x86 also seems to be 4 bytes size even if one would assume it means 6 bytes size.
-         This opens the question what the 4 or 6 nibble means.
-        */
+         This opens the question what the 4 or 6 nibble means. */
         taglen.sizeBytes = 4;
     }
     size_t tagname =0;
@@ -361,7 +359,6 @@ int extractFileFromIM4P(char *buf, const char *dstFilename){
         error("not enough elements in SEQUENCE %d\n",elems);
         return -2;
     }
-
 
     char *dataTag = asn1ElementAtIndex(buf, 3)+1;
     t_asn1ElemLen dlen = asn1Len(dataTag);
@@ -637,7 +634,6 @@ error:
 #undef reterror
 }
 
-
 void printIM4R(char *buf){
 #define reterror(a ...){error(a);goto error;}
     
@@ -759,7 +755,6 @@ void asn1PrintValue(t_asn1Tag *tag){
 }
 
 void asn1PrintRecKeyVal(char *buf){
-    
     if (((t_asn1Tag*)buf)->tagNumber == kASN1TagSEQUENCE) {
         int i;
         if ((i = asn1ElementsInObject(buf)) != 2){
@@ -776,7 +771,6 @@ void asn1PrintRecKeyVal(char *buf){
         return;
     }
     
-    
     //must be a SET
     printf("------------------------------\n");
     for (int i = 0; i<asn1ElementsInObject(buf); i++) {
@@ -788,7 +782,6 @@ void asn1PrintRecKeyVal(char *buf){
         elem += asn1Len(elem+1).sizeBytes;
         asn1PrintRecKeyVal(elem);
     }
-    
 }
 
 void printMANB(char *buf, bool printAll){
@@ -821,12 +814,10 @@ void printMANB(char *buf, bool printAll){
         }
     }
     
-    
 error:
     return;
 #undef reterror
 }
-
 
 char *getSHA1ofSqeuence(char * buf){
     if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSEQUENCE){
@@ -984,14 +975,12 @@ int doForDGSTinIM4M(const char *im4m, void *state, int (*loop_cb)(char elemNameS
         if (!dgstSeq)
             reterror(-6, "can't find dgstSeq. i=%d\n",i);
         
-        
         char *dgst = asn1ElementAtIndex(dgstSeq, 1);
         if (!dgst || asn1Tag(dgst)->tagNumber != kASN1TagOCTET)
             reterror(-7, "can't find DGST. i=%d\n",i);
         
         t_asn1ElemLen lenDGST = asn1Len((char*)dgst+1);
         char *dgstData = (char*)dgst+lenDGST.sizeBytes+1;
-        
         
         if ((err = loop_cb(elemNameStr, dgstData, lenDGST.dataLen, state))){
             if (err > 0){ //restart loop if err > 0
@@ -1007,7 +996,6 @@ error:
     return err;
 #undef reterror
 }
-
 
 int im4m_buildidentity_check_cb(char elemNameStr[4], char *dgstData, size_t dgstDataLen, struct {plist_t rt; plist_t identities;} *state){
 #define skipelem(e) if (strncmp(e, elemNameStr,4) == 0) return 0
@@ -1026,7 +1014,6 @@ int im4m_buildidentity_check_cb(char elemNameStr[4], char *dgstData, size_t dgst
     }else{
         if (!(state->rt = findAnyBuildidentityForFilehash(state->identities, dgstData, dgstDataLen)))
             return (error("can't find any identity which matches all hashes inside IM4M\n"),-1);
-        
     }
     
 #undef skipelem
@@ -1045,7 +1032,6 @@ plist_t getBuildIdentityForIM4M(const char *buf, const plist_t buildmanifest){
     state.identities = plist_dict_get_item(manifest, "BuildIdentities");
     if (!state.identities)
         reterror("can't find BuildIdentities\n");
-    
     
     doForDGSTinIM4M(buf, (void*)&state, (int (*)(char[4], char *, size_t, void *))im4m_buildidentity_check_cb);
     
@@ -1251,8 +1237,7 @@ int verifyIMG4(char *buf, plist_t buildmanifest){
     }else
         printf("[OK] IM4M signature is verified by TssAuthority\n");
     
-#warning TODO verify certificate chain
-    
+/* TO-DO: verify certificate chain */
     if (buildmanifest) {
         plist_t identity = getBuildIdentityForIM4M(buf, buildmanifest);
         if (identity){
@@ -1266,14 +1251,8 @@ int verifyIMG4(char *buf, plist_t buildmanifest){
         warning("No BuildManifest specified, can't verify restore type of APTicket\n");
     }
     
-
 error:
     safeFree(im4pSHA);
     return err;
 #undef reterror
 }
-
-
-
-
-
