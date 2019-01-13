@@ -1008,14 +1008,19 @@ error:
 #undef reterror
 }
 
-
 int im4m_buildidentity_check_cb(char elemNameStr[4], char *dgstData, size_t dgstDataLen, struct {plist_t rt; plist_t identities;} *state){
 #define skipelem(e) if (strncmp(e, elemNameStr,4) == 0) return 0
-    skipelem("ftsp");
+    skipelem("BasebandFirmware");
     skipelem("ftap");
+    skipelem("ftsp);
     skipelem("rfta");
     skipelem("rfts");
-    
+    skipelem("SE,Bootloader");
+    skipelem("SE,Firmware");
+    skipelem("SE,MigrationOS");
+    skipelem("SE,OS");
+    skipelem("SE,UpdatePayload");
+
     if (state->rt){
         if (!hasBuildidentityElementWithHash(state->rt, dgstData, dgstDataLen)){
             //remove identity we are not looking for and start comparing all hashes again
