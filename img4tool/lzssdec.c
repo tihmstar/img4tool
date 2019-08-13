@@ -1,30 +1,28 @@
 //
-//  lzssdec.h
+//  lzssdec.c
 //  img4tool
 //
 //  Code borrowed from: http://newosxbook.com/src.jl?tree=listings&file=joker.c
 //  Coded by Jonathan Levin (a.k.a @Morpheus______), http://newosxbook.com
+//
 
-#include "lzssdec.h"
 #include <string.h>
 #include <stdlib.h>
+#include <sys/types.h>
 
-/**************************************************************
- LZSS.C -- A Data Compression Program
- ***************************************************************
- 4/6/1989 Haruhiko Okumura
- Use, distribute, and modify this program freely.
- Please send me your improved versions.
- PC-VAN      SCIENCE
- NIFTY-Serve PAF01022
- CompuServe  74050,1022
- **************************************************************/
+#include "lzssdec.h"
+
 /*
- *  lzss.c - Package for decompressing lzss compressed objects
- *
- *  Copyright (c) 2003 Apple Computer, Inc.
- *
- *  DRI: Josh de Cesare
+ * LZSS.C -- A data compression program for decompressing lzss compressed objects
+ * 4/6/1989 Haruhiko Okumura
+ * Use, distribute, and modify this program freely.
+ * Please send me your improved versions.
+ * PC-VAN      SCIENCE
+ * NIFTY-Serve PAF01022
+ * CompuServe  74050,1022
+ 
+ * Copyright (c) 2003 Apple Computer, Inc.
+ * DRI: Josh de Cesare
  */
 #define N         4096  /* size of ring buffer - must be power of 2 */
 #define F         18    /* upper limit for match_length */
