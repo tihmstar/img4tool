@@ -16,5 +16,10 @@ AM_LDFLAGS += $(libplist_LIBS) $(libplistmm_LDFLAGS)
 bin_PROGRAMS = img4tool
 img4tool_CFLAGS = $(AM_CFLAGS)
 img4tool_LDADD = $(AM_LDFLAGS)
+
+if WIN32
+img4tool_LDFLAGS = -all-static -static-libgcc -static-libstdc++ $(AM_LDFLAGS)
+endif
+
 img4tool_SOURCES = img4tool.c img4.c lzssdec.c
 endif

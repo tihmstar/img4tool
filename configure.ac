@@ -11,9 +11,24 @@ AC_PROG_LIBTOOL
 CFLAGS+=" -std=c11"
 AC_PROG_INSTALL
 
-# Versioning
+# Versioning.
 CFLAGS+=" -D IMG4TOOL_VERSION_COUNT=\\\"$(git rev-list --count HEAD | tr -d '\n')\\\""
 CFLAGS+=" -D IMG4TOOL_VERSION_SHA=\\\"$(git rev-parse HEAD | tr -d '\n')\\\""
+
+# Checks the platform.
+AC_MSG_CHECKING([whether to enable WIN32 specific flags])
+case "$host_os" in
+*mingw*)
+        win32=true
+        AC_MSG_RESULT([yes])
+	AC_CHECK_TOOL(WINDRES, windres)
+  ;;
+*)
+        win32=false
+        AC_MSG_RESULT([no])
+  ;;
+esac
+AM_CONDITIONAL(WIN32, test x$win32 = xtrue)
 
 # Checks for libraries.
 AC_ARG_WITH([openssl],
