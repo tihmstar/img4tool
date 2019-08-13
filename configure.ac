@@ -52,7 +52,7 @@ AS_IF([test "x$with_lzfse" == xno],
       [AC_DEFINE([IMG4TOOL_NOLZFSE], [], [FUCKYOUAUTOHEADER])])
 
 # Checks for header files.
-AC_CHECK_HEADERS([stdlib.h string.h])
+AC_CHECK_HEADERS([stdlib.h string.h stdio.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL

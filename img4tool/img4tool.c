@@ -43,18 +43,15 @@ char *im4mFormShshFile(const char *shshfile, char **generator){
     
     plist_t shshplist = NULL;
     
-    
     if (memcmp(buf, "bplist00", 8) == 0)
         plist_from_bin(buf, (uint32_t)fSize, &shshplist);
     else
         plist_from_xml(buf, (uint32_t)fSize, &shshplist);
     
-    
     plist_t ticket = plist_dict_get_item(shshplist, "ApImg4Ticket");
     
     char *im4m = 0;
     uint64_t im4msize=0;
-    
     plist_get_data_val(ticket, &im4m, &im4msize);
     
     if (generator){
@@ -108,8 +105,7 @@ plist_t readPlistFromFile(const char *filePath){
 }
 
 char *parseNonce(const char *nonce,size_t noncelen){
-    //    size_t noncelen = 8;
-    
+//  size_t noncelen = 8;
     char *ret = malloc((noncelen+1)*sizeof(char));
     memset(ret, 0, noncelen+1);
     int nlen = 0;
