@@ -6,12 +6,13 @@
 //  Copyright © 2016 tihmstar. All rights reserved.
 //
 
-#include "img4.h"
-#include "all_img4tool.h"
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <stdint.h>
+
+#include "img4.h"
+#include "all.h"
 #include "lzssdec.h"
 
 #ifndef IMG4TOOL_NOLZFSE

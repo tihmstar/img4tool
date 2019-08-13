@@ -1,5 +1,5 @@
 //
-//  main.c
+//  img4tool.c
 //  img4tool
 //
 //  Created by tihmstar on 15.06.16.
@@ -11,12 +11,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <plist/plist.h>
-#include "img4.h"
-#include "img4tool.h"
-#include "all_img4tool.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+
+#include "img4.h"
+#include "img4tool.h"
+#include "all.h"
 
 #ifdef __APPLE__
 #   include <CommonCrypto/CommonDigest.h>
@@ -25,7 +26,6 @@
 #else
 #   include <openssl/sha.h>
 #endif // __APPLE__
-
 
 #define safeFree(buf) if (buf) free(buf), buf = NULL
 #define swapchar(a,b) ((a) ^= (b),(b) ^= (a),(a) ^= (b)) //swaps a and b, unless they are the same variable
@@ -230,7 +230,7 @@ static int parseHex(const char *nonce, size_t *parsedLen, char *ret, size_t *ret
 }
 
 int main(int argc, const char * argv[]) {
-    printf("Version: "IMG4TOOL_VERSION_COMMIT_SHA" - "IMG4TOOL_VERSION_COMMIT_COUNT"\n");
+    printf("Version: "IMG4TOOL_VERSION_SHA" - "IMG4TOOL_VERSION_COUNT"\n");
     int error = 0;
     int optindex = 0;
     int opt = 0;
@@ -248,7 +248,7 @@ int main(int argc, const char * argv[]) {
     
     if (sizeof(uint64_t) != 8){
         printf("[FATAL] sizeof(uint64_t) != 8 (size is %lu byte). This program might function incorrectly\n",sizeof(uint64_t));
-//        return 64;
+//      return 64;
     }
     
     char *buf = NULL;
