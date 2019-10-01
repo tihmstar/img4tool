@@ -67,7 +67,7 @@ char *im4mFormShshFile(const char *shshfile, char **generator){
     return im4msize ? im4m : NULL;
 }
 
-char *readFromFile(const char *filePath){
+char *readFromFile(const char *filePath, size_t *outSize){
     FILE *f = fopen(filePath, "r");
     if (!f) return NULL;
     fseek(f, 0, SEEK_END);
@@ -77,7 +77,8 @@ char *readFromFile(const char *filePath){
     char *ret = malloc(size);
     if (ret) fread(ret, size, 1, f);
     fclose(f);
-    
+    if (outSize) *outSize = size;
+        
     return ret;
 }
 
@@ -136,12 +137,13 @@ char *parseNonce(const char *nonce,size_t noncelen){
     return ret;
 }
 
-#define FLAG_EXTRACT    1 << 0
-#define FLAG_CREATE     1 << 1
-#define FLAG_ALL        1 << 2
-#define FLAG_IM4PONLY   1 << 3
-#define FLAG_VERIFY     1 << 4
-#define FLAG_CONVERT    1 << 5
+#define FLAG_EXTRACT     1 << 0
+#define FLAG_CREATE_IMG4 1 << 1
+#define FLAG_ALL         1 << 2
+#define FLAG_IM4PONLY    1 << 3
+#define FLAG_VERIFY      1 << 4
+#define FLAG_CONVERT     1 << 5
+#define FLAG_CREATE_FILE 1 << 6
 
 
 #ifndef IMG4TOOL_NOMAIN
@@ -172,6 +174,8 @@ static struct option longopts[] = {
     { "verify",         required_argument,  NULL, 'v' },
     { "raw",            required_argument,  NULL, '1' },
     { "convert",        no_argument,        NULL, '2' },
+    { "tag",            required_argument,  NULL, '3' },
+    { "info",           required_argument,  NULL, '4' },
     { NULL, 0, NULL, 0 }
 };
 
@@ -193,7 +197,9 @@ void cmd_help(){
     printf("  -n, --rename-payload NAME\trename IM4P payload (NAME must be exactly 4 bytes)\n");
     printf("      --raw     <bytes>\t\twrite bytes to file if combined with -c (does nothing else otherwise)\n");
     printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
-    
+    printf("      --tag\t\t\tset tag for creating IM4P files from raw\n");
+    printf("      --info\t\t\tset info for creating IM4P files from raw\n");
+
     printf("\n");
 }
 
@@ -244,8 +250,12 @@ int main(int argc, const char * argv[]) {
     const char *createFile = NULL;
     const char *newPayloadName = NULL;
     const char *rawBytes = NULL;
+    const char *tag = NULL;
+    const char *info = NULL;
     char *generator = NULL;
+    size_t img4fileSize = 0;
     
+
     if (sizeof(uint64_t) != 8){
         printf("[FATAL] sizeof(uint64_t) != 8 (size is %lu byte). This program might function incorrectly\n",sizeof(uint64_t));
 //        return 64;
@@ -259,7 +269,7 @@ int main(int argc, const char * argv[]) {
     const char *buildmanifestPath = NULL;
     plist_t buildManifest = NULL;
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:n:1:v:", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:n:v:", longopts, &optindex)) > 0) {
         switch (opt) {
             case '1':
                 rawBytes = optarg;
@@ -269,6 +279,12 @@ int main(int argc, const char * argv[]) {
                 break;
             case '2':
                 flags |= FLAG_CONVERT;
+                break;
+            case '3':
+                tag = optarg;
+                break;
+            case '4':
+                info = optarg;
                 break;
             case 'i':
                 flags |= FLAG_IM4PONLY;
@@ -299,7 +315,7 @@ int main(int argc, const char * argv[]) {
                 extractFile = optarg;
                 break;
             case 'c':
-                flags |= FLAG_CREATE;
+                flags |= FLAG_CREATE_IMG4;
                 createFile = optarg;
                 break;
             case 'e':
@@ -321,20 +337,23 @@ int main(int argc, const char * argv[]) {
             printf("[Error] reading file failed %s\n",shshFile);
             return -1;
         }
-    }else if (!img4File && !(flags & FLAG_CREATE)){
+    }else if (!img4File && !(flags & FLAG_CREATE_IMG4)){
         cmd_help();
         return -2;
     }
     
-    if (!(flags & FLAG_CREATE)){
-        buf = readFromFile(img4File);
+    if (!(flags & FLAG_CREATE_IMG4)){
+        buf = readFromFile(img4File,&img4fileSize);
         if (!buf && !(buf = im4m)){
             printf("[Error] reading file failed %s\n",img4File);
             return -1;
-        }
-        if (*(unsigned char*)buf != 0x30) {
+        }else if (*(unsigned char*)buf != 0x30) {
             printf("[Error] file %s doesn't seem to be img4, im4p, im4m or im4r file\n",img4File);
-            return -5;
+            if (!info || !tag) {
+                return -5;
+            }else{
+                flags |= FLAG_CREATE_FILE;
+            }
         }
     }
     
@@ -496,13 +515,13 @@ int main(int argc, const char * argv[]) {
         
         
         //creating
-    }else if (flags & FLAG_CREATE){
+    }else if (flags & FLAG_CREATE_IMG4){
         size_t bufSize = 0;
         
         if (!rawBytes){
             printf("building img4 with: ");
-            if (im4pFile && (im4p = readFromFile(im4pFile))) printf("IM4P ");
-            if (im4m || (im4mFile && (im4m = readFromFile(im4mFile)))) printf("IM4M ");
+            if (im4pFile && (im4p = readFromFile(im4pFile,NULL))) printf("IM4P ");
+            if (im4m || (im4mFile && (im4m = readFromFile(im4mFile,NULL)))) printf("IM4M ");
             if (im4r) printf("IM4R ");
             if (!im4m && !im4p && !im4r) printf("<empty>");
             printf("\n");
@@ -522,16 +541,38 @@ int main(int argc, const char * argv[]) {
         fclose(f);
         printf("[Success] created %s\n",(rawBytes) ? "file" : "IMG4");
         
-        //printing
-    }else if (sequenceHasName(buf, "IMG4")){
+        
+    }else if (img4File && im4pFile && tag && info){
+        if (!(flags & FLAG_CREATE_FILE)) {
+            error("file already exists!");
+            goto error;
+        }
+        //create new IM4P from raw
+        size_t bufSize = 0;
+        
+        im4p = makeIM4P(tag, info, buf, img4fileSize, &bufSize);
+        
+        FILE *f = fopen(im4pFile, "w");
+        if (!f) {
+            printf("[Error] creating file %s failed\n",im4pFile);
+            goto error;
+        }
+        fwrite(im4p, bufSize, 1, f);
+        fclose(f);
+        printf("[Success] created IM4P file at %s\n",im4pFile);
+        goto error;
+    }//printing
+    else if (buf && sequenceHasName(buf, "IMG4")){
         printElemsInIMG4(buf,(flags & FLAG_ALL), (flags & FLAG_IM4PONLY));
-    }else if(sequenceHasName(buf, "IM4P")){
+    }else if(buf && sequenceHasName(buf, "IM4P")){
         printIM4P(buf);
-    }else if(sequenceHasName(buf, "IM4M")){
+    }else if(buf && sequenceHasName(buf, "IM4M")){
         printIM4M(buf,(flags & FLAG_ALL));
-    }else if (sequenceHasName(buf, "IM4R")){
+    }else if (buf && sequenceHasName(buf, "IM4R")){
         printIM4R(buf);
     }
+        
+        
     if (flags & FLAG_VERIFY) {
         unsigned char genHash[48]; //SHA384 digest length
         size_t bnchSize = 0;

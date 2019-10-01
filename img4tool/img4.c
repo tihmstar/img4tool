@@ -488,9 +488,8 @@ char *asn1PrepandTag(char *buf, t_asn1Tag tag){
     return ret;
 }
 
-char *asn1AppendToTag(char *buf, char *toappend){
+char *asn1AppendToTagWithASN1Len(char *buf, const char *toappend, t_asn1ElemLen apndLen){
     t_asn1ElemLen buflen = asn1Len(buf+1);
-    t_asn1ElemLen apndLen = asn1Len(toappend+1);
     
     //alloc memory for bufdata + buftag + apndData + apndSizebytes + apndTag + maxSizeBytesForBuf
     size_t containerLen;
@@ -508,6 +507,11 @@ char *asn1AppendToTag(char *buf, char *toappend){
     return ret;
 }
 
+char *asn1AppendToTag(char *buf, char *toappend){
+    t_asn1ElemLen apndLen = asn1Len(toappend+1);
+    return asn1AppendToTagWithASN1Len(buf,toappend,apndLen);
+}
+
 char *makeIM4RWithNonce(char *nonce){
     char template[] = {0xA1, 0x23, 0x30, 0x21, 0x16, 0x04, 0x49, 0x4D,
                        0x34, 0x52, 0x31, 0x19, 0xFF, 0x84, 0x92, 0xB9,
@@ -518,6 +522,61 @@ char *makeIM4RWithNonce(char *nonce){
     strncpy(ret+sizeof(template), nonce, 8);
     return ret;
 }
+
+char *makeIM4P(const char *tag, const char *info, const char *buffer, size_t insize, size_t *outsize){
+#warning This functions is such a big mess. Don't even look here if you don't want to get nightmares :(
+    int err = 0;
+    char scratchbuf[0x100] = {};
+    t_asn1ElemLen buflen = {};
+    t_asn1ElemLen newBuflen = {};
+    uint32_t asn1Size = 0;
+    char *sequence = malloc(2);
+    sequence[0] = 0x30;
+    sequence[1] = 0x00;
+
+    char iA5String_IM4P[] = {0x16, 0x04, 0x49, 0x4D, 0x34, 0x50};
+
+    sequence = asn1AppendToTag(sequence, iA5String_IM4P);
+    assure(strlen(tag) == 4);
+
+    iA5String_IM4P[2] = tag[0];
+    iA5String_IM4P[3] = tag[1];
+    iA5String_IM4P[4] = tag[2];
+    iA5String_IM4P[5] = tag[3];
+    
+    sequence = asn1AppendToTag(sequence, iA5String_IM4P);
+
+    assure(strlen(info)<0x70);
+    scratchbuf[0] = 0x16;
+    scratchbuf[1] = (char)strlen(info);
+    memcpy(&scratchbuf[2], info, scratchbuf[1]);
+    
+    sequence = asn1AppendToTag(sequence, scratchbuf);
+
+    buflen = asn1Len(sequence+1);
+
+    
+    newBuflen.dataLen = 0;
+    newBuflen.sizeBytes = 0;
+    sequence = asn1AppendToTagWithASN1Len(sequence, "\x04", newBuflen);
+
+    newBuflen.sizeBytes = asn1MakeSize((char*)&asn1Size, insize) - 1;
+   
+    sequence = asn1AppendToTagWithASN1Len(sequence, (char*)&asn1Size, newBuflen);
+
+    newBuflen.sizeBytes = 0;
+    newBuflen.dataLen = insize-1;
+    sequence = asn1AppendToTagWithASN1Len(sequence, buffer, newBuflen);
+    
+    if (outsize){
+        t_asn1ElemLen retlen = asn1Len(sequence+1);
+        *outsize = 1+ retlen.dataLen + retlen.sizeBytes;
+    }
+    return sequence;
+error:
+    return NULL;
+}
+
 
 char *makeIMG4(char *im4p, char *im4m, char *im4r, size_t *size){
     t_asn1Tag elem0;
