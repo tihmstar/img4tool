@@ -1,6 +1,6 @@
 //
 //  img4tool.h
-//  futurerestore
+//  img4tool
 //
 //  Created by tihmstar on 03.09.16.
 //  Copyright © 2016 tihmstar. All rights reserved.
@@ -19,7 +19,6 @@ char *im4mFormShshFile(const char *shshfile, char **generator);
 char *readFromFile(const char *filePath, size_t *outSize);
 char *parseNonce(const char *nonce,size_t noncelen);
 
-    
 #ifdef __cplusplus
 }
 #endif

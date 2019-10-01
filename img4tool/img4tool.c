@@ -1,5 +1,5 @@
 //
-//  main.c
+//  img4tool.c
 //  img4tool
 //
 //  Created by tihmstar on 15.06.16.
@@ -11,12 +11,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <plist/plist.h>
-#include "img4.h"
-#include "img4tool.h"
-#include "all_img4tool.h"
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+
+#include "img4.h"
+#include "img4tool.h"
+#include "all.h"
 
 #ifdef __APPLE__
 #   include <CommonCrypto/CommonDigest.h>
@@ -25,7 +26,6 @@
 #else
 #   include <openssl/sha.h>
 #endif // __APPLE__
-
 
 #define safeFree(buf) if (buf) free(buf), buf = NULL
 #define swapchar(a,b) ((a) ^= (b),(b) ^= (a),(a) ^= (b)) //swaps a and b, unless they are the same variable
@@ -43,18 +43,15 @@ char *im4mFormShshFile(const char *shshfile, char **generator){
     
     plist_t shshplist = NULL;
     
-    
     if (memcmp(buf, "bplist00", 8) == 0)
         plist_from_bin(buf, (uint32_t)fSize, &shshplist);
     else
         plist_from_xml(buf, (uint32_t)fSize, &shshplist);
     
-    
     plist_t ticket = plist_dict_get_item(shshplist, "ApImg4Ticket");
     
     char *im4m = 0;
     uint64_t im4msize=0;
-    
     plist_get_data_val(ticket, &im4m, &im4msize);
     
     if (generator){
@@ -92,7 +89,6 @@ plist_t readPlistFromFile(const char *filePath){
     char *buf = malloc(size);
     if (!buf)
         return fclose(f),NULL;
-    
     fread(buf, size, 1, f);
     fclose(f);
     
@@ -104,13 +100,11 @@ plist_t readPlistFromFile(const char *filePath){
         plist_from_xml(buf, (uint32_t)size, &rt);
     
     free(buf);
-    
     return rt;
 }
 
 char *parseNonce(const char *nonce,size_t noncelen){
-    //    size_t noncelen = 8;
-    
+//  size_t noncelen = 8;
     char *ret = malloc((noncelen+1)*sizeof(char));
     memset(ret, 0, noncelen+1);
     int nlen = 0;
@@ -181,20 +175,19 @@ static struct option longopts[] = {
 
 void cmd_help(){
     printf("Usage: img4tool [OPTIONS] FILE\n");
-    printf("Parses img4, im4p, im4m files\n\n");
-    
+    printf("Parses img4, im4p, im4p files\n\n");
     printf("  -h, --help\t\t\tprints usage information\n");
-    printf("  -a, --print-all\t\tprint everything from IM4M\n");
-    printf("  -i, --im4p-only\t\tprint only IM4P\n");
-    printf("  -e, --extract\t\t\textracts im4p payload,im4m,im4p\n");
+    printf("  -a, --print-all\t\tprint everything from im4m\n");
+    printf("  -i, --im4p-only\t\tprint only im4p\n");
+    printf("  -e, --extract\t\t\textracts im4m/im4p payload\n");
     printf("  -o, --outfile\t\t\toutput path for extracting im4p payload (does nothing without -e)\n");
     printf("  -s, --shsh    PATH\t\tFilepath for shsh (for reading/writing im4m)\n");
     printf("  -c, --create  PATH\t\tcreates an img4 with the specified im4m, im4p\n");
-    printf("  -m, --im4m    PATH\t\tFilepath for im4m (reading or writing, depending on -e being set)\n");
-    printf("  -p, --im4p    PATH\t\tFilepath for im4p (reading or writing, depending on -e being set)\n");
+    printf("  -m, --im4m    PATH\t\tFilepath for im4m (depending on -e being set)\n");
+    printf("  -p, --im4p    PATH\t\tFilepath for im4p (depending on -e being set)\n");
     printf("  -r, --im4r    <nonce>\t\tnonce to be set for BNCN in im4r\n");
-    printf("  -v, --verify BUILDMANIFEST\tverify IMG4, IM4M\n");
-    printf("  -n, --rename-payload NAME\trename IM4P payload (NAME must be exactly 4 bytes)\n");
+    printf("  -v, --verify BUILDMANIFEST\tverify img4, im4m\n");
+    printf("  -n, --rename-payload NAME\trename im4p payload (NAME must be exactly 4 bytes)\n");
     printf("      --raw     <bytes>\t\twrite bytes to file if combined with -c (does nothing else otherwise)\n");
     printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
     printf("      --tag\t\t\tset tag for creating IM4P files from raw\n");
@@ -206,7 +199,6 @@ void cmd_help(){
 static int parseHex(const char *nonce, size_t *parsedLen, char *ret, size_t *retSize){
     size_t nonceLen = strlen(nonce);
     nonceLen = nonceLen/2 + nonceLen%2; //one byte more if len is odd
-    
     if (retSize) *retSize = (nonceLen+1)*sizeof(char);
     if (!ret) return 0;
     
@@ -217,7 +209,6 @@ static int parseHex(const char *nonce, size_t *parsedLen, char *ret, size_t *ret
     char tmp = 0;
     while (*nonce) {
         char c = *(nonce++);
-        
         tmp *=16;
         if (c >= '0' && c<='9') {
             tmp += c - '0';
@@ -236,7 +227,7 @@ static int parseHex(const char *nonce, size_t *parsedLen, char *ret, size_t *ret
 }
 
 int main(int argc, const char * argv[]) {
-    printf("Version: "IMG4TOOL_VERSION_COMMIT_SHA" - "IMG4TOOL_VERSION_COMMIT_COUNT"\n");
+    printf("Version: "IMG4TOOL_VERSION_SHA" - "IMG4TOOL_VERSION_COUNT"\n");
     int error = 0;
     int optindex = 0;
     int opt = 0;
@@ -258,14 +249,13 @@ int main(int argc, const char * argv[]) {
 
     if (sizeof(uint64_t) != 8){
         printf("[FATAL] sizeof(uint64_t) != 8 (size is %lu byte). This program might function incorrectly\n",sizeof(uint64_t));
-//        return 64;
+//      return 64;
     }
     
     char *buf = NULL;
     char *im4m = NULL;
     char *im4p = NULL;
     char *im4r = NULL;
-    
     const char *buildmanifestPath = NULL;
     plist_t buildManifest = NULL;
     
@@ -304,7 +294,7 @@ int main(int argc, const char * argv[]) {
                 break;
             case 'n':
                 if (strlen(newPayloadName = optarg) != 4){
-                    printf("[Error] new payload name must be exaclty 4 Bytes (currently=\"%s\")\n",newPayloadName);
+                    printf("[Error] new payload name must be exaclty 4 bytes (currently=\"%s\")\n",newPayloadName);
                     exit(-2);
                 }
                 break;
@@ -330,8 +320,9 @@ int main(int argc, const char * argv[]) {
     if (argc-optind == 1) {
         argc -= optind;
         argv += optind;
-        
         img4File = argv[0];
+        
+    // converting & creating
     }else if (shshFile && !(flags & FLAG_CONVERT)){
         if (!(im4m = im4mFormShshFile(shshFile, &generator))){
             printf("[Error] reading file failed %s\n",shshFile);
@@ -362,11 +353,9 @@ int main(int argc, const char * argv[]) {
             error("failed to read buildmanifest from %s\n",buildmanifestPath);
             goto error;
         }
-        
     }
     
     if (newPayloadName){
-        
         FILE *f = fopen(img4File, "r");
         if (!f){
             printf("[Error] reading file failed\n");
@@ -381,7 +370,6 @@ int main(int argc, const char * argv[]) {
         if (buf) fread(buf, size, 1, f);
         fclose(f);
         
-        
         char *im4pbuf = NULL;
         if (sequenceHasName(buf, "IMG4")){
             im4pbuf = getElementFromIMG4(buf, "IM4P");
@@ -389,7 +377,7 @@ int main(int argc, const char * argv[]) {
             im4pbuf = buf;
         }
         if (!im4pbuf){
-            printf("[Error] can't rename IM4P because it wasn't found\n");
+            printf("[Error] can't rename im4p, because it wasn't found\n");
             error = -6;
             goto error;
         }
@@ -398,96 +386,93 @@ int main(int argc, const char * argv[]) {
             error = -7;
             goto error;
         }
-        
         f = fopen(img4File, "w");
         fwrite(buf, size, 1, f);
         fclose(f);
-        printf("[Success] renamed IM4P\n");
+        printf("[Success] renamed im4p\n");
         
-    }else if (flags & FLAG_CONVERT){
+    } else if (flags & FLAG_CONVERT){
         if (!shshFile) {
-            printf("[Error] --convert also requires output to be defined with -s\n");
-            error = -9;
-            goto error;
-        }
+        printf("[Error] --convert also requires output to be defined with -s\n");
+        error = -9;
+        goto error;
+    }
         
-        FILE *im4m = fopen(img4File, "rb");
-        if (!im4m){
-            printf("[Error] reading file failed\n");
-            error= -8;
-            goto error;
-        }
-        fseek(im4m, 0, SEEK_END);
-        size_t size = ftell(im4m);
-        fseek(im4m, 0, SEEK_SET);
+    FILE *im4m = fopen(img4File, "rb");
+    if (!im4m){
+        printf("[Error] reading file failed\n");
+        error= -8;
+        goto error;
+    }
+    fseek(im4m, 0, SEEK_END);
+    size_t size = ftell(im4m);
+    fseek(im4m, 0, SEEK_SET);
+    buf = malloc(size);
+    if (buf) fread(buf, size, 1, im4m);
+    fclose(im4m);
         
-        buf = malloc(size);
-        if (buf) fread(buf, size, 1, im4m);
-        fclose(im4m);
+    plist_t newshsh = plist_new_dict();
+    if (!newshsh){
+        printf("[Error] can't alloc new plist\n");
+        error = -10;
+        goto error;
+    }
         
-        plist_t newshsh = plist_new_dict();
-        if (!newshsh){
-            printf("[Error] can't alloc new plist\n");
-            error = -10;
-            goto error;
-        }
+    plist_t data = plist_new_data(buf, size);
+    plist_dict_set_item(newshsh, "ApImg4Ticket", data);
         
-        plist_t data = plist_new_data(buf, size);
-        
-        plist_dict_set_item(newshsh, "ApImg4Ticket", data);
-        
-        char *xml = NULL;
-        uint32_t xmlSize = 0;
-        plist_to_xml(newshsh, &xml, &xmlSize);
-        
-        if (!xml){
-            printf("[Error] plist to xml failed\n"),error=-11;
+    char *xml = NULL;
+    uint32_t xmlSize = 0;
+    plist_to_xml(newshsh, &xml, &xmlSize);
+    if (!xml){
+        printf("[Error] plist to xml failed\n"),error=-11;
+    }else{
+        FILE *f = NULL;
+        if ((f = fopen(shshFile, "r"))){
+            printf("[Error] shshFile=%s already exists, not overwriting\n",shshFile),error=-12;
+            fclose(f);
         }else{
-            FILE *f = NULL;
-            if ((f = fopen(shshFile, "r"))){
-                printf("[Error] shshFile=%s already exists, not overwriting\n",shshFile),error=-12;
-                fclose(f);
+            f = fopen(shshFile, "w");
+            if (!f){
+                printf("[Error] failed to open shsh file for writing\n"),error=-13;
             }else{
-                f = fopen(shshFile, "w");
-                if (!f){
-                    printf("[Error] failed to open shshfile for writing\n"),error=-13;
-                }else{
-                    if (fwrite(xml, 1, xmlSize, f) != xmlSize)
-                        printf("[Error] saving shsh file failed!\n"),error=-14;
-                    else
-                        printf("Successfully converted IM4M to .shsh\n");
-                    fclose(f);
-                }
+                if (fwrite(xml, 1, xmlSize, f) != xmlSize)
+                    printf("[Error] saving shsh file failed!\n"),error=-14;
+                else
+                    printf("Successfully converted im4m to .shsh\n");
+                fclose(f);
             }
-            free(xml);
         }
-        
-        
-        plist_free(newshsh);
+        free(xml);
+    }
+    plist_free(newshsh);
         
     }else if (flags & FLAG_EXTRACT) {
         char *im4pbuf = NULL;
+        
         if (!im4mFile && !im4pFile && !extractFile){
             printf("[Error] you need to specify at least one of --outfile --im4p --im4m when using -e\n");
             cmd_help();
             goto error;
         }
+        
         if (sequenceHasName(buf, "IMG4")){
             if (im4mFile) {
-                if (extractElementFromIMG4(buf, "IM4M", im4mFile)) printf("[Error] extracting IM4M failed\n");
-                else printf("[Success] extracted IM4M to %s\n",im4mFile);
+                if (extractElementFromIMG4(buf, "IM4M", im4mFile)) printf("[Error] extracting im4m failed\n");
+                else printf("[Success] extracted im4m to %s\n",im4mFile);
             }
             if (im4pFile) {
-                if (extractElementFromIMG4(buf, "IM4P", im4pFile)) printf("[Error] extracting IM4P failed\n");
-                else printf("[Success] extracted IM4P to %s\n",im4pFile);
+                if (extractElementFromIMG4(buf, "IM4P", im4pFile)) printf("[Error] extracting im4p failed\n");
+                else printf("[Success] extracted im4p to %s\n",im4pFile);
             }
             if (extractFile){
                 im4pbuf = getElementFromIMG4(buf, "IM4P");
             }
-        }else if(sequenceHasName(buf, "IM4P")){
-            im4pbuf = buf;
-        }else if(sequenceHasName(buf, "IM4M")){
-            
+    
+            }else if(sequenceHasName(buf, "IM4P")){
+                im4pbuf = buf;
+                
+            }else if(sequenceHasName(buf, "IM4M")){
             FILE *f = fopen(im4mFile, "wb");
             if (!f) {
                 error("can't open file %s\n",im4mFile);
@@ -498,7 +483,7 @@ int main(int argc, const char * argv[]) {
             size_t flen = len.dataLen + len.sizeBytes +1;
             fwrite(buf, flen, 1, f);
             fclose(f);
-            printf("[Success] extracted IM4M to %s\n",im4mFile);
+            printf("[Success] extracted im4m to %s\n",im4mFile);
 
         }else{
             char *name;
@@ -571,8 +556,7 @@ int main(int argc, const char * argv[]) {
     }else if (buf && sequenceHasName(buf, "IM4R")){
         printIM4R(buf);
     }
-        
-        
+    
     if (flags & FLAG_VERIFY) {
         unsigned char genHash[48]; //SHA384 digest length
         size_t bnchSize = 0;
@@ -592,10 +576,11 @@ int main(int argc, const char * argv[]) {
                         SHA384(zz, 8, genHash);
                     else
                         SHA1(zz, 8, genHash);
+                    
                     if (memcmp(genHash, bnch, bnchSize) == 0) {
                         printf("[OK] verified generator \"%s\" to be valid for BNCH \"",generator);
                     }else{
-                        printf("[Error] generator does not generate same nonce as inside IM4M, but instead it'll generate \"");
+                        printf("[Error] generator doesn't generate same ApNonce as inside im4m, but instead it'll generate \"");
                     }
                     
                     for (int i=0; i<bnchSize; i++)
@@ -611,10 +596,8 @@ int main(int argc, const char * argv[]) {
             }
             if (!error)
                 printf("[IMG4TOOL] file is %s!\n",verifyIMG4(buf,buildManifest) ? "invalid" : "valid");
-            
-        }
-        else
-            printf("[Error] can't verify non IM4M file\n"),error = -15;
+        } else
+            printf("[Error] can't verify non-im4m file\n"),error = -15;
     }
    
 error:

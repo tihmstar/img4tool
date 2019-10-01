@@ -6,12 +6,13 @@
 //  Copyright © 2016 tihmstar. All rights reserved.
 //
 
-#include "img4.h"
-#include "all_img4tool.h"
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
 #include <stdint.h>
+
+#include "img4.h"
+#include "all.h"
 #include "lzssdec.h"
 
 #ifndef IMG4TOOL_NOLZFSE
@@ -66,7 +67,6 @@ t_asn1ElemLen asn1Len(const char buf[4]){
 }
 
 char *ans1GetString(char *buf, char **outString, size_t *strlen){
-    
     t_asn1Tag *tag = (t_asn1Tag *)buf;
     
     if (!(tag->tagNumber | kASN1TagIA5String)) {
@@ -90,7 +90,7 @@ int asn1ElementAtIndexWithCounter(const char *buf, int index, t_asn1Tag **tagret
     
     buf +=len.sizeBytes;
     
-#warning TODO add lenght and range checks
+/* TODO: add lenght and range checks */
     while (len.dataLen) {
         if (ret == index && tagret){
             *tagret = (t_asn1Tag*)buf;
@@ -406,7 +406,7 @@ int sequenceHasName(const char *buf, char *name){
 
 char *getElementFromIMG4(char *buf, char* element){
 #define reterror(a ...) return (error(a),NULL)
-    if (!sequenceHasName(buf, "IMG4")) reterror("not img4 sequcence\n");
+    if (!sequenceHasName(buf, "IMG4")) reterror("not img4 sequence\n");
     
     int elems = asn1ElementsInObject(buf);
     for (int i=0; i<elems; i++) {
@@ -886,10 +886,9 @@ error:
 #undef reterror
 }
 
-
-char *getSHA1ofSqeuence(char * buf){
+char *getSHA1ofSequence(char * buf){
     if (((t_asn1Tag*)buf)->tagNumber != kASN1TagSEQUENCE){
-        error("tag not seuqnece");
+        error("tag not sequence");
         return 0;
     }
     t_asn1ElemLen bLen = asn1Len(buf+1);
@@ -975,6 +974,11 @@ plist_t findAnyBuildidentityForFilehash(plist_t identities, char *hash, uint64_t
             skipelem("ftsp")
             skipelem("rfta")
             skipelem("rfts")
+            skipelem("SE,Bootloader")
+            skipelem("SE,Firmware")
+            skipelem("SE,MigrationOS")
+            skipelem("SE,OS")
+            skipelem("SE,UpdatePayload")
             
             plist_t digest = plist_dict_get_item(node, "Digest");
             if (!digest || plist_get_node_type(digest) != PLIST_DATA)
@@ -1067,14 +1071,19 @@ error:
 #undef reterror
 }
 
-
 int im4m_buildidentity_check_cb(char elemNameStr[4], char *dgstData, size_t dgstDataLen, struct {plist_t rt; plist_t identities;} *state){
 #define skipelem(e) if (strncmp(e, elemNameStr,4) == 0) return 0
-    skipelem("ftsp");
+    skipelem("BasebandFirmware");
     skipelem("ftap");
+    skipelem("ftsp");
     skipelem("rfta");
     skipelem("rfts");
-    
+    skipelem("SE,Bootloader");
+    skipelem("SE,Firmware");
+    skipelem("SE,MigrationOS");
+    skipelem("SE,OS");
+    skipelem("SE,UpdatePayload");
+
     if (state->rt){
         if (!hasBuildidentityElementWithHash(state->rt, dgstData, dgstDataLen)){
             //remove identity we are not looking for and start comparing all hashes again
@@ -1211,9 +1220,9 @@ int verifyIM4MSignature(const char *buf){
     char *certs = asn1ElementAtIndex(buf, 4);
     
     int elems = 0;
-    retassure(-2, (elems = asn1ElementsInObject(certs)) >=1); //iPhone7 has 1 cert, while pre-iPhone7 have 2 certs
+    retassure(-2, (elems = asn1ElementsInObject(certs)) >=1); //KTRR devices has 1 cert, while KPP have 2 certs
     
-//    char *bootAuthority = asn1ElementAtIndex(certs, 0); //does not exist on iPhone7
+//  char *bootAuthority = asn1ElementAtIndex(certs, 0); //does not exist on KTRR devices
     char *tssAuthority = asn1ElementAtIndex(certs, elems-1); //is always last item
     
     err = verify_signature(im4m, sig, tssAuthority, elems < 2); //use SHA384 if elems is 2 otherwise use SHA1
@@ -1269,7 +1278,7 @@ char *getBNCHFromIM4M(const char* im4m, size_t *nonceSize){
     
     ret = nonceOctet + asn1Len(nonceOctet).sizeBytes;
     bnchSize = asn1Len(nonceOctet).dataLen;
-    // iPhone 7 and above use 32 byte nonce
+    // KTRR devices use 32 byte nonce
     if (bnchSize != (asn1ElementsInObject(certs) == 1 ? 32 : 20)) {
         reterror("BNCH size incorrect\n");
     }
@@ -1288,7 +1297,7 @@ int verifyIMG4(char *buf, plist_t buildmanifest){
     if (sequenceHasName(buf, "IMG4")){
         //verify IMG4
         char *im4p = getIM4PFromIMG4(buf);
-        im4pSHA = getSHA1ofSqeuence(im4p);
+        im4pSHA = getSHA1ofSequence(im4p);
 
         if (!im4p) goto error;
         
@@ -1310,8 +1319,7 @@ int verifyIMG4(char *buf, plist_t buildmanifest){
     }else
         printf("[OK] IM4M signature is verified by TssAuthority\n");
     
-#warning TODO verify certificate chain
-    
+/* TODO: verify certificate chain */
     if (buildmanifest) {
         plist_t identity = getBuildIdentityForIM4M(buf, buildmanifest);
         if (identity){
@@ -1325,14 +1333,8 @@ int verifyIMG4(char *buf, plist_t buildmanifest){
         warning("No BuildManifest specified, can't verify restore type of APTicket\n");
     }
     
-
 error:
     safeFree(im4pSHA);
     return err;
 #undef reterror
 }
-
-
-
-
-

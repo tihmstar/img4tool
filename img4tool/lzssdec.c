@@ -1,38 +1,60 @@
 //
-//  lzssdec.h
+//  lzssdec.c
 //  img4tool
 //
 //  Code borrowed from: http://newosxbook.com/src.jl?tree=listings&file=joker.c
 //  Coded by Jonathan Levin (a.k.a @Morpheus______), http://newosxbook.com
+//
 
-#include "lzssdec.h"
 #include <string.h>
 #include <stdlib.h>
+#include <sys/types.h>
 
-/**************************************************************
- LZSS.C -- A Data Compression Program
- ***************************************************************
- 4/6/1989 Haruhiko Okumura
- Use, distribute, and modify this program freely.
- Please send me your improved versions.
- PC-VAN      SCIENCE
- NIFTY-Serve PAF01022
- CompuServe  74050,1022
- **************************************************************/
+#include "lzssdec.h"
+
 /*
- *  lzss.c - Package for decompressing lzss compressed objects
- *
- *  Copyright (c) 2003 Apple Computer, Inc.
- *
- *  DRI: Josh de Cesare
+ * LZSS.C -- A data compression program for decompressing lzss compressed objects
+ * 4/6/1989 Haruhiko Okumura
+ * Use, distribute, and modify this program freely.
+ * Please send me your improved versions.
+ * PC-VAN      SCIENCE
+ * NIFTY-Serve PAF01022
+ * CompuServe  74050,1022
+ 
+ * Copyright (c) 2003 Apple Computer, Inc.
+ * DRI: Josh de Cesare
  */
+
 #define N         4096  /* size of ring buffer - must be power of 2 */
 #define F         18    /* upper limit for match_length */
-#define THRESHOLD 2     /* encode string into position and length
-if match_length is greater than this */
+#define THRESHOLD 2     /* encode string into position and length if match_length is greater than this */
 #define NIL       N     /* index for root of binary search trees */
 
-int decompress_lzss(u_int8_t *dst, u_int8_t *src, u_int32_t srclen){
+/* define type for build for win64 support */
+typedef unsigned char u_int8_t;
+typedef unsigned int u_int32_t;
+void *lz_memmem(const void *b1, const void *b2, size_t len1, size_t len2)
+{
+    char *sp = (char *) b1; // Initialize search pointer
+    char *pp = (char *) b2; // Initialize pattern pointer
+    char *eos   = sp + len1 - len2; // Initialize end of search address space pointer
+    
+    /* Sanity check */
+    if(!(b1 && b2 && len1 && len2))
+        return NULL;
+    
+    while (sp <= eos) {
+        if (*sp == *pp)
+            if (memcmp(sp, pp, len2) == 0)
+                return sp;
+        
+        sp++;
+    }
+    
+    return NULL;
+}
+
+int decompressed_lzss(u_int8_t *dst, u_int8_t *src, u_int32_t srclen){
     /* ring buffer of size N, with extra F-1 bytes to aid string comparison */
     u_int8_t text_buf[N + F - 1];
     u_int8_t *dststart = dst;
@@ -88,17 +110,16 @@ char *tryLZSS(char *compressed, size_t *filesize){
     int sig2[2] = { 0xfeedface, 0x0000000c };
     
     char *decomp = malloc (ntohl(compHeader->uncompressedSize));
-    
-    char *feed = memmem(compressed+64, 1024, sig, sizeof(sig));
+    char *feed = lz_memmem(compressed+64, 1024, sig, sizeof(sig));
     
     if (!feed){
-        feed = memmem(compressed+64, 1024, sig2, sizeof(sig2));
+        feed = lz_memmem(compressed+64, 1024, sig2, sizeof(sig2));
         if (!feed)
             return NULL;
     }
     
     feed--;
-    int rc = decompress_lzss((void*)decomp, (void*)feed, ntohl(compHeader->compressedSize));
+    int rc = decompressed_lzss((void*)decomp, (void*)feed, ntohl(compHeader->compressedSize));
     if (rc != ntohl(compHeader->uncompressedSize)) {
         return NULL;
     }
