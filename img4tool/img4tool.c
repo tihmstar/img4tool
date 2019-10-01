@@ -325,7 +325,7 @@ int main(int argc, const char * argv[]) {
     // converting & creating
     }else if (shshFile && !(flags & FLAG_CONVERT)){
         if (!(im4m = im4mFormShshFile(shshFile, &generator))){
-            printf("[Error] reading file failed %s\n",shshFile);
+            printf("[Error] reading shsh file failed %s\n",shshFile);
             return -1;
         }
     }else if (!img4File && !(flags & FLAG_CREATE_IMG4)){
