@@ -13,8 +13,8 @@ configure
 depcomp
 */.deps
 */.libs
-*/img4tool*
-*Makefile*
+Makefile
+Makefile.in
 install-sh
 libtool
 ltmain.sh
