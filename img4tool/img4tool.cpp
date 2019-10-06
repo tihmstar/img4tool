@@ -432,11 +432,34 @@ ASN1DERElement tihmstar::img4tool::appendIM4PToIMG4(const ASN1DERElement img4, c
     assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
     
     retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
-
     
     ASN1DERElement newImg4(img4);
     
     newImg4 += im4p;
+    
+    return newImg4;
+}
 
+ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement img4, const ASN1DERElement im4m){
+    assure(img4.tag().isConstructed);
+    assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+    assure(img4.tag().tagClass == ASN1DERElement::TagClass::Universal);
+    
+    retassure(img4[0].getStringValue() == "IMG4", "Not an IMG4 file");
+    
+    assure(im4m.tag().isConstructed);
+    assure(im4m.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+    assure(im4m.tag().tagClass == ASN1DERElement::TagClass::Universal);
+    
+    retassure(im4m[0].getStringValue() == "IM4M", "Container is not a IM4P");
+    
+    ASN1DERElement newImg4(img4);
+    
+    ASN1DERElement container({ASN1DERElement::TagEnd_of_Content, ASN1DERElement::Contructed, ASN1DERElement::ContextSpecific},NULL,0);
+    
+    container += im4m;
+    
+    newImg4 += container;
+    
     return newImg4;
 }

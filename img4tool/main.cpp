@@ -201,11 +201,12 @@ int main_r(int argc, const char * argv[]) {
     }
     
     
-    
-    if (lastArg) {
-        assure((workingBuffer = readFromFile(lastArg, &workingBufferSize)) && workingBufferSize);
-    } else if (shshFile){
-        assure((workingBuffer = im4mFormShshFile(shshFile, &workingBufferSize, &generator)));
+    if (!outFile) { //don't load shsh if we create a new file
+        if (lastArg) {
+            assure((workingBuffer = readFromFile(lastArg, &workingBufferSize)) && workingBufferSize);
+        } else if (shshFile){
+            assure((workingBuffer = im4mFormShshFile(shshFile, &workingBufferSize, &generator)));
+        }
     }
     
     if (workingBuffer) {
@@ -214,10 +215,12 @@ int main_r(int argc, const char * argv[]) {
             if (im4pFile) {
                 auto im4p = getIM4PFromIMG4(workingBuffer, workingBufferSize);
                 saveToFile(im4pFile, im4p.buf(), im4p.size());
+                printf("Extracted IM4P to %s\n",im4pFile);
             }
             if (im4mFile) {
                 auto im4m = getIM4MFromIMG4(workingBuffer, workingBufferSize);
                 saveToFile(im4mFile, im4m.buf(), im4m.size());
+                printf("Extracted IM4M to %s\n",im4mFile);
             }
         }else {
             //printing only
@@ -237,6 +240,8 @@ int main_r(int argc, const char * argv[]) {
         //create file
         ASN1DERElement img4 = getEmptyIMG4Container();
         
+        retassure(im4pFile, "im4p file is required for img4");
+        
         if (im4pFile) {
             char *buf = NULL;
             size_t bufSize = 0;
@@ -249,10 +254,25 @@ int main_r(int argc, const char * argv[]) {
             
             img4 = appendIM4PToIMG4(img4, im4p);
         }
-#warning TODO implement add im4m
-#error adding im4m (and shsh) is not implemented
+        
+        if (im4mFile || shshFile){
+            char *buf = NULL;
+            size_t bufSize = 0;
+            cleanup([&]{
+                safeFree(buf);
+            });
+
+            if (im4mFile) {
+                buf = readFromFile(im4mFile, &bufSize);
+            }else if (shshFile){
+                buf = im4mFormShshFile(shshFile, &bufSize, NULL);
+            }
+            ASN1DERElement im4m(buf,bufSize);
+            img4 = appendIM4MToIMG4(img4, im4m);
+        }
 
         saveToFile(outFile, img4.buf(), img4.size());
+        printf("Created IMG4 file at %s\n",outFile);
     }
     else{
         reterror("No working buffer");

@@ -29,6 +29,7 @@ namespace tihmstar {
         
         ASN1DERElement getEmptyIMG4Container();
         ASN1DERElement appendIM4PToIMG4(const ASN1DERElement img4, const ASN1DERElement im4p);
+        ASN1DERElement appendIM4MToIMG4(const ASN1DERElement img4, const ASN1DERElement im4m);
 
     };
 };
