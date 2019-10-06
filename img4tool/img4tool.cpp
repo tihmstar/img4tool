@@ -44,12 +44,12 @@ void tihmstar::img4tool::printKBAG(const void *buf, size_t size){
     assure(sequence.tag().tagClass == ASN1DERElement::TagClass::Universal);
 
     printf("KBAG\n");
-    for (auto kbtag : sequence) {
+    for (auto &kbtag : sequence) {
         assure(kbtag.tag().isConstructed);
         assure(kbtag.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
         assure(kbtag.tag().tagClass == ASN1DERElement::TagClass::Universal);
         int i=-1;
-        for (auto elem : kbtag) {
+        for (auto &elem : kbtag) {
             switch (++i) {
                 case 0:
                     printf("num: %llu\n",elem.getIntegerValue());
@@ -84,7 +84,7 @@ void tihmstar::img4tool::printMANB(const void *buf, size_t size, bool printAll){
     
     {
         int i=-1;
-        for (auto tag : sequence) {
+        for (auto &tag : sequence) {
             switch (++i) {
                 case 0:
                     assure(tag.getStringValue() == "MANB");
@@ -101,7 +101,7 @@ void tihmstar::img4tool::printMANB(const void *buf, size_t size, bool printAll){
 
                     if (printAll) {
                         int j = -1;
-                        for (auto selem : tag) {
+                        for (auto &selem : tag) {
                             if (++j == 0)
                                 continue;
                             
@@ -135,7 +135,7 @@ void tihmstar::img4tool::printMANP(const void *buf, size_t size){
     
     {
         int i=-1;
-        for (auto tag : sequence) {
+        for (auto &tag : sequence) {
             switch (++i) {
                 case 0:
                     assure(tag.getStringValue() == "MANP");
@@ -147,7 +147,7 @@ void tihmstar::img4tool::printMANP(const void *buf, size_t size){
                     assure(tag.tag().tagNumber == ASN1DERElement::TagSET);
                     assure(tag.tag().tagClass == ASN1DERElement::TagClass::Universal);
 
-                    for (auto elem : tag) {
+                    for (auto &elem : tag) {
                         size_t privElem = 0;
                         ASN1DERElement subsequence = parsePrivTag(elem.buf(), size-(size_t)((uint8_t*)elem.buf()-(uint8_t*)buf), &privElem);
                         putStr((char*)&privElem,4);
@@ -156,7 +156,7 @@ void tihmstar::img4tool::printMANP(const void *buf, size_t size){
                         assure(subsequence.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
                         assure(subsequence.tag().tagClass == ASN1DERElement::TagClass::Universal);
                         
-                        for (auto subelem : subsequence) {
+                        for (auto &subelem : subsequence) {
                             printf(": ");
                             subelem.print();
                         }
@@ -177,7 +177,7 @@ void tihmstar::img4tool::printRecSequence(const void *buf, size_t size){
 
     assure(sequence.tag().isConstructed);
 
-    for (auto elem : sequence){
+    for (auto &elem : sequence){
         if (*(uint8_t*)elem.buf() == (uint8_t)ASN1DERElement::TagPrivate){
             size_t privTag = 0;
             ASN1DERElement sequence = parsePrivTag(elem.buf(), elem.size(), &privTag);
@@ -246,7 +246,7 @@ void tihmstar::img4tool::printIMG4(const void *buf, size_t size, bool printAll, 
 
     {
         int i=-1;
-        for (auto tag : sequence) {
+        for (auto &tag : sequence) {
             switch (++i) {
 #warning TODO we don't handle IM4R yet
                 case 0:
@@ -282,7 +282,7 @@ void tihmstar::img4tool::printIM4P(const void *buf, size_t size){
 
     {
         int i=-1;
-        for (auto tag : sequence) {
+        for (auto &tag : sequence) {
             switch (++i) {
                 case 0:
                     assure(tag.getStringValue() == "IM4P");
@@ -331,7 +331,7 @@ void tihmstar::img4tool::printIM4M(const void *buf, size_t size, bool printAll){
 
     {
         int i=-1;
-        for (auto tag : sequence) {
+        for (auto &tag : sequence) {
             switch (++i) {
                 case 0:
                     assure(tag.getStringValue() == "IM4M");
@@ -364,4 +364,79 @@ std::string tihmstar::img4tool::getNameForSequence(const void *buf, size_t size)
     assure(sequence.tag().tagClass == ASN1DERElement::TagClass::Universal);
 
     return sequence[0].getStringValue();
+}
+
+ASN1DERElement tihmstar::img4tool::getIM4PFromIMG4(const void *buf, size_t size){
+    ASN1DERElement img4(buf,size);
+    
+    assure(img4.tag().isConstructed);
+    assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+    assure(img4.tag().tagClass == ASN1DERElement::TagClass::Universal);
+
+    retassure(img4[0].getStringValue() == "IMG4", "Not an IMG4 file");
+    
+    ASN1DERElement im4p = img4[1];
+    
+    assure(im4p.tag().isConstructed);
+    assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+    assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
+
+    retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
+
+    return im4p;
+}
+
+ASN1DERElement tihmstar::img4tool::getIM4MFromIMG4(const void *buf, size_t size){
+    ASN1DERElement img4(buf,size);
+    
+    assure(img4.tag().isConstructed);
+    assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+    assure(img4.tag().tagClass == ASN1DERElement::TagClass::Universal);
+    
+    retassure(img4[0].getStringValue() == "IMG4", "Not an IMG4 file");
+    
+    ASN1DERElement container = img4[2];
+    
+    assure(container.tag().isConstructed);
+    assure(container.tag().tagNumber == ASN1DERElement::TagEnd_of_Content);
+    assure(container.tag().tagClass == ASN1DERElement::TagClass::ContextSpecific);
+
+    ASN1DERElement im4m = container[0];
+
+    assure(im4m.tag().isConstructed);
+    assure(im4m.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+    assure(im4m.tag().tagClass == ASN1DERElement::TagClass::Universal);
+    
+    retassure(im4m[0].getStringValue() == "IM4M", "Container is not a IM4M");
+
+    return im4m;
+}
+
+ASN1DERElement tihmstar::img4tool::getEmptyIMG4Container(){
+    ASN1DERElement img4({ASN1DERElement::TagSEQUENCE, ASN1DERElement::Contructed, ASN1DERElement::Universal},NULL,0);
+    ASN1DERElement img4_str({ASN1DERElement::TagIA5String, ASN1DERElement::Primitive, ASN1DERElement::Universal},"IMG4",4);
+    img4 += img4_str;
+    
+    return img4;
+}
+
+ASN1DERElement tihmstar::img4tool::appendIM4PToIMG4(const ASN1DERElement img4, const ASN1DERElement im4p){
+    assure(img4.tag().isConstructed);
+    assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+    assure(img4.tag().tagClass == ASN1DERElement::TagClass::Universal);
+    
+    retassure(img4[0].getStringValue() == "IMG4", "Not an IMG4 file");
+    
+    assure(im4p.tag().isConstructed);
+    assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+    assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
+    
+    retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
+
+    
+    ASN1DERElement newImg4(img4);
+    
+    newImg4 += im4p;
+
+    return newImg4;
 }

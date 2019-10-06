@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4281CC82234A01C500C30E6D /* libplist.3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 4281CC81234A01C500C30E6D /* libplist.3.dylib */; };
 		879896AD2344A91900A98709 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 879896AC2344A91900A98709 /* main.cpp */; };
 		87A281342347B7B900ED08BB /* ASN1DERElement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 87A281322347B7B900ED08BB /* ASN1DERElement.cpp */; };
 		87A281372347B7CA00ED08BB /* img4tool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 87A281352347B7CA00ED08BB /* img4tool.cpp */; };
@@ -26,6 +27,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4281CC81234A01C500C30E6D /* libplist.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libplist.3.dylib; path = ../../../../usr/local/lib/libplist.3.dylib; sourceTree = "<group>"; };
 		879896A92344A91900A98709 /* img4tool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = img4tool; sourceTree = BUILT_PRODUCTS_DIR; };
 		879896AC2344A91900A98709 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		87A281322347B7B900ED08BB /* ASN1DERElement.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ASN1DERElement.cpp; sourceTree = "<group>"; };
@@ -40,17 +42,27 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4281CC82234A01C500C30E6D /* libplist.3.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4281CC80234A01C500C30E6D /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				4281CC81234A01C500C30E6D /* libplist.3.dylib */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		879896A02344A91900A98709 = {
 			isa = PBXGroup;
 			children = (
 				879896AB2344A91900A98709 /* img4tool */,
 				879896AA2344A91900A98709 /* Products */,
+				4281CC80234A01C500C30E6D /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -277,6 +289,7 @@
 					"$(SRCROOT)/include",
 					"$(SRCROOT)/include/img4tool",
 				);
+				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -290,6 +303,7 @@
 					"$(SRCROOT)/include",
 					"$(SRCROOT)/include/img4tool",
 				);
+				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Release;

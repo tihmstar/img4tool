@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <getopt.h>
 #include <string.h>
 #include <stdlib.h>
@@ -19,25 +20,24 @@
 using namespace tihmstar::img4tool;
 using namespace std;
 
-#define FLAG_EXTRACT     1 << 0
-#define FLAG_CREATE_IMG4 1 << 1
-#define FLAG_ALL         1 << 2
-#define FLAG_IM4PONLY    1 << 3
-#define FLAG_VERIFY      1 << 4
-#define FLAG_CONVERT     1 << 5
-#define FLAG_CREATE_FILE 1 << 6
+#define FLAG_ALL         1 << 0
+#define FLAG_IM4PONLY    1 << 1
+#define FLAG_EXTRACT     1 << 2
+//#define FLAG_CREATE_IMG4 1 << 1
+//#define FLAG_VERIFY      1 << 4
+//#define FLAG_CONVERT     1 << 5
+//#define FLAG_CREATE_FILE 1 << 6
 
 static struct option longopts[] = {
     { "help",           no_argument,        NULL, 'h' },
     { "print-all",      no_argument,        NULL, 'a' },
-//    { "extract",        no_argument,        NULL, 'e' },
-//    { "im4p-only",      no_argument,        NULL, 'i' },
-//    { "shsh",           required_argument,  NULL, 's' },
-//    { "im4p",           required_argument,  NULL, 'p' },
-//    { "im4m",           required_argument,  NULL, 'm' },
+    { "im4p-only",      no_argument,        NULL, 'i' },
+    { "shsh",           required_argument,  NULL, 's' },
+    { "extract",        no_argument,        NULL, 'e' },
+    { "im4m",           required_argument,  NULL, 'm' },
+    { "im4p",           required_argument,  NULL, 'p' },
+    { "create",         required_argument,  NULL, 'c' },
 //    { "im4r",           required_argument,  NULL, 'r' },
-//    { "outfile",        required_argument,  NULL, 'o' },
-//    { "create",         required_argument,  NULL, 'c' },
 //    { "rename-payload", required_argument,  NULL, 'n' },
 //    { "verify",         required_argument,  NULL, 'v' },
 //    { "raw",            required_argument,  NULL, '1' },
@@ -47,6 +47,42 @@ static struct option longopts[] = {
     { NULL, 0, NULL, 0 }
 };
 
+char *im4mFormShshFile(const char *shshfile, size_t *outSize, char **generator){
+    FILE *f = fopen(shshfile,"rb");
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    
+    size_t fSize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *buf = (char*)malloc(fSize);
+    fread(buf, fSize, 1, f);
+    fclose(f);
+    
+    plist_t shshplist = NULL;
+    
+    if (memcmp(buf, "bplist00", 8) == 0)
+        plist_from_bin(buf, (uint32_t)fSize, &shshplist);
+    else
+        plist_from_xml(buf, (uint32_t)fSize, &shshplist);
+    
+    plist_t ticket = plist_dict_get_item(shshplist, "ApImg4Ticket");
+    
+    char *im4m = 0;
+    uint64_t im4msize=0;
+    plist_get_data_val(ticket, &im4m, &im4msize);
+    if (outSize) {
+        *outSize = im4msize;
+    }
+    
+    if (generator){
+        if ((ticket = plist_dict_get_item(shshplist, "generator")))
+            plist_get_string_val(ticket, generator);
+    }
+    
+    plist_free(shshplist);
+    
+    return im4msize ? im4m : NULL;
+}
 
 char *readFromFile(const char *filePath, size_t *outSize){
     FILE *f = fopen(filePath, "r");
@@ -54,8 +90,7 @@ char *readFromFile(const char *filePath, size_t *outSize){
     fseek(f, 0, SEEK_END);
     size_t size = ftell(f);
     fseek(f, 0, SEEK_SET);
-#error make a fancy file-to-buf reader
-    char *ret = malloc(size);
+    char *ret = (char*)malloc(size);
     if (ret) fread(ret, size, 1, f);
     fclose(f);
     if (outSize) *outSize = size;
@@ -63,18 +98,30 @@ char *readFromFile(const char *filePath, size_t *outSize){
     return ret;
 }
 
+void saveToFile(const char *filePath, const void *buf, size_t bufSize){
+    FILE *f = NULL;
+    cleanup([&]{
+        if (f) {
+            fclose(f);
+        }
+    });
+    
+    assure(f = fopen(filePath, "wb"));
+    assure(fwrite(buf, 1, bufSize, f) == bufSize);
+}
+
 void cmd_help(){
     printf("Usage: img4tool [OPTIONS] FILE\n");
     printf("Parses img4, im4p, im4m files\n\n");
     printf("  -h, --help\t\t\tprints usage information\n");
     printf("  -a, --print-all\t\tprint everything from im4m\n");
-//    printf("  -i, --im4p-only\t\tprint only im4p\n");
-//    printf("  -e, --extract\t\t\textracts im4m/im4p payload\n");
+    printf("  -i, --im4p-only\t\tprint only im4p\n");
+    printf("  -e, --extract\t\t\textracts im4m/im4p payload\n");
+    printf("  -s, --shsh\t<PATH>\t\tFilepath for shsh (for reading/writing im4m)\n");
+    printf("  -m, --im4m\t<PATH>\t\tFilepath for im4m (depending on -e being set)\n");
+    printf("  -p, --im4p\t<PATH>\t\tFilepath for im4p (depending on -e being set)\n");
+    printf("  -c, --create\t<PATH>\t\tcreates an img4 with the specified im4m, im4p\n");
 //    printf("  -o, --outfile\t\t\toutput path for extracting im4p payload (does nothing without -e)\n");
-//    printf("  -s, --shsh    PATH\t\tFilepath for shsh (for reading/writing im4m)\n");
-//    printf("  -c, --create  PATH\t\tcreates an img4 with the specified im4m, im4p\n");
-//    printf("  -m, --im4m    PATH\t\tFilepath for im4m (depending on -e being set)\n");
-//    printf("  -p, --im4p    PATH\t\tFilepath for im4p (depending on -e being set)\n");
 //    printf("  -r, --im4r    <nonce>\t\tnonce to be set for BNCN in im4r\n");
 //    printf("  -v, --verify BUILDMANIFEST\tverify img4, im4m\n");
 //    printf("  -n, --rename-payload NAME\trename im4p payload (NAME must be exactly 4 bytes)\n");
@@ -87,19 +134,54 @@ void cmd_help(){
 }
 
 int main_r(int argc, const char * argv[]) {
+    printf("%s\n",version());
+    
+    const char *lastArg = NULL;
+    const char *shshFile = NULL;
+    const char *im4mFile = NULL;
+    const char *im4pFile = NULL;
+    const char *outFile = NULL;
+
     int optindex = 0;
     int opt = 0;
     long flags = 0;
-    const char *lastArg = NULL;
-    printf("%s\n",version());
 
-    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:o:c:ir:n:v:", longopts, &optindex)) > 0) {
+    char *workingBuffer = NULL;
+    size_t workingBufferSize = 0;
+    char *generator = NULL;
+
+    
+    cleanup([&]{
+        safeFree(workingBuffer);
+        safeFree(generator);
+    });
+    
+    
+    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:c:ir:n:v:", longopts, &optindex)) > 0) {
         switch (opt) {
             case 'h':
                 cmd_help();
                 return 0;
             case 'a':
                 flags |= FLAG_ALL;
+                break;
+            case 'i':
+                flags |= FLAG_IM4PONLY;
+                break;
+            case 's':
+                shshFile = optarg;
+                break;
+            case 'e':
+                flags |= FLAG_EXTRACT;
+                break;
+            case 'm':
+                im4mFile = optarg;
+                break;
+            case 'p':
+                im4pFile = optarg;
+                break;
+            case 'c':
+                outFile = optarg;
                 break;
             default:
                 cmd_help();
@@ -112,15 +194,77 @@ int main_r(int argc, const char * argv[]) {
         argv += optind;
         lastArg = argv[0];
     }else{
-        cmd_help();
-        return -2;
+        if (!shshFile && !outFile) {
+            cmd_help();
+            return -2;
+        }
     }
     
+    
+    
+    if (lastArg) {
+        assure((workingBuffer = readFromFile(lastArg, &workingBufferSize)) && workingBufferSize);
+    } else if (shshFile){
+        assure((workingBuffer = im4mFormShshFile(shshFile, &workingBufferSize, &generator)));
+    }
+    
+    if (workingBuffer) {
+        if (flags & FLAG_EXTRACT) {
+            //extract
+            if (im4pFile) {
+                auto im4p = getIM4PFromIMG4(workingBuffer, workingBufferSize);
+                saveToFile(im4pFile, im4p.buf(), im4p.size());
+            }
+            if (im4mFile) {
+                auto im4m = getIM4MFromIMG4(workingBuffer, workingBufferSize);
+                saveToFile(im4mFile, im4m.buf(), im4m.size());
+            }
+        }else {
+            //printing only
+            string seqName = getNameForSequence(workingBuffer, workingBufferSize);
+            if (seqName == "IMG4") {
+                printIMG4(workingBuffer, workingBufferSize, flags & FLAG_ALL, flags & FLAG_IM4PONLY);
+            } else if (seqName == "IM4P"){
+                printIM4P(workingBuffer, workingBufferSize);
+            } else if (seqName == "IM4M"){
+                printIM4M(workingBuffer, workingBufferSize, flags & FLAG_ALL);
+            }
+            else{
+                reterror("File not recognised");
+            }
+        }
+    } else if (outFile){
+        //create file
+        ASN1DERElement img4 = getEmptyIMG4Container();
+        
+        if (im4pFile) {
+            char *buf = NULL;
+            size_t bufSize = 0;
+            cleanup([&]{
+                safeFree(buf);
+            });
+            buf = readFromFile(im4pFile, &bufSize);
+            
+            ASN1DERElement im4p(buf,bufSize);
+            
+            img4 = appendIM4PToIMG4(img4, im4p);
+        }
+#warning TODO implement add im4m
+#error adding im4m (and shsh) is not implemented
+
+        saveToFile(outFile, img4.buf(), img4.size());
+    }
+    else{
+        reterror("No working buffer");
+    }
     
     return 0;
 }
 
 int main(int argc, const char * argv[]) {
+#ifdef DEBUG
+    return main_r(argc, argv);
+#else
     try {
         return main_r(argc, argv);
     } catch (tihmstar::exception &e) {
@@ -128,4 +272,5 @@ int main(int argc, const char * argv[]) {
         e.dump();
         return e.code();
     }
+#endif
 }

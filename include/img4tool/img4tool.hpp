@@ -12,6 +12,8 @@
 #include <unistd.h>
 #include <iostream>
 
+#include <img4tool/ASN1DERElement.hpp>
+
 namespace tihmstar {
     namespace img4tool {
         const char *version();
@@ -22,6 +24,12 @@ namespace tihmstar {
         
         std::string getNameForSequence(const void *buf, size_t size);
         
+        ASN1DERElement getIM4PFromIMG4(const void *buf, size_t size);
+        ASN1DERElement getIM4MFromIMG4(const void *buf, size_t size);
+        
+        ASN1DERElement getEmptyIMG4Container();
+        ASN1DERElement appendIM4PToIMG4(const ASN1DERElement img4, const ASN1DERElement im4p);
+
     };
 };
 #endif /* img4tool_hpp */

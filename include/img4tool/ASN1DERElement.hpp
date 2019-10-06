@@ -103,24 +103,32 @@ namespace tihmstar {
             bool _ownsBuffer;
         public:
             ASN1DERElement(const void *buf, size_t bufSize);
+            ASN1DERElement(const ASN1TAG tag, const void *payload, size_t payloadLen);
             ~ASN1DERElement();
+            
+            ASN1DERElement(ASN1DERElement &&old);
+            ASN1DERElement(const ASN1DERElement &old);
 
-            const void *buf();
-            const void *payload();
-            size_t taginfoSize();
-            size_t payloadSize();
-            size_t size();
 
-            ASN1TAG tag();
+            const void *buf() const;
+            const void *payload() const;
+            size_t taginfoSize() const;
+            size_t payloadSize() const;
+            size_t size() const;
+
+            ASN1TAG tag() const;
             
-            std::string getStringValue();
-            uint64_t getIntegerValue();
-            void print();
+            std::string getStringValue() const;
+            uint64_t getIntegerValue() const;
+            void print() const;
+
             
-            ASN1DERElement operator[](uint32_t i);
-            
-            ASN1DERElementIterator begin();
-            ASN1DERElementIterator end();
+            ASN1DERElement operator[](uint32_t i) const;
+            ASN1DERElement &operator+=(const ASN1DERElement &add);
+            ASN1DERElement &operator=(ASN1DERElement &&old);
+
+            ASN1DERElementIterator begin() const;
+            ASN1DERElementIterator end() const;
 
         };
         
