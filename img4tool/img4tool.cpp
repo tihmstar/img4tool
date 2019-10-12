@@ -12,6 +12,12 @@
 #include "img4tool/libgeneral/macros.h"
 #include "ASN1DERElement.hpp"
 
+#ifdef __APPLE__
+#   include <CommonCrypto/CommonCrypto.h>
+#else
+#   include <openssl/aes.h>
+#endif // __APPLE__
+
 using namespace tihmstar::img4tool;
 
 #define putStr(s,l) printf("%.*s",(int)l,s)
@@ -462,4 +468,88 @@ ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement img4, c
     newImg4 += container;
     
     return newImg4;
+}
+
+ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement im4p, const char *decryptIv, const char *decryptKey){
+    assure(im4p.tag().isConstructed);
+    assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+    assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
+    
+    retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
+
+    ASN1DERElement payload = im4p[3];
+    assure(!payload.tag().isConstructed);
+    assure(payload.tag().tagNumber == ASN1DERElement::TagOCTET);
+    assure(payload.tag().tagClass == ASN1DERElement::TagClass::Universal);
+
+    return (decryptIv || decryptKey) ? decryptPayload(payload, decryptIv, decryptKey) : payload;
+}
+
+ASN1DERElement tihmstar::img4tool::decryptPayload(const ASN1DERElement payload, const char *decryptIv, const char *decryptKey){
+    uint8_t iv[16] = {};
+    uint8_t key[32] = {};
+    retassure(decryptIv, "decryptPayload requires IV but none was provided!");
+    retassure(decryptKey, "decryptPayload requires KEY but none was provided!");
+
+    assure(!payload.tag().isConstructed);
+    assure(payload.tag().tagNumber == ASN1DERElement::TagOCTET);
+    assure(payload.tag().tagClass == ASN1DERElement::TagClass::Universal);
+
+    ASN1DERElement decPayload(payload);
+    
+    assure(strlen(decryptIv) == sizeof(iv)*2);
+    assure(strlen(decryptKey) == sizeof(key)*2);
+    for (int i=0; i<sizeof(iv); i++) {
+        unsigned int t;
+        assure(sscanf(decryptIv+i*2,"%02x",&t) == 1);
+        iv[i] = t;
+    }
+    for (int i=0; i<sizeof(key); i++) {
+        unsigned int t;
+        assure(sscanf(decryptKey+i*2,"%02x",&t) == 1);
+        key[i] = t;
+    }
+
+    
+#ifdef __APPLE__
+    retassure(CCCrypt(kCCDecrypt, kCCAlgorithmAES, 0, key, sizeof(key), iv, decPayload.payload(), decPayload.payloadSize(), (void*)decPayload.payload(), decPayload.payloadSize(), NULL) == kCCSuccess,
+           "Decryption failed!");
+#else
+    AES_KEY decKey = {};
+    retassure(!AES_set_decrypt_key(key, sizeof(key)*8, &decKey), "Failed to set decryption key");
+    AES_cbc_encrypt((const unsigned char*)decPayload.payload(), (unsigned char*)decPayload.payload(), decPayload.payloadSize(), &decKey, iv, AES_DECRYPT);
+#endif
+    
+    return decPayload;
+}
+
+ASN1DERElement tihmstar::img4tool::getEmptyIM4PContainer(const char *type, const char *desc){
+    ASN1DERElement im4p({ASN1DERElement::TagSEQUENCE, ASN1DERElement::Contructed, ASN1DERElement::Universal},NULL,0);
+    ASN1DERElement im4p_str({ASN1DERElement::TagIA5String, ASN1DERElement::Primitive, ASN1DERElement::Universal},"IM4P",4);
+    ASN1DERElement im4p_type({ASN1DERElement::TagIA5String, ASN1DERElement::Primitive, ASN1DERElement::Universal},type,strlen(type));
+    ASN1DERElement im4p_desc({ASN1DERElement::TagIA5String, ASN1DERElement::Primitive, ASN1DERElement::Universal},desc,strlen(desc));
+
+    retassure(im4p_type.payloadSize() == 4, "Type needs to be exactly 4 bytes long");
+    
+    im4p += im4p_str;
+    im4p += im4p_type;
+    im4p += im4p_desc;
+
+    return im4p;
+}
+
+ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement im4p, const void *buf, size_t size){
+    assure(im4p.tag().isConstructed);
+    assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+    assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
+    
+    retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
+
+    ASN1DERElement newim4p(im4p);
+
+    ASN1DERElement im4p_payload({ASN1DERElement::TagOCTET, ASN1DERElement::Primitive, ASN1DERElement::Universal},buf,size);
+
+    newim4p += im4p_payload;
+    
+    return newim4p;
 }

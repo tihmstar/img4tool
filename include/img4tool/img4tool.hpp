@@ -30,7 +30,15 @@ namespace tihmstar {
         ASN1DERElement getEmptyIMG4Container();
         ASN1DERElement appendIM4PToIMG4(const ASN1DERElement img4, const ASN1DERElement im4p);
         ASN1DERElement appendIM4MToIMG4(const ASN1DERElement img4, const ASN1DERElement im4m);
+    
+        ASN1DERElement getPayloadFromIM4P(const ASN1DERElement im4p, const char *decryptIv = NULL, const char *decryptKey = NULL);
+        ASN1DERElement decryptPayload(const ASN1DERElement payload, const char *decryptIv, const char *decryptKey);
+        
+        ASN1DERElement getEmptyIM4PContainer(const char *type, const char *desc);
 
+        ASN1DERElement appendPayloadToIM4P(const ASN1DERElement im4p, const void *buf, size_t size);
+
+        
     };
 };
 #endif /* img4tool_hpp */

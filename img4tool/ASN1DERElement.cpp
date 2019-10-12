@@ -271,6 +271,15 @@ ASN1DERElement &ASN1DERElement::operator=(ASN1DERElement &&old){
     return *this;
 }
 
+ASN1DERElement &ASN1DERElement::operator=(const ASN1DERElement &old){
+    _bufSize = old._bufSize;
+    _ownsBuffer = true;
+    _buf = (ASN1TAG*)malloc(_bufSize);
+    memcpy((void*)&_buf[0], old._buf, _bufSize);
+
+    return *this;
+}
+
 ASN1DERElement::ASN1DERElementIterator ASN1DERElement::begin() const{
     return {(const ASN1TAG *)payload(),payloadSize(),0};
 }

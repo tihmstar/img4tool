@@ -126,6 +126,7 @@ namespace tihmstar {
             ASN1DERElement operator[](uint32_t i) const;
             ASN1DERElement &operator+=(const ASN1DERElement &add);
             ASN1DERElement &operator=(ASN1DERElement &&old);
+            ASN1DERElement &operator=(const ASN1DERElement &obj);
 
             ASN1DERElementIterator begin() const;
             ASN1DERElementIterator end() const;

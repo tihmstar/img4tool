@@ -20,13 +20,13 @@
 using namespace tihmstar::img4tool;
 using namespace std;
 
-#define FLAG_ALL         1 << 0
-#define FLAG_IM4PONLY    1 << 1
-#define FLAG_EXTRACT     1 << 2
-//#define FLAG_CREATE_IMG4 1 << 1
+#define FLAG_ALL        (1 << 0)
+#define FLAG_IM4PONLY   (1 << 1)
+#define FLAG_EXTRACT    (1 << 2)
+#define FLAG_CREATE     (1 << 3)
+//#define FLAG_EXTRACT_PAYLOAD    (1 << 4)
 //#define FLAG_VERIFY      1 << 4
 //#define FLAG_CONVERT     1 << 5
-//#define FLAG_CREATE_FILE 1 << 6
 
 static struct option longopts[] = {
     { "help",           no_argument,        NULL, 'h' },
@@ -37,13 +37,16 @@ static struct option longopts[] = {
     { "im4m",           required_argument,  NULL, 'm' },
     { "im4p",           required_argument,  NULL, 'p' },
     { "create",         required_argument,  NULL, 'c' },
+    { "outfile",        required_argument,  NULL, 'o' },
+    { "iv",             required_argument,  NULL, '1' },
+    { "key",            required_argument,  NULL, '2' },
+    { "type",           required_argument,  NULL, 't' },
+    { "desc",           required_argument,  NULL, 'd' },
 //    { "im4r",           required_argument,  NULL, 'r' },
 //    { "rename-payload", required_argument,  NULL, 'n' },
 //    { "verify",         required_argument,  NULL, 'v' },
 //    { "raw",            required_argument,  NULL, '1' },
 //    { "convert",        no_argument,        NULL, '2' },
-//    { "tag",            required_argument,  NULL, '3' },
-//    { "info",           required_argument,  NULL, '4' },
     { NULL, 0, NULL, 0 }
 };
 
@@ -120,15 +123,18 @@ void cmd_help(){
     printf("  -s, --shsh\t<PATH>\t\tFilepath for shsh (for reading/writing im4m)\n");
     printf("  -m, --im4m\t<PATH>\t\tFilepath for im4m (depending on -e being set)\n");
     printf("  -p, --im4p\t<PATH>\t\tFilepath for im4p (depending on -e being set)\n");
-    printf("  -c, --create\t<PATH>\t\tcreates an img4 with the specified im4m, im4p\n");
-//    printf("  -o, --outfile\t\t\toutput path for extracting im4p payload (does nothing without -e)\n");
+    printf("  -c, --create\t<PATH>\t\tcreates an img4 with the specified im4m, im4p or creates im4p with raw file (last argument)\n");
+    printf("  -o, --outfile\t\t\toutput path for extracting im4p payload (does nothing without -e)\n");
+    printf("  -t, --type\t\t\tset type for creating IM4P files from raw\n");
+    printf("  -d, --desc\t\t\tset desc for creating IM4P files from raw\n");
+    printf("      --iv\t\t\tIV  for decrypting payload when extracting (requires -e and -o)\n");
+    printf("      --key\t\t\tKey for decrypting payload when extracting (requires -e and -o)\n");
+
 //    printf("  -r, --im4r    <nonce>\t\tnonce to be set for BNCN in im4r\n");
 //    printf("  -v, --verify BUILDMANIFEST\tverify img4, im4m\n");
 //    printf("  -n, --rename-payload NAME\trename im4p payload (NAME must be exactly 4 bytes)\n");
 //    printf("      --raw     <bytes>\t\twrite bytes to file if combined with -c (does nothing else otherwise)\n");
 //    printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
-//    printf("      --tag\t\t\tset tag for creating IM4P files from raw\n");
-//    printf("      --info\t\t\tset info for creating IM4P files from raw\n");
     
     printf("\n");
 }
@@ -141,6 +147,10 @@ int main_r(int argc, const char * argv[]) {
     const char *im4mFile = NULL;
     const char *im4pFile = NULL;
     const char *outFile = NULL;
+    const char *decryptIv = NULL;
+    const char *decryptKey = NULL;
+    const char *im4pType = NULL;
+    const char *im4pDesc = "Image created by img4tool";
 
     int optindex = 0;
     int opt = 0;
@@ -157,7 +167,7 @@ int main_r(int argc, const char * argv[]) {
     });
     
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:p:c:ir:n:v:", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:o:p:c:ir:n:v:1:2:t:d:", longopts, &optindex)) > 0) {
         switch (opt) {
             case 'h':
                 cmd_help();
@@ -172,6 +182,7 @@ int main_r(int argc, const char * argv[]) {
                 shshFile = optarg;
                 break;
             case 'e':
+                retassure(!(flags & FLAG_CREATE), "Invalid command line arguments. can't extract and create at the same time");
                 flags |= FLAG_EXTRACT;
                 break;
             case 'm':
@@ -181,7 +192,26 @@ int main_r(int argc, const char * argv[]) {
                 im4pFile = optarg;
                 break;
             case 'c':
+                flags |= FLAG_CREATE;
+                retassure(!(flags & FLAG_EXTRACT), "Invalid command line arguments. can't extract and create at the same time");
+                retassure(!outFile, "Invalid command line arguments. outFile already set!");
                 outFile = optarg;
+                break;
+            case 'o':
+                retassure(!outFile, "Invalid command line arguments. outFile already set!");
+                outFile = optarg;
+                break;
+            case '1':  //iv
+                decryptIv = optarg;
+                break;
+            case '2':  //key
+                decryptKey = optarg;
+                break;
+            case 't':
+                im4pType = optarg;
+                break;
+            case 'd':  //info
+                im4pDesc = optarg;
                 break;
             default:
                 cmd_help();
@@ -194,14 +224,14 @@ int main_r(int argc, const char * argv[]) {
         argv += optind;
         lastArg = argv[0];
     }else{
-        if (!shshFile && !outFile) {
+        if (!shshFile && !(flags & FLAG_CREATE)) {
             cmd_help();
             return -2;
         }
     }
     
     
-    if (!outFile) { //don't load shsh if we create a new file
+    if (!(flags & FLAG_CREATE && im4pFile) ) { //don't load shsh if we create a new img4 file
         if (lastArg) {
             assure((workingBuffer = readFromFile(lastArg, &workingBufferSize)) && workingBufferSize);
         } else if (shshFile){
@@ -212,17 +242,48 @@ int main_r(int argc, const char * argv[]) {
     if (workingBuffer) {
         if (flags & FLAG_EXTRACT) {
             //extract
+            bool didExtract = false;
+            
             if (im4pFile) {
                 auto im4p = getIM4PFromIMG4(workingBuffer, workingBufferSize);
                 saveToFile(im4pFile, im4p.buf(), im4p.size());
                 printf("Extracted IM4P to %s\n",im4pFile);
+                didExtract = true;
             }
             if (im4mFile) {
                 auto im4m = getIM4MFromIMG4(workingBuffer, workingBufferSize);
                 saveToFile(im4mFile, im4m.buf(), im4m.size());
                 printf("Extracted IM4M to %s\n",im4mFile);
+                didExtract = true;
             }
-        }else {
+            if (workingBuffer && outFile) {
+                ASN1DERElement im4p(workingBuffer, workingBufferSize);
+                string seqName = getNameForSequence(workingBuffer, workingBufferSize);
+                if (seqName == "IMG4") {
+                    im4p = getIM4PFromIMG4(workingBuffer, workingBufferSize);
+                } else if (seqName != "IM4P"){
+                    reterror("File not recognised");
+                }
+                
+                ASN1DERElement payload = getPayloadFromIM4P(im4p, decryptIv, decryptKey);
+                saveToFile(outFile, payload.payload(), payload.payloadSize());
+                printf("Extracted IM4P payload to %s\n",outFile);
+                didExtract = true;
+            }
+            
+            if (!didExtract) {
+                error("Failed to extract!\n");
+                return -1;
+            }
+        } else if (flags & FLAG_CREATE && im4pType){
+            ASN1DERElement im4p = getEmptyIM4PContainer(im4pType, im4pDesc);
+
+            im4p = appendPayloadToIM4P(im4p, workingBuffer, workingBufferSize);
+
+            saveToFile(outFile, im4p.buf(), im4p.size());
+            printf("Created IM4P file at %s\n",outFile);
+        }
+        else {
             //printing only
             string seqName = getNameForSequence(workingBuffer, workingBufferSize);
             if (seqName == "IMG4") {
@@ -236,8 +297,8 @@ int main_r(int argc, const char * argv[]) {
                 reterror("File not recognised");
             }
         }
-    } else if (outFile){
-        //create file
+    } else if (flags & FLAG_CREATE){
+        //create IMG4 file
         ASN1DERElement img4 = getEmptyIMG4Container();
         
         retassure(im4pFile, "im4p file is required for img4");
