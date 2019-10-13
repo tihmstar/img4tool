@@ -38,7 +38,10 @@ namespace tihmstar {
 
         ASN1DERElement appendPayloadToIM4P(const ASN1DERElement im4p, const void *buf, size_t size);
 
+        bool isValidIMG4(const ASN1DERElement img4);
+        bool isValidIM4P(const ASN1DERElement im4p);
         
+        ASN1DERElement renameIM4P(const ASN1DERElement im4p, const char *type);
     };
 };
 #endif /* img4tool_hpp */

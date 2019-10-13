@@ -24,7 +24,7 @@ using namespace std;
 #define FLAG_IM4PONLY   (1 << 1)
 #define FLAG_EXTRACT    (1 << 2)
 #define FLAG_CREATE     (1 << 3)
-//#define FLAG_EXTRACT_PAYLOAD    (1 << 4)
+#define FLAG_RENAME     (1 << 4)
 //#define FLAG_VERIFY      1 << 4
 //#define FLAG_CONVERT     1 << 5
 
@@ -42,8 +42,8 @@ static struct option longopts[] = {
     { "key",            required_argument,  NULL, '2' },
     { "type",           required_argument,  NULL, 't' },
     { "desc",           required_argument,  NULL, 'd' },
+    { "rename-payload", required_argument,  NULL, 'n' },
 //    { "im4r",           required_argument,  NULL, 'r' },
-//    { "rename-payload", required_argument,  NULL, 'n' },
 //    { "verify",         required_argument,  NULL, 'v' },
 //    { "raw",            required_argument,  NULL, '1' },
 //    { "convert",        no_argument,        NULL, '2' },
@@ -124,15 +124,15 @@ void cmd_help(){
     printf("  -m, --im4m\t<PATH>\t\tFilepath for im4m (depending on -e being set)\n");
     printf("  -p, --im4p\t<PATH>\t\tFilepath for im4p (depending on -e being set)\n");
     printf("  -c, --create\t<PATH>\t\tcreates an img4 with the specified im4m, im4p or creates im4p with raw file (last argument)\n");
-    printf("  -o, --outfile\t\t\toutput path for extracting im4p payload (does nothing without -e)\n");
+    printf("  -o, --outfile\t\t\toutput path for extracting im4p payload (-e) or renaming im4p (-n)\n");
     printf("  -t, --type\t\t\tset type for creating IM4P files from raw\n");
     printf("  -d, --desc\t\t\tset desc for creating IM4P files from raw\n");
+    printf("  -n, --rename-payload NAME\trename im4p payload (NAME must be exactly 4 bytes)\n");
     printf("      --iv\t\t\tIV  for decrypting payload when extracting (requires -e and -o)\n");
     printf("      --key\t\t\tKey for decrypting payload when extracting (requires -e and -o)\n");
 
 //    printf("  -r, --im4r    <nonce>\t\tnonce to be set for BNCN in im4r\n");
 //    printf("  -v, --verify BUILDMANIFEST\tverify img4, im4m\n");
-//    printf("  -n, --rename-payload NAME\trename im4p payload (NAME must be exactly 4 bytes)\n");
 //    printf("      --raw     <bytes>\t\twrite bytes to file if combined with -c (does nothing else otherwise)\n");
 //    printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
     
@@ -166,8 +166,7 @@ int main_r(int argc, const char * argv[]) {
         safeFree(generator);
     });
     
-    
-    while ((opt = getopt_long(argc, (char* const *)argv, "has:em:o:p:c:ir:n:v:1:2:t:d:", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "hais:em:p:c:o:1:2:t:d:n:", longopts, &optindex)) > 0) {
         switch (opt) {
             case 'h':
                 cmd_help();
@@ -208,10 +207,17 @@ int main_r(int argc, const char * argv[]) {
                 decryptKey = optarg;
                 break;
             case 't':
+                retassure(!(flags & FLAG_RENAME), "Invalid command line arguments. can't rename and create at the same time");
+                retassure(!im4pType, "Invalid command line arguments. im4pType already set!");
                 im4pType = optarg;
                 break;
             case 'd':  //info
                 im4pDesc = optarg;
+                break;
+            case 'n': //rename-payload
+                retassure(!im4pType, "Invalid command line arguments. im4pType already set!");
+                im4pType = optarg;
+                flags |= FLAG_RENAME;
                 break;
             default:
                 cmd_help();
@@ -282,6 +288,19 @@ int main_r(int argc, const char * argv[]) {
 
             saveToFile(outFile, im4p.buf(), im4p.size());
             printf("Created IM4P file at %s\n",outFile);
+        } else if (flags & FLAG_RENAME){
+            retassure(im4pType, "typen required");
+            retassure(outFile, "outputfile required");
+            
+            ASN1DERElement im4p(workingBuffer, workingBufferSize);
+            string seqName = getNameForSequence(workingBuffer, workingBufferSize);
+            if (seqName != "IM4P"){
+                reterror("File not an IM4P");
+            }
+            
+            im4p = renameIM4P(im4p, im4pType);
+            saveToFile(outFile, im4p.buf(), im4p.size());
+            printf("Saved new renamed IM4P to %s\n",outFile);
         }
         else {
             //printing only

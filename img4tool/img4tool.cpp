@@ -374,20 +374,10 @@ std::string tihmstar::img4tool::getNameForSequence(const void *buf, size_t size)
 
 ASN1DERElement tihmstar::img4tool::getIM4PFromIMG4(const void *buf, size_t size){
     ASN1DERElement img4(buf,size);
-    
-    assure(img4.tag().isConstructed);
-    assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
-    assure(img4.tag().tagClass == ASN1DERElement::TagClass::Universal);
-
-    retassure(img4[0].getStringValue() == "IMG4", "Not an IMG4 file");
+    assure(isValidIMG4(img4));
     
     ASN1DERElement im4p = img4[1];
-    
-    assure(im4p.tag().isConstructed);
-    assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
-    assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
-
-    retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
+    assure(isValidIM4P(im4p));
 
     return im4p;
 }
@@ -395,11 +385,7 @@ ASN1DERElement tihmstar::img4tool::getIM4PFromIMG4(const void *buf, size_t size)
 ASN1DERElement tihmstar::img4tool::getIM4MFromIMG4(const void *buf, size_t size){
     ASN1DERElement img4(buf,size);
     
-    assure(img4.tag().isConstructed);
-    assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
-    assure(img4.tag().tagClass == ASN1DERElement::TagClass::Universal);
-    
-    retassure(img4[0].getStringValue() == "IMG4", "Not an IMG4 file");
+    assure(isValidIMG4(img4));
     
     ASN1DERElement container = img4[2];
     
@@ -427,18 +413,9 @@ ASN1DERElement tihmstar::img4tool::getEmptyIMG4Container(){
 }
 
 ASN1DERElement tihmstar::img4tool::appendIM4PToIMG4(const ASN1DERElement img4, const ASN1DERElement im4p){
-    assure(img4.tag().isConstructed);
-    assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
-    assure(img4.tag().tagClass == ASN1DERElement::TagClass::Universal);
-    
-    retassure(img4[0].getStringValue() == "IMG4", "Not an IMG4 file");
-    
-    assure(im4p.tag().isConstructed);
-    assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
-    assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
-    
-    retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
-    
+    assure(isValidIMG4(img4));
+    assure(isValidIM4P(im4p));
+
     ASN1DERElement newImg4(img4);
     
     newImg4 += im4p;
@@ -447,11 +424,7 @@ ASN1DERElement tihmstar::img4tool::appendIM4PToIMG4(const ASN1DERElement img4, c
 }
 
 ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement img4, const ASN1DERElement im4m){
-    assure(img4.tag().isConstructed);
-    assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
-    assure(img4.tag().tagClass == ASN1DERElement::TagClass::Universal);
-    
-    retassure(img4[0].getStringValue() == "IMG4", "Not an IMG4 file");
+    assure(isValidIMG4(img4));
     
     assure(im4m.tag().isConstructed);
     assure(im4m.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -471,17 +444,8 @@ ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement img4, c
 }
 
 ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement im4p, const char *decryptIv, const char *decryptKey){
-    assure(im4p.tag().isConstructed);
-    assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
-    assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
-    
-    retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
-
+    assure(isValidIM4P(im4p));
     ASN1DERElement payload = im4p[3];
-    assure(!payload.tag().isConstructed);
-    assure(payload.tag().tagNumber == ASN1DERElement::TagOCTET);
-    assure(payload.tag().tagClass == ASN1DERElement::TagClass::Universal);
-
     return (decryptIv || decryptKey) ? decryptPayload(payload, decryptIv, decryptKey) : payload;
 }
 
@@ -539,12 +503,7 @@ ASN1DERElement tihmstar::img4tool::getEmptyIM4PContainer(const char *type, const
 }
 
 ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement im4p, const void *buf, size_t size){
-    assure(im4p.tag().isConstructed);
-    assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
-    assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
-    
-    retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
-
+    assure(isValidIM4P(im4p));
     ASN1DERElement newim4p(im4p);
 
     ASN1DERElement im4p_payload({ASN1DERElement::TagOCTET, ASN1DERElement::Primitive, ASN1DERElement::Universal},buf,size);
@@ -552,4 +511,50 @@ ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement im4p
     newim4p += im4p_payload;
     
     return newim4p;
+}
+
+bool tihmstar::img4tool::isValidIMG4(const ASN1DERElement img4){
+    try{
+        assure(img4.tag().isConstructed);
+        assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+        assure(img4.tag().tagClass == ASN1DERElement::TagClass::Universal);
+        
+        retassure(img4[0].getStringValue() == "IMG4", "Not an IMG4 file");
+        return true;
+    }catch (tihmstar::exception &e){
+        //
+    }
+    return false;
+}
+
+bool tihmstar::img4tool::isValidIM4P(const ASN1DERElement im4p){
+    try {
+        assure(im4p.tag().isConstructed);
+        assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+        assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
+        
+        retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
+        retassure(im4p[1].getStringValue().size() == 4, "IM4P type has size != 4");
+        retassure(im4p[2].getStringValue().size(), "IM4P description is empty");
+
+        ASN1DERElement payload = im4p[3];
+        assure(!payload.tag().isConstructed);
+        assure(payload.tag().tagNumber == ASN1DERElement::TagOCTET);
+        assure(payload.tag().tagClass == ASN1DERElement::TagClass::Universal);
+
+        return true;
+    } catch (tihmstar::exception &e) {
+        //
+    }
+    return false;
+}
+
+ASN1DERElement tihmstar::img4tool::renameIM4P(const ASN1DERElement im4p, const char *type){
+    assure(isValidIM4P(im4p));
+    retassure(strlen(type) == 4, "type has size != 4");
+    ASN1DERElement newIm4p(im4p);
+
+    memcpy((void*)newIm4p[1].payload(),type,4);
+    
+    return newIm4p;
 }
