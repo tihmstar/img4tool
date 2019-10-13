@@ -372,20 +372,17 @@ std::string tihmstar::img4tool::getNameForSequence(const void *buf, size_t size)
     return sequence[0].getStringValue();
 }
 
-ASN1DERElement tihmstar::img4tool::getIM4PFromIMG4(const void *buf, size_t size){
-    ASN1DERElement img4(buf,size);
-    assure(isValidIMG4(img4));
+ASN1DERElement tihmstar::img4tool::getIM4PFromIMG4(const ASN1DERElement img4){
+    assure(isIMG4(img4));
     
     ASN1DERElement im4p = img4[1];
-    assure(isValidIM4P(im4p));
+    assure(isIM4P(im4p));
 
     return im4p;
 }
 
-ASN1DERElement tihmstar::img4tool::getIM4MFromIMG4(const void *buf, size_t size){
-    ASN1DERElement img4(buf,size);
-    
-    assure(isValidIMG4(img4));
+ASN1DERElement tihmstar::img4tool::getIM4MFromIMG4(const ASN1DERElement img4){
+    assure(isIMG4(img4));
     
     ASN1DERElement container = img4[2];
     
@@ -413,8 +410,8 @@ ASN1DERElement tihmstar::img4tool::getEmptyIMG4Container(){
 }
 
 ASN1DERElement tihmstar::img4tool::appendIM4PToIMG4(const ASN1DERElement img4, const ASN1DERElement im4p){
-    assure(isValidIMG4(img4));
-    assure(isValidIM4P(im4p));
+    assure(isIMG4(img4));
+    assure(isIM4P(im4p));
 
     ASN1DERElement newImg4(img4);
     
@@ -424,7 +421,7 @@ ASN1DERElement tihmstar::img4tool::appendIM4PToIMG4(const ASN1DERElement img4, c
 }
 
 ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement img4, const ASN1DERElement im4m){
-    assure(isValidIMG4(img4));
+    assure(isIMG4(img4));
     
     assure(im4m.tag().isConstructed);
     assure(im4m.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -444,7 +441,7 @@ ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement img4, c
 }
 
 ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement im4p, const char *decryptIv, const char *decryptKey){
-    assure(isValidIM4P(im4p));
+    assure(isIM4P(im4p));
     ASN1DERElement payload = im4p[3];
     return (decryptIv || decryptKey) ? decryptPayload(payload, decryptIv, decryptKey) : payload;
 }
@@ -503,7 +500,7 @@ ASN1DERElement tihmstar::img4tool::getEmptyIM4PContainer(const char *type, const
 }
 
 ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement im4p, const void *buf, size_t size){
-    assure(isValidIM4P(im4p));
+    assure(isIM4P(im4p));
     ASN1DERElement newim4p(im4p);
 
     ASN1DERElement im4p_payload({ASN1DERElement::TagOCTET, ASN1DERElement::Primitive, ASN1DERElement::Universal},buf,size);
@@ -513,7 +510,7 @@ ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement im4p
     return newim4p;
 }
 
-bool tihmstar::img4tool::isValidIMG4(const ASN1DERElement img4){
+bool tihmstar::img4tool::isIMG4(const ASN1DERElement img4){
     try{
         assure(img4.tag().isConstructed);
         assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -527,7 +524,7 @@ bool tihmstar::img4tool::isValidIMG4(const ASN1DERElement img4){
     return false;
 }
 
-bool tihmstar::img4tool::isValidIM4P(const ASN1DERElement im4p){
+bool tihmstar::img4tool::isIM4P(const ASN1DERElement im4p){
     try {
         assure(im4p.tag().isConstructed);
         assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -536,12 +533,43 @@ bool tihmstar::img4tool::isValidIM4P(const ASN1DERElement im4p){
         retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
         retassure(im4p[1].getStringValue().size() == 4, "IM4P type has size != 4");
         retassure(im4p[2].getStringValue().size(), "IM4P description is empty");
-
+        
         ASN1DERElement payload = im4p[3];
         assure(!payload.tag().isConstructed);
         assure(payload.tag().tagNumber == ASN1DERElement::TagOCTET);
         assure(payload.tag().tagClass == ASN1DERElement::TagClass::Universal);
+        
+        return true;
+    } catch (tihmstar::exception &e) {
+        //
+    }
+    return false;
+}
 
+bool tihmstar::img4tool::isIM4M(const ASN1DERElement im4m){
+    try {
+        assure(im4m.tag().isConstructed);
+        assure(im4m.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+        assure(im4m.tag().tagClass == ASN1DERElement::TagClass::Universal);
+        
+        retassure(im4m[0].getStringValue() == "IM4M", "Container is not a IM4M");
+        retassure(im4m[1].getIntegerValue() == 0, "IM4M has weird version number");
+
+        auto set = im4m[2];
+        assure(set.tag().isConstructed);
+        assure(set.tag().tagNumber == ASN1DERElement::TagSET);
+        assure(set.tag().tagClass == ASN1DERElement::TagClass::Universal);
+
+        auto octet = im4m[3];
+        assure(!octet.tag().isConstructed);
+        assure(octet.tag().tagNumber == ASN1DERElement::TagOCTET);
+        assure(octet.tag().tagClass == ASN1DERElement::TagClass::Universal);
+
+        auto seq = im4m[4];
+        assure(seq.tag().isConstructed);
+        assure(seq.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+        assure(seq.tag().tagClass == ASN1DERElement::TagClass::Universal);
+        
         return true;
     } catch (tihmstar::exception &e) {
         //
@@ -550,7 +578,7 @@ bool tihmstar::img4tool::isValidIM4P(const ASN1DERElement im4p){
 }
 
 ASN1DERElement tihmstar::img4tool::renameIM4P(const ASN1DERElement im4p, const char *type){
-    assure(isValidIM4P(im4p));
+    assure(isIM4P(im4p));
     retassure(strlen(type) == 4, "type has size != 4");
     ASN1DERElement newIm4p(im4p);
 

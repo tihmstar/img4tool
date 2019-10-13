@@ -25,8 +25,8 @@ using namespace std;
 #define FLAG_EXTRACT    (1 << 2)
 #define FLAG_CREATE     (1 << 3)
 #define FLAG_RENAME     (1 << 4)
+#define FLAG_CONVERT    (1 << 5)
 //#define FLAG_VERIFY      1 << 4
-//#define FLAG_CONVERT     1 << 5
 
 static struct option longopts[] = {
     { "help",           no_argument,        NULL, 'h' },
@@ -38,15 +38,15 @@ static struct option longopts[] = {
     { "im4p",           required_argument,  NULL, 'p' },
     { "create",         required_argument,  NULL, 'c' },
     { "outfile",        required_argument,  NULL, 'o' },
-    { "iv",             required_argument,  NULL, '1' },
-    { "key",            required_argument,  NULL, '2' },
     { "type",           required_argument,  NULL, 't' },
     { "desc",           required_argument,  NULL, 'd' },
     { "rename-payload", required_argument,  NULL, 'n' },
+    { "iv",             required_argument,  NULL, '1' },
+    { "key",            required_argument,  NULL, '2' },
+    { "convert",        no_argument,        NULL, '3' },
 //    { "im4r",           required_argument,  NULL, 'r' },
 //    { "verify",         required_argument,  NULL, 'v' },
 //    { "raw",            required_argument,  NULL, '1' },
-//    { "convert",        no_argument,        NULL, '2' },
     { NULL, 0, NULL, 0 }
 };
 
@@ -130,11 +130,11 @@ void cmd_help(){
     printf("  -n, --rename-payload NAME\trename im4p payload (NAME must be exactly 4 bytes)\n");
     printf("      --iv\t\t\tIV  for decrypting payload when extracting (requires -e and -o)\n");
     printf("      --key\t\t\tKey for decrypting payload when extracting (requires -e and -o)\n");
+    printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
 
 //    printf("  -r, --im4r    <nonce>\t\tnonce to be set for BNCN in im4r\n");
 //    printf("  -v, --verify BUILDMANIFEST\tverify img4, im4m\n");
 //    printf("      --raw     <bytes>\t\twrite bytes to file if combined with -c (does nothing else otherwise)\n");
-//    printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
     
     printf("\n");
 }
@@ -166,7 +166,7 @@ int main_r(int argc, const char * argv[]) {
         safeFree(generator);
     });
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "hais:em:p:c:o:1:2:t:d:n:", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "hais:em:p:c:o:1:2:t:d:n:3", longopts, &optindex)) > 0) {
         switch (opt) {
             case 'h':
                 cmd_help();
@@ -205,6 +205,9 @@ int main_r(int argc, const char * argv[]) {
                 break;
             case '2':  //key
                 decryptKey = optarg;
+                break;
+            case '3':  //convert
+                flags |= FLAG_CONVERT;
                 break;
             case 't':
                 retassure(!(flags & FLAG_RENAME), "Invalid command line arguments. can't rename and create at the same time");
@@ -249,34 +252,41 @@ int main_r(int argc, const char * argv[]) {
         if (flags & FLAG_EXTRACT) {
             //extract
             bool didExtract = false;
+            ASN1DERElement file(workingBuffer, workingBufferSize);
             
-            if (im4pFile) {
-                auto im4p = getIM4PFromIMG4(workingBuffer, workingBufferSize);
-                saveToFile(im4pFile, im4p.buf(), im4p.size());
-                printf("Extracted IM4P to %s\n",im4pFile);
-                didExtract = true;
-            }
-            if (im4mFile) {
-                auto im4m = getIM4MFromIMG4(workingBuffer, workingBufferSize);
-                saveToFile(im4mFile, im4m.buf(), im4m.size());
-                printf("Extracted IM4M to %s\n",im4mFile);
-                didExtract = true;
-            }
-            if (workingBuffer && outFile) {
-                ASN1DERElement im4p(workingBuffer, workingBufferSize);
-                string seqName = getNameForSequence(workingBuffer, workingBufferSize);
-                if (seqName == "IMG4") {
-                    im4p = getIM4PFromIMG4(workingBuffer, workingBufferSize);
-                } else if (seqName != "IM4P"){
+            if (outFile) {
+                //check for payload extraction
+                if (isIMG4(file)) {
+                    file = getIM4PFromIMG4(file);
+                } else if (!isIM4P(file)){
                     reterror("File not recognised");
                 }
                 
-                ASN1DERElement payload = getPayloadFromIM4P(im4p, decryptIv, decryptKey);
+                ASN1DERElement payload = getPayloadFromIM4P(file, decryptIv, decryptKey);
                 saveToFile(outFile, payload.payload(), payload.payloadSize());
                 printf("Extracted IM4P payload to %s\n",outFile);
                 didExtract = true;
+            } else if (isIMG4(file)) {
+                //extract im4p an im4m from img4
+                if (im4pFile) {
+                    auto im4p = getIM4PFromIMG4(file);
+                    saveToFile(im4pFile, im4p.buf(), im4p.size());
+                    printf("Extracted IM4P to %s\n",im4pFile);
+                    didExtract = true;
+                }
+                if (im4mFile) {
+                    auto im4m = getIM4MFromIMG4(file);
+                    saveToFile(im4mFile, im4m.buf(), im4m.size());
+                    printf("Extracted IM4M to %s\n",im4mFile);
+                    didExtract = true;
+                }
+            }else if (isIM4M(file)){
+                assure(im4mFile);
+                saveToFile(im4mFile, file.buf(), file.size());
+                printf("Saved IM4M to %s\n",im4mFile);
+                didExtract = true;
             }
-            
+
             if (!didExtract) {
                 error("Failed to extract!\n");
                 return -1;
@@ -301,6 +311,32 @@ int main_r(int argc, const char * argv[]) {
             im4p = renameIM4P(im4p, im4pType);
             saveToFile(outFile, im4p.buf(), im4p.size());
             printf("Saved new renamed IM4P to %s\n",outFile);
+        } else if (flags & FLAG_CONVERT){
+            retassure(shshFile, "output path for shsh file required");
+            ASN1DERElement im4m(workingBuffer, workingBufferSize);
+            retassure(isIM4M(im4m), "lastarg needs to be IM4M");
+            
+            plist_t newshsh = NULL;
+            plist_t data = NULL;
+            char *xml = NULL;
+            uint32_t xmlSize = 0;
+            cleanup([&]{
+                if (newshsh) {
+                    plist_free(newshsh);
+                }
+                if (data) {
+                    plist_free(data);
+                }
+                safeFree(xml);
+            });
+            assure(newshsh = plist_new_dict());
+            assure(data = plist_new_data((const char*)im4m.buf(), im4m.size()));
+            
+            plist_dict_set_item(newshsh, "ApImg4Ticket", data); data = NULL;
+            
+            retassure((plist_to_xml(newshsh, &xml, &xmlSize),xml), "failed to convert plist to xml");
+            saveToFile(shshFile, xml, xmlSize);
+            printf("Saved IM4M to %s\n",shshFile);
         }
         else {
             //printing only
