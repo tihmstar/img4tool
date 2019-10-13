@@ -103,7 +103,7 @@ ASN1DERElement::ASN1DERElement(const ASN1DERElement &old) :
     _ownsBuffer(true)
 {
     _buf = (ASN1TAG*)malloc(_bufSize);
-    memcpy((void*)&_buf[0], old._buf, old._bufSize);
+    memcpy((void*)&_buf[0], old._buf, _bufSize);
 }
 
 
@@ -220,7 +220,7 @@ ASN1DERElement ASN1DERElement::operator[](uint32_t i) const{
     
     while (i--){
         uint8_t *buf = (uint8_t*)rt.buf()+ rt.size();
-        size_t size = _bufSize - (size_t)((uint8_t*)rt.buf() - buf);
+        size_t size = _bufSize - (size_t)(buf - (uint8_t*)_buf);
         rt = ASN1DERElement(buf, size);
     }
     

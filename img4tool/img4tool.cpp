@@ -7,15 +7,26 @@
 //
 
 #include <stdio.h>
+#include <array>
 #include <arpa/inet.h>
 #include "img4tool.hpp"
 #include "img4tool/libgeneral/macros.h"
 #include "ASN1DERElement.hpp"
 
+#warning TODO adjust this for __APPLE__
+#include <openssl/x509.h>
+#include <openssl/evp.h>
+
 #ifdef __APPLE__
 #   include <CommonCrypto/CommonCrypto.h>
+#   include <CommonCrypto/CommonDigest.h>
+#   define SHA1(d, n, md) CC_SHA1(d, n, md)
+#   define SHA384(d, n, md) CC_SHA384(d, n, md)
+#   define SHA_DIGEST_LENGTH CC_SHA1_DIGEST_LENGTH
+#   define SHA384_DIGEST_LENGTH CC_SHA384_DIGEST_LENGTH
 #else
 #   include <openssl/aes.h>
+#   include <openssl/sha.h>
 #endif // __APPLE__
 
 using namespace tihmstar::img4tool;
@@ -210,6 +221,8 @@ ASN1DERElement tihmstar::img4tool::parsePrivTag(const void *buf, size_t size, si
     ASN1DERElement::ASN1Len *tlen = NULL;
     size_t taginfoSize = 7;
     assure(size >= taginfoSize);
+    assure(*(uint8_t*)buf == ASN1DERElement::TagPrivate);
+
 
     ptag = ((ASN1DERElement::ASN1PrivateTag *)buf) + 1;
     tlen = ((ASN1DERElement::ASN1Len *)buf) + 6;
@@ -372,7 +385,7 @@ std::string tihmstar::img4tool::getNameForSequence(const void *buf, size_t size)
     return sequence[0].getStringValue();
 }
 
-ASN1DERElement tihmstar::img4tool::getIM4PFromIMG4(const ASN1DERElement img4){
+ASN1DERElement tihmstar::img4tool::getIM4PFromIMG4(const ASN1DERElement &img4){
     assure(isIMG4(img4));
     
     ASN1DERElement im4p = img4[1];
@@ -381,7 +394,7 @@ ASN1DERElement tihmstar::img4tool::getIM4PFromIMG4(const ASN1DERElement img4){
     return im4p;
 }
 
-ASN1DERElement tihmstar::img4tool::getIM4MFromIMG4(const ASN1DERElement img4){
+ASN1DERElement tihmstar::img4tool::getIM4MFromIMG4(const ASN1DERElement &img4){
     assure(isIMG4(img4));
     
     ASN1DERElement container = img4[2];
@@ -409,7 +422,7 @@ ASN1DERElement tihmstar::img4tool::getEmptyIMG4Container(){
     return img4;
 }
 
-ASN1DERElement tihmstar::img4tool::appendIM4PToIMG4(const ASN1DERElement img4, const ASN1DERElement im4p){
+ASN1DERElement tihmstar::img4tool::appendIM4PToIMG4(const ASN1DERElement &img4, const ASN1DERElement &im4p){
     assure(isIMG4(img4));
     assure(isIM4P(im4p));
 
@@ -420,7 +433,7 @@ ASN1DERElement tihmstar::img4tool::appendIM4PToIMG4(const ASN1DERElement img4, c
     return newImg4;
 }
 
-ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement img4, const ASN1DERElement im4m){
+ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement &img4, const ASN1DERElement &im4m){
     assure(isIMG4(img4));
     
     assure(im4m.tag().isConstructed);
@@ -440,13 +453,13 @@ ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement img4, c
     return newImg4;
 }
 
-ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement im4p, const char *decryptIv, const char *decryptKey){
+ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv, const char *decryptKey){
     assure(isIM4P(im4p));
     ASN1DERElement payload = im4p[3];
     return (decryptIv || decryptKey) ? decryptPayload(payload, decryptIv, decryptKey) : payload;
 }
 
-ASN1DERElement tihmstar::img4tool::decryptPayload(const ASN1DERElement payload, const char *decryptIv, const char *decryptKey){
+ASN1DERElement tihmstar::img4tool::decryptPayload(const ASN1DERElement &payload, const char *decryptIv, const char *decryptKey){
     uint8_t iv[16] = {};
     uint8_t key[32] = {};
     retassure(decryptIv, "decryptPayload requires IV but none was provided!");
@@ -499,7 +512,7 @@ ASN1DERElement tihmstar::img4tool::getEmptyIM4PContainer(const char *type, const
     return im4p;
 }
 
-ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement im4p, const void *buf, size_t size){
+ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement &im4p, const void *buf, size_t size){
     assure(isIM4P(im4p));
     ASN1DERElement newim4p(im4p);
 
@@ -510,7 +523,7 @@ ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement im4p
     return newim4p;
 }
 
-bool tihmstar::img4tool::isIMG4(const ASN1DERElement img4){
+bool tihmstar::img4tool::isIMG4(const ASN1DERElement &img4){
     try{
         assure(img4.tag().isConstructed);
         assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -524,7 +537,7 @@ bool tihmstar::img4tool::isIMG4(const ASN1DERElement img4){
     return false;
 }
 
-bool tihmstar::img4tool::isIM4P(const ASN1DERElement im4p){
+bool tihmstar::img4tool::isIM4P(const ASN1DERElement &im4p){
     try {
         assure(im4p.tag().isConstructed);
         assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -546,7 +559,7 @@ bool tihmstar::img4tool::isIM4P(const ASN1DERElement im4p){
     return false;
 }
 
-bool tihmstar::img4tool::isIM4M(const ASN1DERElement im4m){
+bool tihmstar::img4tool::isIM4M(const ASN1DERElement &im4m){
     try {
         assure(im4m.tag().isConstructed);
         assure(im4m.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -577,7 +590,7 @@ bool tihmstar::img4tool::isIM4M(const ASN1DERElement im4m){
     return false;
 }
 
-ASN1DERElement tihmstar::img4tool::renameIM4P(const ASN1DERElement im4p, const char *type){
+ASN1DERElement tihmstar::img4tool::renameIM4P(const ASN1DERElement &im4p, const char *type){
     assure(isIM4P(im4p));
     retassure(strlen(type) == 4, "type has size != 4");
     ASN1DERElement newIm4p(im4p);
@@ -585,4 +598,356 @@ ASN1DERElement tihmstar::img4tool::renameIM4P(const ASN1DERElement im4p, const c
     memcpy((void*)newIm4p[1].payload(),type,4);
     
     return newIm4p;
+}
+
+bool tihmstar::img4tool::isIM4MSignatureValid(const ASN1DERElement &im4m){
+    EVP_MD_CTX *mdctx = NULL;
+    X509 *cert = NULL;
+    EVP_PKEY *certpubkey = NULL;
+    const unsigned char* certificate = NULL;
+    bool useSHA384 = false;
+    cleanup([&]{
+        if(mdctx) EVP_MD_CTX_destroy(mdctx);
+    });
+    
+    try {
+        assure(isIM4M(im4m));
+        ASN1DERElement data   = im4m[2];
+        ASN1DERElement sig   = im4m[3];
+        ASN1DERElement certelem = im4m[4][0];
+        try {
+            //bootAuthority is 0
+            //tssAuthority is 1
+            certelem = im4m[4][1];
+        } catch (tihmstar::exception &e) {
+            //however bootAuthority does not exist on iPhone7
+            useSHA384 = true;
+        }
+        
+        certificate = (const unsigned char*)certelem.buf();
+        
+        assure(mdctx = EVP_MD_CTX_create());
+        assure(cert = d2i_X509(NULL, &certificate, certelem.size()));
+        assure(certpubkey = X509_get_pubkey(cert));
+        
+        assure(EVP_DigestVerifyInit(mdctx, NULL, (useSHA384) ? EVP_sha384() : EVP_sha1(), NULL, certpubkey) == 1);
+        
+        assure(EVP_DigestVerifyUpdate(mdctx, data.buf(), data.size()) == 1);
+        
+        assure(EVP_DigestVerifyFinal(mdctx, (unsigned char*)sig.payload(), sig.payloadSize()) == 1);
+    } catch (tihmstar::exception &e) {
+        printf("[IMG4TOOL] failed to verify IM4M signature with error:\n");
+        e.dump();
+        return false;
+    }
+    return true;
+}
+
+
+bool tihmstar::img4tool::doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &im4m, plist_t buildIdentity) noexcept{
+    plist_t ApBoardID = NULL;
+    plist_t ApChipID = NULL;
+    plist_t ApSecurityDomain = NULL;
+    try{
+        assure(isIM4M(im4m));
+        
+        assure(ApBoardID = plist_dict_get_item(buildIdentity, "ApBoardID"));
+        assure(ApChipID = plist_dict_get_item(buildIdentity, "ApChipID"));
+        assure(ApSecurityDomain = plist_dict_get_item(buildIdentity, "ApSecurityDomain"));
+        
+        assure(plist_get_node_type(ApBoardID) == PLIST_STRING);
+        assure(plist_get_node_type(ApChipID) == PLIST_STRING);
+        assure(plist_get_node_type(ApSecurityDomain) == PLIST_STRING);
+
+        
+        ASN1DERElement set = im4m[2];
+        ASN1DERElement manbpriv = set[0];
+        size_t privTagVal = 0;
+        ASN1DERElement manb = parsePrivTag(manbpriv.buf(), manbpriv.size(), &privTagVal);
+        assure(privTagVal == *(uint32_t*)"MANB");
+        assure(manb[0].getStringValue() == "MANB");
+        
+        ASN1DERElement manbset = manb[1];
+        
+        ASN1DERElement manppriv = manbset[0];
+        privTagVal = 0;
+        ASN1DERElement manp = parsePrivTag(manppriv.buf(), manppriv.size(), &privTagVal);
+        assure(privTagVal == *(uint32_t*)"MANP");
+        assure(manp[0].getStringValue() == "MANP");
+
+        ASN1DERElement manpset = manp[1];
+
+        
+        for (auto &e : manpset) {
+            char *pstrval= NULL;
+            uint64_t val = 0;
+            size_t ptagVal = 0;
+            plist_t currVal = NULL;
+            cleanup([&]{
+                safeFree(pstrval);
+            });
+            ASN1DERElement ptag = parsePrivTag(e.buf(), e.size(), &ptagVal);
+            
+            switch (ptagVal) {
+                case 'DROB': //BORD
+                    assure(ptag[0].getStringValue() == "BORD");
+                    currVal = ApBoardID;ApBoardID = NULL;
+                    break;
+                case 'PIHC': //CHIP
+                    assure(ptag[0].getStringValue() == "CHIP");
+                    currVal = ApChipID;ApChipID = NULL;
+                    break;
+                case 'MODS': //SDOM
+                    assure(ptag[0].getStringValue() == "SDOM");
+                    currVal = ApSecurityDomain;ApSecurityDomain = NULL;
+                    break;
+                default:
+                    continue;
+            }
+
+            plist_get_string_val(currVal, &pstrval);
+            if (strncmp("0x", pstrval, 2) == 0){
+                sscanf(pstrval, "0x%llx",&val);
+            }else{
+                sscanf(pstrval, "%lld",&val);
+            }
+            assure(ptag[1].getIntegerValue() == val);
+        }
+        //make sure we verified all 3 values we wanted to check
+        assure(!ApBoardID && !ApChipID && !ApSecurityDomain);
+    }catch (tihmstar::exception &e){
+        return false;
+    }
+    return true;
+}
+
+bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, plist_t buildIdentity) noexcept{
+    plist_t manifest = NULL;
+    try {
+        printf("[IMG4TOOL] checking buildidentity matches board ... ");
+        if (!doesIM4MBoardMatchBuildIdentity(im4m, buildIdentity)) {
+            printf("NO\n");
+            return false;
+        }
+        printf("YES\n");
+        
+        printf("[IMG4TOOL] checking buildidentity has all required hashes:\n");
+        ASN1DERElement set = im4m[2];
+        ASN1DERElement manbpriv = set[0];
+        size_t privTagVal = 0;
+        ASN1DERElement manb = parsePrivTag(manbpriv.buf(), manbpriv.size(), &privTagVal);
+        assure(privTagVal == *(uint32_t*)"MANB");
+        assure(manb[0].getStringValue() == "MANB");
+        
+        ASN1DERElement manbset = manb[1];
+        
+        assure(manifest = plist_dict_get_item(buildIdentity, "Manifest"));
+        assure(plist_get_node_type(manifest) == PLIST_DICT);
+        
+        plist_dict_iter melems = NULL;
+        cleanup([&]{
+            safeFree(melems);
+        });
+        plist_dict_new_iter(manifest, &melems);
+        assure(melems);
+        plist_t eVal = NULL;
+        char *eKey = NULL;
+        
+        while (((void)plist_dict_next_item(manifest, melems, &eKey, &eVal),eVal)) {
+            plist_t pInfo = NULL;
+            plist_t pDigest = NULL;
+            plist_t pPersonalize = NULL;
+            uint8_t doPersonalize = 0;
+            char *digest = NULL;
+            uint64_t digestLen = 0;
+            bool hasDigit = false;
+            cleanup([&]{
+                safeFree(digest);
+            });
+            
+            int didprint = printf("[IMG4TOOL] checking hash for \"%s\"",eKey);
+            while (didprint++< 55) {
+                printf(" ");
+            }
+            
+            assure(pInfo = plist_dict_get_item(eVal, "Info"));
+            if (!(pPersonalize = plist_dict_get_item(pInfo, "Personalize"))){
+                printf("OK (unchecked)\n");
+                continue;
+            }
+            assure(plist_get_node_type(pPersonalize) == PLIST_BOOLEAN);
+            plist_get_bool_val(pPersonalize, &doPersonalize);
+            if (!doPersonalize){
+                printf("OK (unpersonalized)\n");
+                continue;
+            }
+            assure(pDigest = plist_dict_get_item(eVal, "Digest"));
+            assure(plist_get_node_type(pDigest) == PLIST_DATA);
+            plist_get_data_val(pDigest, &digest, &digestLen);
+            
+            
+            for (auto &e : manbset) {
+                size_t pTagVal = 0;
+                ASN1DERElement me = parsePrivTag(e.buf(), e.size(), &pTagVal);
+                if (pTagVal == *(uint32_t*)"MANP")
+                    continue;
+
+                ASN1DERElement set = me[1];
+                
+                for (auto &se : set) {
+                    size_t pTagVal = 0;
+                    ASN1DERElement sel = parsePrivTag(se.buf(), se.size(), &pTagVal);
+                    switch (pTagVal) {
+                        case 'TSGD': //DGST
+                        {
+                            std::string selDigest = sel[1].getStringValue();
+                            if (selDigest.size() == digestLen && memcmp(selDigest.c_str(), digest, digestLen) == 0){
+                                hasDigit = true;
+                                printf("OK (found \"%s\" with matching hash)\n",me[0].getStringValue().c_str());
+                                goto continue_plist;
+                            }
+                        }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
+        continue_plist:
+            assure(hasDigit);
+        }
+    } catch (tihmstar::exception &e) {
+        printf("\nfailed verification with error:\n");
+        e.dump();
+        return false;
+    }
+    return true;
+}
+
+const plist_t tihmstar::img4tool::getBuildIdentityForIm4m(const ASN1DERElement &im4m, plist_t buildmanifest){
+    plist_t buildidentities = NULL;
+
+    assure(buildmanifest);
+    assure(buildidentities = plist_dict_get_item(buildmanifest, "BuildIdentities"));
+    assure(plist_get_node_type(buildidentities) == PLIST_ARRAY);
+    
+    for (int i=0; i<plist_array_get_size(buildidentities); i++) {
+        plist_t buildIdentity = NULL;
+        
+        printf("[IMG4TOOL] checking buildidentity %d:\n",i);
+        assure(buildIdentity = plist_array_get_item(buildidentities, i));
+        if (im4mMatchesBuildIdentity(im4m, buildIdentity)) {
+            return buildIdentity;
+        }
+    }
+    reterror("Failed to find matching buildidentity");
+}
+
+void tihmstar::img4tool::printGeneralBuildIdentityInformation(plist_t buildidentity){
+    plist_t info = NULL;
+    plist_dict_iter iter = NULL;
+    cleanup([&]{
+        safeFree(iter);
+    });
+    assure(info = plist_dict_get_item(buildidentity, "Info"));
+    
+    assure(((void)plist_dict_new_iter(info, &iter),iter));
+    
+    plist_t node = NULL;
+    char *key = NULL;
+    while ((void)plist_dict_next_item(info, iter, &key, &node),node) {
+        char *str = NULL;
+        cleanup([&]{
+            safeFree(str);
+        });
+        plist_type t = PLIST_NONE;
+        switch (t = plist_get_node_type(node)) {
+            case PLIST_STRING:
+                plist_get_string_val(node, &str);
+                printf("%s : %s\n",key,str);
+                break;
+            case PLIST_BOOLEAN:
+                plist_get_bool_val(node, (uint8_t*)&t);
+                printf("%s : %s\n",key,((uint8_t)t) ? "YES" : "NO" );
+            default:
+                break;
+        }
+    }
+}
+
+bool tihmstar::img4tool::isValidIM4M(const ASN1DERElement &im4m, plist_t buildmanifest){
+    try {
+        plist_t buildIdentity = NULL;
+        buildIdentity = getBuildIdentityForIm4m(im4m, buildmanifest);
+        
+        if (!isIM4MSignatureValid(im4m)) {
+            reterror("Signature verification of IM4M failed!\n");
+        }
+        printf("\n[IMG4TOOL] IM4M signature is verified by TssAuthority\n");
+        
+        printf("[IMG4TOOL] IM4M is valid for the given BuildManifest for the following restore:\n");
+        printGeneralBuildIdentityInformation(buildIdentity);
+    } catch (tihmstar::exception &e) {
+        printf("\n[IMG4TOOL] IM4M validation failed with error:\n");
+        e.dump();
+        return false;
+    }
+
+    return true;
+}
+
+std::string tihmstar::img4tool::getIM4PSHA1(const ASN1DERElement &im4p){
+    std::array<char, SHA_DIGEST_LENGTH> tmp{'\0'};
+    std::string hash{tmp.begin(),tmp.end()};
+    SHA1((unsigned char*)im4p.buf(), (unsigned int)im4p.size(), (unsigned char *)hash.c_str());
+    return hash;
+}
+
+
+std::string tihmstar::img4tool::getIM4PSHA384(const ASN1DERElement &im4p){
+    std::array<char, SHA384_DIGEST_LENGTH> tmp{'\0'};
+    std::string hash{tmp.begin(),tmp.end()};
+    SHA384((unsigned char*)im4p.buf(), (unsigned int)im4p.size(), (unsigned char *)hash.c_str());
+    return hash;
+}
+
+bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::string hash){
+    assure(isIM4M(im4m));
+    ASN1DERElement set = im4m[2];
+    ASN1DERElement manbpriv = set[0];
+    size_t privTagVal = 0;
+    ASN1DERElement manb = parsePrivTag(manbpriv.buf(), manbpriv.size(), &privTagVal);
+    assure(privTagVal == *(uint32_t*)"MANB");
+    assure(manb[0].getStringValue() == "MANB");
+    
+    ASN1DERElement manbset = manb[1];
+    
+    for (auto &e : manbset) {
+        size_t pTagVal = 0;
+        ASN1DERElement me = parsePrivTag(e.buf(), e.size(), &pTagVal);
+        if (pTagVal == *(uint32_t*)"MANP")
+            continue;
+        
+        ASN1DERElement set = me[1];
+        auto asd = me[0].getStringValue();
+
+        for (auto &se : set) {
+            size_t pTagVal = 0;
+            ASN1DERElement sel = parsePrivTag(se.buf(), se.size(), &pTagVal);
+            switch (pTagVal) {
+                case 'TSGD': //DGST
+                {
+                    std::string selDigest = sel[1].getStringValue();
+                    if (selDigest == hash){
+                        return true;
+                    }
+                }
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    
+    return false;
 }

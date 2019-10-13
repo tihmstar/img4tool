@@ -26,7 +26,6 @@ using namespace std;
 #define FLAG_CREATE     (1 << 3)
 #define FLAG_RENAME     (1 << 4)
 #define FLAG_CONVERT    (1 << 5)
-//#define FLAG_VERIFY      1 << 4
 
 static struct option longopts[] = {
     { "help",           no_argument,        NULL, 'h' },
@@ -41,17 +40,29 @@ static struct option longopts[] = {
     { "type",           required_argument,  NULL, 't' },
     { "desc",           required_argument,  NULL, 'd' },
     { "rename-payload", required_argument,  NULL, 'n' },
+    { "verify",         required_argument,  NULL, 'v' },
     { "iv",             required_argument,  NULL, '1' },
     { "key",            required_argument,  NULL, '2' },
     { "convert",        no_argument,        NULL, '3' },
-//    { "im4r",           required_argument,  NULL, 'r' },
-//    { "verify",         required_argument,  NULL, 'v' },
-//    { "raw",            required_argument,  NULL, '1' },
     { NULL, 0, NULL, 0 }
 };
 
-char *im4mFormShshFile(const char *shshfile, size_t *outSize, char **generator){
-    FILE *f = fopen(shshfile,"rb");
+char *readFromFile(const char *filePath, size_t *outSize){
+    FILE *f = fopen(filePath, "r");
+    if (!f) return NULL;
+    fseek(f, 0, SEEK_END);
+    size_t size = ftell(f);
+    fseek(f, 0, SEEK_SET);
+    char *ret = (char*)malloc(size);
+    if (ret) fread(ret, size, 1, f);
+    fclose(f);
+    if (outSize) *outSize = size;
+    
+    return ret;
+}
+
+plist_t readPlistFromFile(const char *filePath){
+    FILE *f = fopen(filePath,"rb");
     if (!f) return NULL;
     fseek(f, 0, SEEK_END);
     
@@ -61,12 +72,18 @@ char *im4mFormShshFile(const char *shshfile, size_t *outSize, char **generator){
     fread(buf, fSize, 1, f);
     fclose(f);
     
-    plist_t shshplist = NULL;
+    plist_t plist = NULL;
     
     if (memcmp(buf, "bplist00", 8) == 0)
-        plist_from_bin(buf, (uint32_t)fSize, &shshplist);
+        plist_from_bin(buf, (uint32_t)fSize, &plist);
     else
-        plist_from_xml(buf, (uint32_t)fSize, &shshplist);
+        plist_from_xml(buf, (uint32_t)fSize, &plist);
+    
+    return plist;
+}
+
+char *im4mFormShshFile(const char *shshfile, size_t *outSize, char **generator){
+    plist_t shshplist = readPlistFromFile(shshfile);
     
     plist_t ticket = plist_dict_get_item(shshplist, "ApImg4Ticket");
     
@@ -85,20 +102,6 @@ char *im4mFormShshFile(const char *shshfile, size_t *outSize, char **generator){
     plist_free(shshplist);
     
     return im4msize ? im4m : NULL;
-}
-
-char *readFromFile(const char *filePath, size_t *outSize){
-    FILE *f = fopen(filePath, "r");
-    if (!f) return NULL;
-    fseek(f, 0, SEEK_END);
-    size_t size = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *ret = (char*)malloc(size);
-    if (ret) fread(ret, size, 1, f);
-    fclose(f);
-    if (outSize) *outSize = size;
-    
-    return ret;
 }
 
 void saveToFile(const char *filePath, const void *buf, size_t bufSize){
@@ -128,14 +131,11 @@ void cmd_help(){
     printf("  -t, --type\t\t\tset type for creating IM4P files from raw\n");
     printf("  -d, --desc\t\t\tset desc for creating IM4P files from raw\n");
     printf("  -n, --rename-payload NAME\trename im4p payload (NAME must be exactly 4 bytes)\n");
+    printf("  -v, --verify BUILDMANIFEST\tverify img4, im4m\n");
     printf("      --iv\t\t\tIV  for decrypting payload when extracting (requires -e and -o)\n");
     printf("      --key\t\t\tKey for decrypting payload when extracting (requires -e and -o)\n");
     printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
 
-//    printf("  -r, --im4r    <nonce>\t\tnonce to be set for BNCN in im4r\n");
-//    printf("  -v, --verify BUILDMANIFEST\tverify img4, im4m\n");
-//    printf("      --raw     <bytes>\t\twrite bytes to file if combined with -c (does nothing else otherwise)\n");
-    
     printf("\n");
 }
 
@@ -151,6 +151,7 @@ int main_r(int argc, const char * argv[]) {
     const char *decryptKey = NULL;
     const char *im4pType = NULL;
     const char *im4pDesc = "Image created by img4tool";
+    const char *buildmanifestFile = NULL;
 
     int optindex = 0;
     int opt = 0;
@@ -166,7 +167,7 @@ int main_r(int argc, const char * argv[]) {
         safeFree(generator);
     });
     
-    while ((opt = getopt_long(argc, (char* const *)argv, "hais:em:p:c:o:1:2:t:d:n:3", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "hais:em:p:c:o:1:2:t:d:n:3v:", longopts, &optindex)) > 0) {
         switch (opt) {
             case 'h':
                 cmd_help();
@@ -221,6 +222,9 @@ int main_r(int argc, const char * argv[]) {
                 retassure(!im4pType, "Invalid command line arguments. im4pType already set!");
                 im4pType = optarg;
                 flags |= FLAG_RENAME;
+                break;
+            case 'v':
+                buildmanifestFile = optarg;
                 break;
             default:
                 cmd_help();
@@ -337,6 +341,39 @@ int main_r(int argc, const char * argv[]) {
             retassure((plist_to_xml(newshsh, &xml, &xmlSize),xml), "failed to convert plist to xml");
             saveToFile(shshFile, xml, xmlSize);
             printf("Saved IM4M to %s\n",shshFile);
+        } else if (buildmanifestFile){
+            //verify
+            ASN1DERElement file(workingBuffer, workingBufferSize);
+            std::string im4pSHA1;
+            std::string im4pSHA384;
+
+            if (isIMG4(file)) {
+                ASN1DERElement im4p = getIM4PFromIMG4(file);
+                file = getIM4MFromIMG4(file);
+                
+                im4pSHA1 = getIM4PSHA1(im4p);
+                im4pSHA384 = getIM4PSHA384(im4p);
+            }
+            
+            if (isIM4M(file)) {
+                plist_t buildmanifest = NULL;
+                cleanup([&]{
+                    if (buildmanifest) {
+                        plist_free(buildmanifest);
+                    }
+                });
+                assure(buildmanifest = readPlistFromFile(buildmanifestFile));
+                
+                printf("APTicket is %s!\n",isValidIM4M(file, buildmanifest) ? "valid" : "invalid");
+                
+                if (im4pSHA1.size() || im4pSHA384.size()) {
+                    //verify payload hash too
+                    retassure(im4mContainsHash(file, im4pSHA1) || im4mContainsHash(file, im4pSHA384), "IM4P hash not in IM4M");
+                    printf("[IMG4TOOL] IMG4 contains an IM4P which is correctly signed by IM4M\n");
+                }
+            }else{
+                reterror("File not recognised");
+            }
         }
         else {
             //printing only
