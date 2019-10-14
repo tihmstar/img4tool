@@ -10,24 +10,27 @@
 #include <array>
 #include <arpa/inet.h>
 #include "img4tool.hpp"
-#include "img4tool/libgeneral/macros.h"
 #include "ASN1DERElement.hpp"
+#include <img4tool/libgeneral/macros.h>
 
-#warning TODO adjust this for __APPLE__
-#include <openssl/x509.h>
-#include <openssl/evp.h>
 
-#ifdef __APPLE__
-#   include <CommonCrypto/CommonCrypto.h>
-#   include <CommonCrypto/CommonDigest.h>
-#   define SHA1(d, n, md) CC_SHA1(d, n, md)
-#   define SHA384(d, n, md) CC_SHA384(d, n, md)
-#   define SHA_DIGEST_LENGTH CC_SHA1_DIGEST_LENGTH
-#   define SHA384_DIGEST_LENGTH CC_SHA384_DIGEST_LENGTH
-#else
+#ifdef HAVE_OPENSSL
 #   include <openssl/aes.h>
 #   include <openssl/sha.h>
-#endif // __APPLE__
+
+#warning TODO adjust this for HAVE_COMMCRYPTO
+#   include <openssl/x509.h> //not replaced by CommCrypto
+#   include <openssl/evp.h> //not replaced by CommCrypto
+#else
+#   ifdef HAVE_COMMCRYPTO
+#       include <CommonCrypto/CommonCrypto.h>
+#       include <CommonCrypto/CommonDigest.h>
+#       define SHA1(d, n, md) CC_SHA1(d, n, md)
+#       define SHA384(d, n, md) CC_SHA384(d, n, md)
+#       define SHA_DIGEST_LENGTH CC_SHA1_DIGEST_LENGTH
+#       define SHA384_DIGEST_LENGTH CC_SHA384_DIGEST_LENGTH
+#   endif //HAVE_COMMCRYPTO
+#endif // HAVE_OPENSSL
 
 using namespace tihmstar::img4tool;
 
@@ -456,19 +459,28 @@ ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement &img4, 
 ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv, const char *decryptKey){
     assure(isIM4P(im4p));
     ASN1DERElement payload = im4p[3];
-    return (decryptIv || decryptKey) ? decryptPayload(payload, decryptIv, decryptKey) : payload;
+    if (decryptIv || decryptKey) {
+#ifdef HAVE_CRYPTO
+        return decryptPayload(payload, decryptIv, decryptKey);
+#else
+        reterror("decryption keys were provided, but img4tool was compiled without crypto backend!");
+#endif //HAVE_CRYPTO
+    }
+    return payload;
 }
 
+#pragma mark begin_needs_crypto
+#ifdef HAVE_CRYPTO
 ASN1DERElement tihmstar::img4tool::decryptPayload(const ASN1DERElement &payload, const char *decryptIv, const char *decryptKey){
     uint8_t iv[16] = {};
     uint8_t key[32] = {};
     retassure(decryptIv, "decryptPayload requires IV but none was provided!");
     retassure(decryptKey, "decryptPayload requires KEY but none was provided!");
-
+    
     assure(!payload.tag().isConstructed);
     assure(payload.tag().tagNumber == ASN1DERElement::TagOCTET);
     assure(payload.tag().tagClass == ASN1DERElement::TagClass::Universal);
-
+    
     ASN1DERElement decPayload(payload);
     
     assure(strlen(decryptIv) == sizeof(iv)*2);
@@ -483,19 +495,78 @@ ASN1DERElement tihmstar::img4tool::decryptPayload(const ASN1DERElement &payload,
         assure(sscanf(decryptKey+i*2,"%02x",&t) == 1);
         key[i] = t;
     }
-
     
-#ifdef __APPLE__
-    retassure(CCCrypt(kCCDecrypt, kCCAlgorithmAES, 0, key, sizeof(key), iv, decPayload.payload(), decPayload.payloadSize(), (void*)decPayload.payload(), decPayload.payloadSize(), NULL) == kCCSuccess,
-           "Decryption failed!");
-#else
+    
+#ifdef HAVE_OPENSSL
     AES_KEY decKey = {};
     retassure(!AES_set_decrypt_key(key, sizeof(key)*8, &decKey), "Failed to set decryption key");
     AES_cbc_encrypt((const unsigned char*)decPayload.payload(), (unsigned char*)decPayload.payload(), decPayload.payloadSize(), &decKey, iv, AES_DECRYPT);
-#endif
+#else
+#   ifdef HAVE_COMMCRYPTO
+    retassure(CCCrypt(kCCDecrypt, kCCAlgorithmAES, 0, key, sizeof(key), iv, decPayload.payload(), decPayload.payloadSize(), (void*)decPayload.payload(), decPayload.payloadSize(), NULL) == kCCSuccess,
+              "Decryption failed!");
+#   endif //HAVE_COMMCRYPTO
+#endif //HAVE_OPENSSL
     
     return decPayload;
 }
+
+std::string tihmstar::img4tool::getIM4PSHA1(const ASN1DERElement &im4p){
+    std::array<char, SHA_DIGEST_LENGTH> tmp{'\0'};
+    std::string hash{tmp.begin(),tmp.end()};
+    SHA1((unsigned char*)im4p.buf(), (unsigned int)im4p.size(), (unsigned char *)hash.c_str());
+    return hash;
+}
+
+std::string tihmstar::img4tool::getIM4PSHA384(const ASN1DERElement &im4p){
+    std::array<char, SHA384_DIGEST_LENGTH> tmp{'\0'};
+    std::string hash{tmp.begin(),tmp.end()};
+    SHA384((unsigned char*)im4p.buf(), (unsigned int)im4p.size(), (unsigned char *)hash.c_str());
+    return hash;
+}
+
+bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::string hash){
+    assure(isIM4M(im4m));
+    ASN1DERElement set = im4m[2];
+    ASN1DERElement manbpriv = set[0];
+    size_t privTagVal = 0;
+    ASN1DERElement manb = parsePrivTag(manbpriv.buf(), manbpriv.size(), &privTagVal);
+    assure(privTagVal == *(uint32_t*)"MANB");
+    assure(manb[0].getStringValue() == "MANB");
+    
+    ASN1DERElement manbset = manb[1];
+    
+    for (auto &e : manbset) {
+        size_t pTagVal = 0;
+        ASN1DERElement me = parsePrivTag(e.buf(), e.size(), &pTagVal);
+        if (pTagVal == *(uint32_t*)"MANP")
+            continue;
+        
+        ASN1DERElement set = me[1];
+        auto asd = me[0].getStringValue();
+        
+        for (auto &se : set) {
+            size_t pTagVal = 0;
+            ASN1DERElement sel = parsePrivTag(se.buf(), se.size(), &pTagVal);
+            switch (pTagVal) {
+                case 'TSGD': //DGST
+                {
+                    std::string selDigest = sel[1].getStringValue();
+                    if (selDigest == hash){
+                        return true;
+                    }
+                }
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    return false;
+}
+#endif //HAVE_CRYPTO
+#pragma mark end_needs_crypto
+
 
 ASN1DERElement tihmstar::img4tool::getEmptyIM4PContainer(const char *type, const char *desc){
     ASN1DERElement im4p({ASN1DERElement::TagSEQUENCE, ASN1DERElement::Contructed, ASN1DERElement::Universal},NULL,0);
@@ -600,7 +671,10 @@ ASN1DERElement tihmstar::img4tool::renameIM4P(const ASN1DERElement &im4p, const 
     return newIm4p;
 }
 
+#pragma mark begin_needs_openssl
+#ifdef HAVE_OPENSSL
 bool tihmstar::img4tool::isIM4MSignatureValid(const ASN1DERElement &im4m){
+    
     EVP_MD_CTX *mdctx = NULL;
     X509 *cert = NULL;
     EVP_PKEY *certpubkey = NULL;
@@ -642,8 +716,12 @@ bool tihmstar::img4tool::isIM4MSignatureValid(const ASN1DERElement &im4m){
     }
     return true;
 }
+#endif //HAVE_OPENSSL
+#pragma mark end_needs_openssl
 
 
+#pragma mark begin_needs_plist
+#ifdef HAVE_PLIST
 bool tihmstar::img4tool::doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &im4m, plist_t buildIdentity) noexcept{
     plist_t ApBoardID = NULL;
     plist_t ApChipID = NULL;
@@ -715,7 +793,7 @@ bool tihmstar::img4tool::doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &i
         }
         //make sure we verified all 3 values we wanted to check
         assure(!ApBoardID && !ApChipID && !ApSecurityDomain);
-    }catch (tihmstar::exception &e){
+    }catch (...){
         return false;
     }
     return true;
@@ -880,10 +958,14 @@ bool tihmstar::img4tool::isValidIM4M(const ASN1DERElement &im4m, plist_t buildma
         plist_t buildIdentity = NULL;
         buildIdentity = getBuildIdentityForIm4m(im4m, buildmanifest);
         
+#ifdef HAVE_OPENSSL
         if (!isIM4MSignatureValid(im4m)) {
             reterror("Signature verification of IM4M failed!\n");
         }
         printf("\n[IMG4TOOL] IM4M signature is verified by TssAuthority\n");
+#else
+        printf("[WARNING] COMPILED WITHOUT OPENSSL: can not im4m signature!\n");
+#endif //HAVE_OPENSSL
         
         printf("[IMG4TOOL] IM4M is valid for the given BuildManifest for the following restore:\n");
         printGeneralBuildIdentityInformation(buildIdentity);
@@ -895,59 +977,7 @@ bool tihmstar::img4tool::isValidIM4M(const ASN1DERElement &im4m, plist_t buildma
 
     return true;
 }
-
-std::string tihmstar::img4tool::getIM4PSHA1(const ASN1DERElement &im4p){
-    std::array<char, SHA_DIGEST_LENGTH> tmp{'\0'};
-    std::string hash{tmp.begin(),tmp.end()};
-    SHA1((unsigned char*)im4p.buf(), (unsigned int)im4p.size(), (unsigned char *)hash.c_str());
-    return hash;
-}
+#endif //HAVE_PLIST
+#pragma mark end_needs_plist
 
 
-std::string tihmstar::img4tool::getIM4PSHA384(const ASN1DERElement &im4p){
-    std::array<char, SHA384_DIGEST_LENGTH> tmp{'\0'};
-    std::string hash{tmp.begin(),tmp.end()};
-    SHA384((unsigned char*)im4p.buf(), (unsigned int)im4p.size(), (unsigned char *)hash.c_str());
-    return hash;
-}
-
-bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::string hash){
-    assure(isIM4M(im4m));
-    ASN1DERElement set = im4m[2];
-    ASN1DERElement manbpriv = set[0];
-    size_t privTagVal = 0;
-    ASN1DERElement manb = parsePrivTag(manbpriv.buf(), manbpriv.size(), &privTagVal);
-    assure(privTagVal == *(uint32_t*)"MANB");
-    assure(manb[0].getStringValue() == "MANB");
-    
-    ASN1DERElement manbset = manb[1];
-    
-    for (auto &e : manbset) {
-        size_t pTagVal = 0;
-        ASN1DERElement me = parsePrivTag(e.buf(), e.size(), &pTagVal);
-        if (pTagVal == *(uint32_t*)"MANP")
-            continue;
-        
-        ASN1DERElement set = me[1];
-        auto asd = me[0].getStringValue();
-
-        for (auto &se : set) {
-            size_t pTagVal = 0;
-            ASN1DERElement sel = parsePrivTag(se.buf(), se.size(), &pTagVal);
-            switch (pTagVal) {
-                case 'TSGD': //DGST
-                {
-                    std::string selDigest = sel[1].getStringValue();
-                    if (selDigest == hash){
-                        return true;
-                    }
-                }
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-    
-    return false;
-}

@@ -8,7 +8,7 @@
 
 #include <algorithm>
 #include "ASN1DERElement.hpp"
-#include "img4tool/libgeneral/macros.h"
+#include <img4tool/libgeneral/macros.h>
 
 using namespace tihmstar::img4tool;
 
@@ -30,7 +30,7 @@ std::string makeASN1Size(size_t size){
         return {{(char)0x81,(char)(size & 0xFF)}};
     } else {
         // 1 byte length
-        return {{(char)(size & 0xFF)}};
+        return {(char)(size & 0xFF)};
     }
 }
 

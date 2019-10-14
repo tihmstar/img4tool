@@ -12,10 +12,14 @@
 #include <getopt.h>
 #include <string.h>
 #include <stdlib.h>
-#include <plist/plist.h>
 
-#include "img4tool/libgeneral/macros.h"
+#include <img4tool/libgeneral/macros.h>
 #include "img4tool.hpp"
+
+#ifdef HAVE_PLIST
+#include <plist/plist.h>
+#endif //HAVE_PLIST
+
 
 using namespace tihmstar::img4tool;
 using namespace std;
@@ -31,7 +35,9 @@ static struct option longopts[] = {
     { "help",           no_argument,        NULL, 'h' },
     { "print-all",      no_argument,        NULL, 'a' },
     { "im4p-only",      no_argument,        NULL, 'i' },
+#ifdef HAVE_PLIST
     { "shsh",           required_argument,  NULL, 's' },
+#endif //HAVE_PLIST
     { "extract",        no_argument,        NULL, 'e' },
     { "im4m",           required_argument,  NULL, 'm' },
     { "im4p",           required_argument,  NULL, 'p' },
@@ -40,10 +46,14 @@ static struct option longopts[] = {
     { "type",           required_argument,  NULL, 't' },
     { "desc",           required_argument,  NULL, 'd' },
     { "rename-payload", required_argument,  NULL, 'n' },
+#ifdef HAVE_PLIST
     { "verify",         required_argument,  NULL, 'v' },
+#endif //HAVE_PLIST
     { "iv",             required_argument,  NULL, '1' },
     { "key",            required_argument,  NULL, '2' },
+#ifdef HAVE_PLIST
     { "convert",        no_argument,        NULL, '3' },
+#endif //HAVE_PLIST
     { NULL, 0, NULL, 0 }
 };
 
@@ -61,6 +71,7 @@ char *readFromFile(const char *filePath, size_t *outSize){
     return ret;
 }
 
+#ifdef HAVE_PLIST
 plist_t readPlistFromFile(const char *filePath){
     FILE *f = fopen(filePath,"rb");
     if (!f) return NULL;
@@ -103,6 +114,8 @@ char *im4mFormShshFile(const char *shshfile, size_t *outSize, char **generator){
     
     return im4msize ? im4m : NULL;
 }
+#endif //HAVE_PLIST
+
 
 void saveToFile(const char *filePath, const void *buf, size_t bufSize){
     FILE *f = NULL;
@@ -123,7 +136,9 @@ void cmd_help(){
     printf("  -a, --print-all\t\tprint everything from im4m\n");
     printf("  -i, --im4p-only\t\tprint only im4p\n");
     printf("  -e, --extract\t\t\textracts im4m/im4p payload\n");
+#ifdef HAVE_PLIST
     printf("  -s, --shsh\t<PATH>\t\tFilepath for shsh (for reading/writing im4m)\n");
+#endif //HAVE_PLIST
     printf("  -m, --im4m\t<PATH>\t\tFilepath for im4m (depending on -e being set)\n");
     printf("  -p, --im4p\t<PATH>\t\tFilepath for im4p (depending on -e being set)\n");
     printf("  -c, --create\t<PATH>\t\tcreates an img4 with the specified im4m, im4p or creates im4p with raw file (last argument)\n");
@@ -131,10 +146,14 @@ void cmd_help(){
     printf("  -t, --type\t\t\tset type for creating IM4P files from raw\n");
     printf("  -d, --desc\t\t\tset desc for creating IM4P files from raw\n");
     printf("  -n, --rename-payload NAME\trename im4p payload (NAME must be exactly 4 bytes)\n");
+#ifdef HAVE_PLIST
     printf("  -v, --verify BUILDMANIFEST\tverify img4, im4m\n");
+#endif //HAVE_PLIST
     printf("      --iv\t\t\tIV  for decrypting payload when extracting (requires -e and -o)\n");
     printf("      --key\t\t\tKey for decrypting payload when extracting (requires -e and -o)\n");
+#ifdef HAVE_PLIST
     printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
+#endif //HAVE_PLIST
 
     printf("\n");
 }
@@ -178,9 +197,11 @@ int main_r(int argc, const char * argv[]) {
             case 'i':
                 flags |= FLAG_IM4PONLY;
                 break;
+#ifdef HAVE_PLIST
             case 's':
                 shshFile = optarg;
                 break;
+#endif //HAVE_PLIST
             case 'e':
                 retassure(!(flags & FLAG_CREATE), "Invalid command line arguments. can't extract and create at the same time");
                 flags |= FLAG_EXTRACT;
@@ -207,9 +228,11 @@ int main_r(int argc, const char * argv[]) {
             case '2':  //key
                 decryptKey = optarg;
                 break;
+#ifdef HAVE_PLIST
             case '3':  //convert
                 flags |= FLAG_CONVERT;
                 break;
+#endif //HAVE_PLIST
             case 't':
                 retassure(!(flags & FLAG_RENAME), "Invalid command line arguments. can't rename and create at the same time");
                 retassure(!im4pType, "Invalid command line arguments. im4pType already set!");
@@ -223,9 +246,11 @@ int main_r(int argc, const char * argv[]) {
                 im4pType = optarg;
                 flags |= FLAG_RENAME;
                 break;
+#ifdef HAVE_PLIST
             case 'v':
                 buildmanifestFile = optarg;
                 break;
+#endif //HAVE_PLIST
             default:
                 cmd_help();
                 return -1;
@@ -247,9 +272,12 @@ int main_r(int argc, const char * argv[]) {
     if (!(flags & FLAG_CREATE && im4pFile) ) { //don't load shsh if we create a new img4 file
         if (lastArg) {
             assure((workingBuffer = readFromFile(lastArg, &workingBufferSize)) && workingBufferSize);
-        } else if (shshFile){
+        }
+#ifdef HAVE_PLIST
+        else if (shshFile){
             assure((workingBuffer = im4mFormShshFile(shshFile, &workingBufferSize, &generator)));
         }
+#endif //HAVE_PLIST
     }
     
     if (workingBuffer) {
@@ -315,7 +343,9 @@ int main_r(int argc, const char * argv[]) {
             im4p = renameIM4P(im4p, im4pType);
             saveToFile(outFile, im4p.buf(), im4p.size());
             printf("Saved new renamed IM4P to %s\n",outFile);
-        } else if (flags & FLAG_CONVERT){
+        }
+#ifdef HAVE_PLIST
+        else if (flags & FLAG_CONVERT){
             retassure(shshFile, "output path for shsh file required");
             ASN1DERElement im4m(workingBuffer, workingBufferSize);
             retassure(isIM4M(im4m), "lastarg needs to be IM4M");
@@ -348,11 +378,15 @@ int main_r(int argc, const char * argv[]) {
             std::string im4pSHA384;
 
             if (isIMG4(file)) {
+#ifdef HAVE_CRYPTO
                 ASN1DERElement im4p = getIM4PFromIMG4(file);
                 file = getIM4MFromIMG4(file);
                 
                 im4pSHA1 = getIM4PSHA1(im4p);
                 im4pSHA384 = getIM4PSHA384(im4p);
+#else
+                printf("[WARNING] COMPILED WITHOUT CRYPTO: can not verify im4p payload hash!\n");
+#endif //HAVE_CRYPTO
             }
             
             if (isIM4M(file)) {
@@ -366,15 +400,18 @@ int main_r(int argc, const char * argv[]) {
                 
                 printf("APTicket is %s!\n",isValidIM4M(file, buildmanifest) ? "valid" : "invalid");
                 
+#ifdef HAVE_CRYPTO
                 if (im4pSHA1.size() || im4pSHA384.size()) {
                     //verify payload hash too
                     retassure(im4mContainsHash(file, im4pSHA1) || im4mContainsHash(file, im4pSHA384), "IM4P hash not in IM4M");
                     printf("[IMG4TOOL] IMG4 contains an IM4P which is correctly signed by IM4M\n");
                 }
+#endif //HAVE_CRYPTO
             }else{
                 reterror("File not recognised");
             }
         }
+#endif //HAVE_PLIST
         else {
             //printing only
             string seqName = getNameForSequence(workingBuffer, workingBufferSize);
@@ -417,9 +454,12 @@ int main_r(int argc, const char * argv[]) {
 
             if (im4mFile) {
                 buf = readFromFile(im4mFile, &bufSize);
-            }else if (shshFile){
+            }
+#ifdef HAVE_PLIST
+            else if (shshFile){
                 buf = im4mFormShshFile(shshFile, &bufSize, NULL);
             }
+#endif //HAVE_PLIST
             ASN1DERElement im4m(buf,bufSize);
             img4 = appendIM4MToIMG4(img4, im4m);
         }
