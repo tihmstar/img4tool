@@ -125,8 +125,8 @@ void saveToFile(const char *filePath, const void *buf, size_t bufSize){
         }
     });
     
-    assure(f = fopen(filePath, "wb"));
-    assure(fwrite(buf, 1, bufSize, f) == bufSize);
+    retassure(f = fopen(filePath, "wb"), "failed to create file");
+    retassure(fwrite(buf, 1, bufSize, f) == bufSize, "failed to write to file");
 }
 
 void cmd_help(){
@@ -271,11 +271,11 @@ int main_r(int argc, const char * argv[]) {
     
     if (!(flags & FLAG_CREATE && im4pFile) ) { //don't load shsh if we create a new img4 file
         if (lastArg) {
-            assure((workingBuffer = readFromFile(lastArg, &workingBufferSize)) && workingBufferSize);
+            retassure((workingBuffer = readFromFile(lastArg, &workingBufferSize)) && workingBufferSize, "failed to read lastArgFile");
         }
 #ifdef HAVE_PLIST
         else if (shshFile){
-            assure((workingBuffer = im4mFormShshFile(shshFile, &workingBufferSize, &generator)));
+            retassure((workingBuffer = im4mFormShshFile(shshFile, &workingBufferSize, &generator)), "Failed to read shshFile");
         }
 #endif //HAVE_PLIST
     }
@@ -313,7 +313,7 @@ int main_r(int argc, const char * argv[]) {
                     didExtract = true;
                 }
             }else if (isIM4M(file)){
-                assure(im4mFile);
+                retassure(im4mFile, "requested extracting IM4M from SHSH but no output path was given");
                 saveToFile(im4mFile, file.buf(), file.size());
                 printf("Saved IM4M to %s\n",im4mFile);
                 didExtract = true;
@@ -363,8 +363,8 @@ int main_r(int argc, const char * argv[]) {
                 }
                 safeFree(xml);
             });
-            assure(newshsh = plist_new_dict());
-            assure(data = plist_new_data((const char*)im4m.buf(), im4m.size()));
+            retassure(newshsh = plist_new_dict(),"failed to create new plist dict");
+            retassure(data = plist_new_data((const char*)im4m.buf(), im4m.size()),"failed to create plist data from im4m buf");
             
             plist_dict_set_item(newshsh, "ApImg4Ticket", data); data = NULL;
             
@@ -396,7 +396,7 @@ int main_r(int argc, const char * argv[]) {
                         plist_free(buildmanifest);
                     }
                 });
-                assure(buildmanifest = readPlistFromFile(buildmanifestFile));
+                retassure(buildmanifest = readPlistFromFile(buildmanifestFile),"failed to read buildmanifest");
                 
                 printf("APTicket is %s!\n",isValidIM4M(file, buildmanifest) ? "valid" : "invalid");
                 
