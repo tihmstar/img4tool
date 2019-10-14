@@ -584,7 +584,13 @@ ASN1DERElement tihmstar::img4tool::getEmptyIM4PContainer(const char *type, const
 }
 
 ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement &im4p, const void *buf, size_t size){
-    assure(isIM4P(im4p));
+    assure(im4p.tag().isConstructed);
+    assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+    assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
+    
+    retassure(im4p[0].getStringValue() == "IM4P", "Container is not a IM4P");
+    retassure(im4p[1].getStringValue().size() == 4, "IM4P type has size != 4");
+    retassure(im4p[2].getStringValue().size(), "IM4P description is empty");
     ASN1DERElement newim4p(im4p);
 
     ASN1DERElement im4p_payload({ASN1DERElement::TagOCTET, ASN1DERElement::Primitive, ASN1DERElement::Universal},buf,size);
