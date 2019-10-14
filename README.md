@@ -1,6 +1,23 @@
 # img4tool
 _A tool for manipulating IMG4, IM4M and IM4P files_
 
+# BUILD
+Be sure to checkout the require submodule after cloning.
+```bash
+git submodule init
+git submodule update
+```
+
+To compile run:
+
+```bash
+./autogen.sh
+make
+sudo make install
+```
+
+
+# Features
 ## Print
 * Print IMG4, IM4P, IM4M
   * `img4tool infile.img4`
