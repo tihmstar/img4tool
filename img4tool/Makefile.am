@@ -1,4 +1,4 @@
-AM_CFLAGS = -I$(top_srcdir)/include $(GLOBAL_CFLAGS) $(libplist_CFLAGS) $(openssl_CFLAGS)
+AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/include/img4tool $(GLOBAL_CFLAGS) $(libplist_CFLAGS) $(openssl_CFLAGS)
 AM_CXXFLAGS = $(AM_CFLAGS) $(GLOBAL_CXXFLAGS)
 AM_LDFLAGS = $(libplist_LIBS) $(openssl_LIBS)
 

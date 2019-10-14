@@ -475,9 +475,9 @@ int main_r(int argc, const char * argv[]) {
 }
 
 int main(int argc, const char * argv[]) {
-#ifdef DEBUG
-    return main_r(argc, argv);
-#else
+//#ifdef DEBUG
+//    return main_r(argc, argv);
+//#else
     try {
         return main_r(argc, argv);
     } catch (tihmstar::exception &e) {
@@ -485,5 +485,5 @@ int main(int argc, const char * argv[]) {
         e.dump();
         return e.code();
     }
-#endif
+//#endif
 }
