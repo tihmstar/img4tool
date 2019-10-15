@@ -12,7 +12,17 @@
 #include "img4tool.hpp"
 #include "ASN1DERElement.hpp"
 #include <img4tool/libgeneral/macros.h>
+extern "C"{
+#include "lzssdec.h"
+};
 
+#ifdef HAVE_LIBLZFSE
+#   include <lzfse.h>
+#elif defined(HAVE_LIBCOMPRESSION)
+#   include <compression.h>
+#   define lzfse_decode_buffer(src, src_size, dst, dst_size, scratch) \
+compression_decode_buffer(src, src_size, dst, dst_size, scratch, COMPRESSION_LZFSE)
+#endif
 
 #ifdef HAVE_OPENSSL
 #   include <openssl/aes.h>
@@ -45,6 +55,7 @@ namespace tihmstar {
         void printRecSequence(const void *buf, size_t size);
         
         ASN1DERElement parsePrivTag(const void *buf, size_t size, size_t *outPrivTag);
+        ASN1DERElement unpackKernelIfNeeded(const ASN1DERElement &kernelOctet);
     };
 };
 
@@ -456,17 +467,45 @@ ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement &img4, 
     return newImg4;
 }
 
+ASN1DERElement tihmstar::img4tool::unpackKernelIfNeeded(const ASN1DERElement &kernelOctet){
+    const char *payload = (const char *)kernelOctet.payload();
+    size_t unpackedLen = 0;
+    char *unpacked = NULL;
+    cleanup([&]{
+        safeFree(unpacked);
+    });
+    ASN1DERElement retVal=kernelOctet;
+    
+    if (strncmp(payload, "complzss", 8) == 0) {
+        printf("Kernelcache detected, uncompressing (%s): ", "complzss");
+        if((unpacked = tryLZSS(payload, &unpackedLen))){
+            retVal = ASN1DERElement({ASN1DERElement::TagNumber::TagOCTET,ASN1DERElement::Primitive, ASN1DERElement::Universal}, unpacked, unpackedLen);
+            printf("ok\n");
+        }else{
+            printf("failed!\n");
+        }
+    } else if (strncmp(payload, "bvx2", 4) == 0) {
+        printf("Kernelcache detected, uncompressing (%s): ", "bvx2");
+        printf("failed!\n");
+#warning TODO implement bvx2
+        warning("Unpacking bvx2 currently not implemented!\n");
+    }
+    
+    return retVal;
+}
+
 ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv, const char *decryptKey){
     assure(isIM4P(im4p));
     ASN1DERElement payload = im4p[3];
     if (decryptIv || decryptKey) {
 #ifdef HAVE_CRYPTO
-        return decryptPayload(payload, decryptIv, decryptKey);
+        payload = decryptPayload(payload, decryptIv, decryptKey);
 #else
         reterror("decryption keys were provided, but img4tool was compiled without crypto backend!");
 #endif //HAVE_CRYPTO
     }
-    return payload;
+    
+    return unpackKernelIfNeeded(payload);
 }
 
 #pragma mark begin_needs_crypto

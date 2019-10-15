@@ -10,6 +10,7 @@ libimg4tool_la_CXXFLAGS = $(AM_CXXFLAGS)
 libimg4tool_la_LDFLAGS = $(AM_LDFLAGS)
 libimg4tool_la_SOURCES = 	$(top_srcdir)/external/libgeneral/libgeneral/exception.cpp \
 													ASN1DERElement.cpp \
+													lzssdec.c \
 													img4tool.cpp
 
 img4tool_CFLAGS = $(AM_CFLAGS)

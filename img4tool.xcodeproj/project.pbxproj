@@ -13,6 +13,7 @@
 		87A281342347B7B900ED08BB /* ASN1DERElement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 87A281322347B7B900ED08BB /* ASN1DERElement.cpp */; };
 		87A281372347B7CA00ED08BB /* img4tool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 87A281352347B7CA00ED08BB /* img4tool.cpp */; };
 		87A2813B2347BD9400ED08BB /* exception.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 87A2813A2347BD9400ED08BB /* exception.cpp */; };
+		87EB3A6923561EE2008F1B06 /* lzssdec.c in Sources */ = {isa = PBXBuildFile; fileRef = 87EB3A6823561EE2008F1B06 /* lzssdec.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -38,6 +39,8 @@
 		87A281352347B7CA00ED08BB /* img4tool.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = img4tool.cpp; sourceTree = "<group>"; };
 		87A281362347B7CA00ED08BB /* img4tool.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = img4tool.hpp; path = ../include/img4tool/img4tool.hpp; sourceTree = "<group>"; };
 		87A2813A2347BD9400ED08BB /* exception.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = exception.cpp; path = external/libgeneral/libgeneral/exception.cpp; sourceTree = SOURCE_ROOT; };
+		87EB3A6723561EE2008F1B06 /* lzssdec.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = lzssdec.h; sourceTree = "<group>"; };
+		87EB3A6823561EE2008F1B06 /* lzssdec.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = lzssdec.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -86,6 +89,8 @@
 				87A281382347BD7B00ED08BB /* external */,
 				87A281332347B7B900ED08BB /* ASN1DERElement.hpp */,
 				87A281322347B7B900ED08BB /* ASN1DERElement.cpp */,
+				87EB3A6723561EE2008F1B06 /* lzssdec.h */,
+				87EB3A6823561EE2008F1B06 /* lzssdec.c */,
 				87A281362347B7CA00ED08BB /* img4tool.hpp */,
 				87A281352347B7CA00ED08BB /* img4tool.cpp */,
 				879896AC2344A91900A98709 /* main.cpp */,
@@ -169,6 +174,7 @@
 				87A2813B2347BD9400ED08BB /* exception.cpp in Sources */,
 				87A281342347B7B900ED08BB /* ASN1DERElement.cpp in Sources */,
 				87A281372347B7CA00ED08BB /* img4tool.cpp in Sources */,
+				87EB3A6923561EE2008F1B06 /* lzssdec.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -295,6 +301,7 @@
 					"HAVE_PLIST=1",
 					"HAVE_CRYPTO=1",
 					"HAVE_OPENSSL=1",
+					"HAVE_LIBCOMPRESSION=1",
 				);
 				HEADER_SEARCH_PATHS = (
 					/usr/local/include,
