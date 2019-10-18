@@ -132,3 +132,6 @@ echo "  compiler ................: ${CC}
   Now type 'make' to build $PACKAGE-$VERSION,
   and then 'make install' for installation.
 "
+if test "x$crypto_backend" != "xopenssl"; then
+  echo "WARNING: crypto_backend is not openssl, some features will be missing"
+fi
