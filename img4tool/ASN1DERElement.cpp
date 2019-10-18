@@ -9,6 +9,7 @@
 #include <algorithm>
 #include "ASN1DERElement.hpp"
 #include <img4tool/libgeneral/macros.h>
+#include <string.h>
 
 using namespace tihmstar::img4tool;
 
@@ -202,7 +203,7 @@ void ASN1DERElement::print() const{
             break;
         }
         case TagINTEGER:
-            printf("%llu",getIntegerValue());
+            printf("%lu",getIntegerValue());
             break;
         case TagBOOLEAN:
             printf("%s",getIntegerValue() == 0 ? "false" : "true");

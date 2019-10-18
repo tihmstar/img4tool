@@ -6,10 +6,11 @@
 //  Copyright © 2019 tihmstar. All rights reserved.
 //
 
+#include "img4tool.hpp"
 #include <stdio.h>
+#include <string.h>
 #include <array>
 #include <arpa/inet.h>
-#include "img4tool.hpp"
 #include "ASN1DERElement.hpp"
 #include <img4tool/libgeneral/macros.h>
 extern "C"{
@@ -83,7 +84,7 @@ void tihmstar::img4tool::printKBAG(const void *buf, size_t size){
         for (auto &elem : kbtag) {
             switch (++i) {
                 case 0:
-                    printf("num: %llu\n",elem.getIntegerValue());
+                    printf("num: %lu\n",elem.getIntegerValue());
                     break;
                 case 1:
                 case 2:
@@ -371,7 +372,7 @@ void tihmstar::img4tool::printIM4M(const void *buf, size_t size, bool printAll){
                     printf("IM4M: ---------\n");
                     break;
                 case 1:
-                    printf("Version: %llu\n",tag.getIntegerValue());
+                    printf("Version: %lu\n",tag.getIntegerValue());
                     break;
                 case 2:
                     assure(tag.tag().isConstructed);
@@ -830,9 +831,9 @@ bool tihmstar::img4tool::doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &i
 
             plist_get_string_val(currVal, &pstrval);
             if (strncmp("0x", pstrval, 2) == 0){
-                sscanf(pstrval, "0x%llx",&val);
+                sscanf(pstrval, "0x%lx",&val);
             }else{
-                sscanf(pstrval, "%lld",&val);
+                sscanf(pstrval, "%ld",&val);
             }
             assure(ptag[1].getIntegerValue() == val);
         }

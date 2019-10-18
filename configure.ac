@@ -31,6 +31,7 @@ case $host_os in
 esac
 
 CXXFLAGS+=" -std=c++11"
+CFLAGS+=" -std=c11"
 # Versioning.
 
 # Checks for libraries.
@@ -105,6 +106,8 @@ AC_TYPE_SIZE_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_UINT8_T
+
+AC_CHECK_FUNCS([memmem])
 
 
 AC_CONFIG_FILES([Makefile

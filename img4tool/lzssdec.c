@@ -6,11 +6,16 @@
 //  Coded by Jonathan Levin (a.k.a @Morpheus______), http://newosxbook.com
 //
 
+#define _GNU_SOURCE 
+
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <stdint.h>
 #include "lzssdec.h"
 #include <img4tool/libgeneral/macros.h>
+#include <arpa/inet.h>
+#include <string.h>
 
 
 /*
