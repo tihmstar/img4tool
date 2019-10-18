@@ -30,7 +30,7 @@ case $host_os in
         ;;
 esac
 
-CPPFLAGS+=" -std=c++11"
+CXXFLAGS+=" -std=c++11"
 # Versioning.
 
 # Checks for libraries.
