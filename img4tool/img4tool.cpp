@@ -727,7 +727,7 @@ bool tihmstar::img4tool::isIM4MSignatureValid(const ASN1DERElement &im4m){
     const unsigned char* certificate = NULL;
     bool useSHA384 = false;
     cleanup([&]{
-        if(mdctx) EVP_MD_CTX_destroy(mdctx);
+        if(mdctx) EVP_MD_CTX_free(mdctx);
     });
     
     try {
@@ -746,7 +746,7 @@ bool tihmstar::img4tool::isIM4MSignatureValid(const ASN1DERElement &im4m){
         
         certificate = (const unsigned char*)certelem.buf();
         
-        assure(mdctx = EVP_MD_CTX_create());
+        assure(mdctx = EVP_MD_CTX_new());
         assure(cert = d2i_X509(NULL, &certificate, certelem.size()));
         assure(certpubkey = X509_get_pubkey(cert));
         
