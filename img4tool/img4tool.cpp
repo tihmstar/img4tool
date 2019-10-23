@@ -91,7 +91,7 @@ void tihmstar::img4tool::printKBAG(const void *buf, size_t size){
                 {
                     std::string kbagstr = elem.getStringValue();
                     for (int i=0; i<kbagstr.size(); i++) {
-                        printf("%02x",((uint8_t*)kbagstr.c_str())[i]);
+                        printf("%02x",(reinterpret_cast<const uint8_t*>(kbagstr.c_str()))[i]);
                     }
                     printf("\n");
                     break;
@@ -107,12 +107,12 @@ void tihmstar::img4tool::printKBAG(const void *buf, size_t size){
 void tihmstar::img4tool::printMANB(const void *buf, size_t size, bool printAll){
     size_t privTag = 0;
     ASN1DERElement sequence = parsePrivTag(buf, size, &privTag);
-    assure(privTag == *(uint32_t*)"MANB");
+    assure(privTag == *reinterpret_cast<const uint32_t*>("MANB"));
     assure(sequence.tag().isConstructed);
     assure(sequence.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
     assure(sequence.tag().tagClass == ASN1DERElement::TagClass::Universal);
 
-    putStr((char*)&privTag,4);
+    putStr(reinterpret_cast<const char *>(&privTag),4);
 
     {
         int i=-1;
@@ -138,8 +138,8 @@ void tihmstar::img4tool::printMANB(const void *buf, size_t size, bool printAll){
                                 continue;
 
                             size_t privElem = 0;
-                            ASN1DERElement subsequence = parsePrivTag(selem.buf(), size-(size_t)((uint8_t*)selem.buf()-(uint8_t*)buf), &privElem);
-                            putStr((char*)&privElem,4);
+                            ASN1DERElement subsequence = parsePrivTag(selem.buf(), size - static_cast<size_t>((reinterpret_cast<const uint8_t*>(selem.buf()) - reinterpret_cast<const uint8_t*>(buf))), &privElem);
+                            putStr(reinterpret_cast<const char*>(&privElem),4);
                             printf(": ");
                             printRecSequence(subsequence.buf(), subsequence.size());
                         }
@@ -158,12 +158,12 @@ void tihmstar::img4tool::printMANB(const void *buf, size_t size, bool printAll){
 void tihmstar::img4tool::printMANP(const void *buf, size_t size){
     size_t privTag = 0;
     ASN1DERElement sequence = parsePrivTag(buf, size, &privTag);
-    assure(privTag == *(uint32_t*)"MANP");
+    assure(privTag == *reinterpret_cast<const uint32_t*>("MANP"));
     assure(sequence.tag().isConstructed);
     assure(sequence.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
     assure(sequence.tag().tagClass == ASN1DERElement::TagClass::Universal);
 
-    putStr((char*)&privTag,4);
+    putStr(reinterpret_cast<const char*>(&privTag),4);
 
     {
         int i=-1;
@@ -181,8 +181,8 @@ void tihmstar::img4tool::printMANP(const void *buf, size_t size){
 
                     for (auto &elem : tag) {
                         size_t privElem = 0;
-                        ASN1DERElement subsequence = parsePrivTag(elem.buf(), size-(size_t)((uint8_t*)elem.buf()-(uint8_t*)buf), &privElem);
-                        putStr((char*)&privElem,4);
+                        ASN1DERElement subsequence = parsePrivTag(elem.buf(), size - static_cast<size_t>((reinterpret_cast<const uint8_t*>(elem.buf()) - reinterpret_cast<const uint8_t*>(buf))), &privElem);
+                        putStr(reinterpret_cast<const char*>(&privElem),4);
 
                         assure(subsequence.tag().isConstructed);
                         assure(subsequence.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -210,11 +210,11 @@ void tihmstar::img4tool::printRecSequence(const void *buf, size_t size){
     assure(sequence.tag().isConstructed);
 
     for (auto &elem : sequence){
-        if (*(uint8_t*)elem.buf() == (uint8_t)ASN1DERElement::TagPrivate){
+        if (*reinterpret_cast<const uint8_t*>(elem.buf()) == static_cast<uint8_t>(ASN1DERElement::TagPrivate)){
             size_t privTag = 0;
             ASN1DERElement sequence = parsePrivTag(elem.buf(), elem.size(), &privTag);
             printf("\n");
-            putStr((char*)&privTag, 4);
+            putStr(reinterpret_cast<const char *>(&privTag), 4);
             printf(": ");
             printRecSequence(sequence.buf(), sequence.size());
         }else if (elem.tag().isConstructed) {
@@ -232,15 +232,14 @@ void tihmstar::img4tool::printRecSequence(const void *buf, size_t size){
 
 ASN1DERElement tihmstar::img4tool::parsePrivTag(const void *buf, size_t size, size_t *outPrivTag){
     size_t privTag = 0;
-    ASN1DERElement::ASN1PrivateTag *ptag = NULL;
-    ASN1DERElement::ASN1Len *tlen = NULL;
+    const ASN1DERElement::ASN1PrivateTag *ptag = NULL;
+    const ASN1DERElement::ASN1Len *tlen = NULL;
     size_t taginfoSize = 7;
     assure(size >= taginfoSize);
-    assure(*(uint8_t*)buf == ASN1DERElement::TagPrivate);
+    assure(*reinterpret_cast<const uint8_t*>(buf) == ASN1DERElement::TagPrivate);
 
-
-    ptag = ((ASN1DERElement::ASN1PrivateTag *)buf) + 1;
-    tlen = ((ASN1DERElement::ASN1Len *)buf) + 6;
+    ptag = reinterpret_cast<const ASN1DERElement::ASN1PrivateTag*>(buf) + 1;
+    tlen = reinterpret_cast<const ASN1DERElement::ASN1Len*>(buf) + 6;
 
     for (int i=0; i<taginfoSize-1; i++) {
         privTag <<=7;
@@ -255,7 +254,7 @@ ASN1DERElement tihmstar::img4tool::parsePrivTag(const void *buf, size_t size, si
     }
 
     assure(size >= taginfoSize);
-    return {(uint8_t*)buf+taginfoSize,size-taginfoSize};
+    return {reinterpret_cast<const uint8_t*>(buf)+taginfoSize,size-taginfoSize};
 }
 
 
@@ -469,7 +468,7 @@ ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement &img4, 
 }
 
 ASN1DERElement tihmstar::img4tool::unpackKernelIfNeeded(const ASN1DERElement &kernelOctet){
-    const char *payload = (const char *)kernelOctet.payload();
+    const char *payload = reinterpret_cast<const char *>(kernelOctet.payload());
     size_t unpackedLen = 0;
     char *unpacked = NULL;
     cleanup([&]{
@@ -540,10 +539,10 @@ ASN1DERElement tihmstar::img4tool::decryptPayload(const ASN1DERElement &payload,
 #ifdef HAVE_OPENSSL
     AES_KEY decKey = {};
     retassure(!AES_set_decrypt_key(key, sizeof(key)*8, &decKey), "Failed to set decryption key");
-    AES_cbc_encrypt((const unsigned char*)decPayload.payload(), (unsigned char*)decPayload.payload(), decPayload.payloadSize(), &decKey, iv, AES_DECRYPT);
+    AES_cbc_encrypt(reinterpret_cast<const uint8_t*>(decPayload.payload()), const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(decPayload.payload())), decPayload.payloadSize(), &decKey, iv, AES_DECRYPT);
 #else
 #   ifdef HAVE_COMMCRYPTO
-    retassure(CCCrypt(kCCDecrypt, kCCAlgorithmAES, 0, key, sizeof(key), iv, decPayload.payload(), decPayload.payloadSize(), (void*)decPayload.payload(), decPayload.payloadSize(), NULL) == kCCSuccess,
+    retassure(CCCrypt(kCCDecrypt, kCCAlgorithmAES, 0, key, sizeof(key), iv, decPayload.payload(), decPayload.payloadSize(), reinterpret_cast<void*>(decPayload.payload()), decPayload.payloadSize(), NULL) == kCCSuccess,
               "Decryption failed!");
 #   endif //HAVE_COMMCRYPTO
 #endif //HAVE_OPENSSL
@@ -554,14 +553,14 @@ ASN1DERElement tihmstar::img4tool::decryptPayload(const ASN1DERElement &payload,
 std::string tihmstar::img4tool::getIM4PSHA1(const ASN1DERElement &im4p){
     std::array<char, SHA_DIGEST_LENGTH> tmp{'\0'};
     std::string hash{tmp.begin(),tmp.end()};
-    SHA1((unsigned char*)im4p.buf(), (unsigned int)im4p.size(), (unsigned char *)hash.c_str());
+    SHA1(reinterpret_cast<const uint8_t*>(im4p.buf()), static_cast<uint32_t>(im4p.size()), const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(hash.c_str())));
     return hash;
 }
 
 std::string tihmstar::img4tool::getIM4PSHA384(const ASN1DERElement &im4p){
     std::array<char, SHA384_DIGEST_LENGTH> tmp{'\0'};
     std::string hash{tmp.begin(),tmp.end()};
-    SHA384((unsigned char*)im4p.buf(), (unsigned int)im4p.size(), (unsigned char *)hash.c_str());
+    SHA384(reinterpret_cast<const uint8_t*>(im4p.buf()), static_cast<uint32_t>(im4p.size()), const_cast<uint8_t*>(reinterpret_cast<const uint8_t*>(hash.c_str())));
     return hash;
 }
 
@@ -571,7 +570,7 @@ bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::strin
     ASN1DERElement manbpriv = set[0];
     size_t privTagVal = 0;
     ASN1DERElement manb = parsePrivTag(manbpriv.buf(), manbpriv.size(), &privTagVal);
-    assure(privTagVal == *(uint32_t*)"MANB");
+    assure(privTagVal == *reinterpret_cast<const uint32_t*>("MANB"));
     assure(manb[0].getStringValue() == "MANB");
 
     ASN1DERElement manbset = manb[1];
@@ -579,7 +578,7 @@ bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::strin
     for (auto &e : manbset) {
         size_t pTagVal = 0;
         ASN1DERElement me = parsePrivTag(e.buf(), e.size(), &pTagVal);
-        if (pTagVal == *(uint32_t*)"MANP")
+        if (pTagVal == *reinterpret_cast<const uint32_t*>("MANP"))
             continue;
 
         ASN1DERElement set = me[1];
@@ -712,7 +711,7 @@ ASN1DERElement tihmstar::img4tool::renameIM4P(const ASN1DERElement &im4p, const 
     retassure(strlen(type) == 4, "type has size != 4");
     ASN1DERElement newIm4p(im4p);
 
-    memcpy((void*)newIm4p[1].payload(),type,4);
+    memcpy(const_cast<void*>(reinterpret_cast<const void*>(newIm4p[1].payload())),type,4);
 
     return newIm4p;
 }
@@ -744,7 +743,7 @@ bool tihmstar::img4tool::isIM4MSignatureValid(const ASN1DERElement &im4m){
             useSHA384 = true;
         }
 
-        certificate = (const unsigned char*)certelem.buf();
+        certificate = reinterpret_cast<const uint8_t*>(certelem.buf());
 
         assure(mdctx = EVP_MD_CTX_new());
         assure(cert = d2i_X509(NULL, &certificate, certelem.size()));
@@ -754,7 +753,7 @@ bool tihmstar::img4tool::isIM4MSignatureValid(const ASN1DERElement &im4m){
 
         assure(EVP_DigestVerifyUpdate(mdctx, data.buf(), data.size()) == 1);
 
-        assure(EVP_DigestVerifyFinal(mdctx, (unsigned char*)sig.payload(), sig.payloadSize()) == 1);
+        assure(EVP_DigestVerifyFinal(mdctx, reinterpret_cast<const uint8_t*>(sig.payload()), sig.payloadSize()) == 1);
     } catch (tihmstar::exception &e) {
         printf("[IMG4TOOL] failed to verify IM4M signature with error:\n");
         e.dump();
@@ -788,7 +787,7 @@ bool tihmstar::img4tool::doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &i
         ASN1DERElement manbpriv = set[0];
         size_t privTagVal = 0;
         ASN1DERElement manb = parsePrivTag(manbpriv.buf(), manbpriv.size(), &privTagVal);
-        assure(privTagVal == *(uint32_t*)"MANB");
+        assure(privTagVal == *reinterpret_cast<const uint32_t*>("MANB"));
         assure(manb[0].getStringValue() == "MANB");
 
         ASN1DERElement manbset = manb[1];
@@ -796,7 +795,7 @@ bool tihmstar::img4tool::doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &i
         ASN1DERElement manppriv = manbset[0];
         privTagVal = 0;
         ASN1DERElement manp = parsePrivTag(manppriv.buf(), manppriv.size(), &privTagVal);
-        assure(privTagVal == *(uint32_t*)"MANP");
+        assure(privTagVal == *reinterpret_cast<const uint32_t*>("MANP"));
         assure(manp[0].getStringValue() == "MANP");
 
         ASN1DERElement manpset = manp[1];
@@ -860,7 +859,7 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
         ASN1DERElement manbpriv = set[0];
         size_t privTagVal = 0;
         ASN1DERElement manb = parsePrivTag(manbpriv.buf(), manbpriv.size(), &privTagVal);
-        assure(privTagVal == *(uint32_t*)"MANB");
+        assure(privTagVal == *reinterpret_cast<const uint32_t*>("MANB"));
         assure(manb[0].getStringValue() == "MANB");
 
         ASN1DERElement manbset = manb[1];
@@ -913,7 +912,7 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
             for (auto &e : manbset) {
                 size_t pTagVal = 0;
                 ASN1DERElement me = parsePrivTag(e.buf(), e.size(), &pTagVal);
-                if (pTagVal == *(uint32_t*)"MANP")
+                if (pTagVal == *reinterpret_cast<const uint32_t*>("MANP"))
                     continue;
 
                 ASN1DERElement set = me[1];
@@ -991,8 +990,8 @@ void tihmstar::img4tool::printGeneralBuildIdentityInformation(plist_t buildident
                 printf("%s : %s\n",key,str);
                 break;
             case PLIST_BOOLEAN:
-                plist_get_bool_val(node, (uint8_t*)&t);
-                printf("%s : %s\n",key,((uint8_t)t) ? "YES" : "NO" );
+                plist_get_bool_val(node, reinterpret_cast<uint8_t*>(&t));
+                printf("%s : %s\n",key,(static_cast<uint8_t>(t)) ? "YES" : "NO" );
             default:
                 break;
         }
