@@ -110,6 +110,7 @@ namespace tihmstar {
             ASN1DERElement(const ASN1DERElement &old);
 
 
+            bool ownsBuffer() const;
             const void *buf() const;
             const void *payload() const;
             size_t taginfoSize() const;

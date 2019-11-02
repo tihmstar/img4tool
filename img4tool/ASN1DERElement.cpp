@@ -157,6 +157,10 @@ size_t ASN1DERElement::size() const{
     return taginfoSize() + payloadSize();
 }
 
+bool ASN1DERElement::ownsBuffer() const{
+   return _ownsBuffer;
+}
+
 
 const void *ASN1DERElement::buf() const{
     return _buf;
