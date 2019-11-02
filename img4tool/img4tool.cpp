@@ -431,7 +431,7 @@ ASN1DERElement tihmstar::img4tool::getIM4MFromIMG4(const ASN1DERElement &img4){
 }
 
 ASN1DERElement tihmstar::img4tool::getEmptyIMG4Container(){
-    ASN1DERElement img4({ASN1DERElement::TagSEQUENCE, ASN1DERElement::Contructed, ASN1DERElement::Universal},NULL,0);
+    ASN1DERElement img4({ASN1DERElement::TagSEQUENCE, ASN1DERElement::Constructed, ASN1DERElement::Universal},NULL,0);
     ASN1DERElement img4_str({ASN1DERElement::TagIA5String, ASN1DERElement::Primitive, ASN1DERElement::Universal},"IMG4",4);
     img4 += img4_str;
     
@@ -456,11 +456,11 @@ ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement &img4, 
     assure(im4m.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
     assure(im4m.tag().tagClass == ASN1DERElement::TagClass::Universal);
     
-    retassure(im4m[0].getStringValue() == "IM4M", "Container is not a IM4P");
+    retassure(im4m[0].getStringValue() == "IM4M", "Container is not a IM4M");
     
     ASN1DERElement newImg4(img4);
     
-    ASN1DERElement container({ASN1DERElement::TagEnd_of_Content, ASN1DERElement::Contructed, ASN1DERElement::ContextSpecific},NULL,0);
+    ASN1DERElement container({ASN1DERElement::TagEnd_of_Content, ASN1DERElement::Constructed, ASN1DERElement::ContextSpecific},NULL,0);
     
     container += im4m;
     
@@ -510,8 +510,10 @@ ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement &im4p
     return unpackKernelIfNeeded(payload);
 }
 
-std::pair<const char*,size_t> tihmstar::img4tool::getBNCHFromIM4M(const ASN1DERElement &im4m){
+ASN1DERElement tihmstar::img4tool::getValFromIM4M(const ASN1DERElement &im4m, uint32_t val){
     assure(isIM4M(im4m));
+    
+    val = htonl(val); //allows us to pass "ECID" instead of "DICE"
     
     ASN1DERElement set = im4m[2];
     ASN1DERElement manbpriv = set[0];
@@ -532,18 +534,46 @@ std::pair<const char*,size_t> tihmstar::img4tool::getBNCHFromIM4M(const ASN1DERE
     for (auto &e : manpset) {
         size_t ptagVal = 0;
         ASN1DERElement ptag = parsePrivTag(e.buf(), e.size(), &ptagVal);        
-        switch (ptagVal) {
-            case 'HCNB': //BNCH
-                assure(ptag[0].getStringValue() == "BNCH");
-                return {(char*)ptag[1].payload(),ptag[1].payloadSize()};
-                break;
-            default:
-                continue;
+        if (ptagVal == val) {
+            assure(*(uint32_t*)ptag[0].getStringValue().c_str() == val);
+            return ptag[1];
         }
     }
     
     reterror("failed to find nonce!");
     return {0,0};
+}
+
+ASN1DERElement tihmstar::img4tool::genPrivTagForNumberWithPayload(size_t privnum, const ASN1DERElement &payload){
+    char *elembuf = NULL;
+    size_t elemSize = 0;
+    cleanup([&]{
+        safeFree(elembuf);
+    });
+    char buf[20] = {};
+    buf[0] = 0xff;
+
+    int modval = 0;
+    while (privnum >> modval) modval+=7;
+    int i=1;
+    for (;i<sizeof(buf) && modval>0; i++) {
+        modval-=7;
+        ((ASN1DERElement::ASN1PrivateTag*)buf)[i].num = (privnum>>modval) & 0x7f;
+        if (modval) {
+            ((ASN1DERElement::ASN1PrivateTag*)buf)[i].more = 1;
+        }
+    }
+    std::string payloadSize = ASN1DERElement::makeASN1Size(payload.size());
+    
+    elembuf = (char*)malloc(elemSize = (payload.size() +payloadSize.size() + i));
+    memcpy(&elembuf[0], buf, i);
+    memcpy(&elembuf[i], payloadSize.c_str(), payloadSize.size());
+    memcpy(&elembuf[i+payloadSize.size()], payload.buf(), payload.size());
+
+    ASN1DERElement local(elembuf,elemSize);
+    
+    //by casting to const we make sure to create a copy which owns the buffer so we can free our local buffer
+    return static_cast<const ASN1DERElement>(local);
 }
 
 #pragma mark begin_needs_crypto
@@ -646,7 +676,7 @@ bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::strin
 
 
 ASN1DERElement tihmstar::img4tool::getEmptyIM4PContainer(const char *type, const char *desc){
-    ASN1DERElement im4p({ASN1DERElement::TagSEQUENCE, ASN1DERElement::Contructed, ASN1DERElement::Universal},NULL,0);
+    ASN1DERElement im4p({ASN1DERElement::TagSEQUENCE, ASN1DERElement::Constructed, ASN1DERElement::Universal},NULL,0);
     ASN1DERElement im4p_str({ASN1DERElement::TagIA5String, ASN1DERElement::Primitive, ASN1DERElement::Universal},"IM4P",4);
     ASN1DERElement im4p_type({ASN1DERElement::TagIA5String, ASN1DERElement::Primitive, ASN1DERElement::Universal},type,strlen(type));
     ASN1DERElement im4p_desc({ASN1DERElement::TagIA5String, ASN1DERElement::Primitive, ASN1DERElement::Universal},desc,strlen(desc));

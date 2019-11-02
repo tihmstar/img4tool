@@ -306,8 +306,8 @@
 					"HAVE_LIBCOMPRESSION=1",
 				);
 				HEADER_SEARCH_PATHS = (
-					/usr/local/include,
 					"$(SRCROOT)/include",
+					/usr/local/include,
 					"$(SRCROOT)/include/img4tool",
 				);
 				LIBRARY_SEARCH_PATHS = (
@@ -324,8 +324,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				GCC_PREPROCESSOR_DEFINITIONS = "";
 				HEADER_SEARCH_PATHS = (
-					/usr/local/include,
 					"$(SRCROOT)/include",
+					/usr/local/include,
 					"$(SRCROOT)/include/img4tool",
 				);
 				LIBRARY_SEARCH_PATHS = (

@@ -15,7 +15,7 @@ using namespace tihmstar::img4tool;
 
 #pragma mark helper
 
-std::string makeASN1Size(size_t size){
+std::string ASN1DERElement::makeASN1Size(size_t size){
     assure(size < 0x100000000);
     if (size >= 0x1000000) {
         // 1+4 bytes length

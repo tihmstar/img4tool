@@ -28,7 +28,7 @@ namespace tihmstar {
 
             enum Primitive{
                 Primitive  = 0,
-                Contructed = 1
+                Constructed = 1
             };
 
             enum TagNumber{
@@ -131,7 +131,8 @@ namespace tihmstar {
 
             ASN1DERElementIterator begin() const;
             ASN1DERElementIterator end() const;
-
+            
+            static std::string makeASN1Size(size_t size);
         };
         
     };
