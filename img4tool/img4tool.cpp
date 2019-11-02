@@ -640,7 +640,7 @@ ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement &im4
     return newim4p;
 }
 
-bool tihmstar::img4tool::isIMG4(const ASN1DERElement &img4){
+bool tihmstar::img4tool::isIMG4(const ASN1DERElement &img4) noexcept{
     try{
         assure(img4.tag().isConstructed);
         assure(img4.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -654,7 +654,7 @@ bool tihmstar::img4tool::isIMG4(const ASN1DERElement &img4){
     return false;
 }
 
-bool tihmstar::img4tool::isIM4P(const ASN1DERElement &im4p){
+bool tihmstar::img4tool::isIM4P(const ASN1DERElement &im4p) noexcept{
     try {
         assure(im4p.tag().isConstructed);
         assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -676,7 +676,7 @@ bool tihmstar::img4tool::isIM4P(const ASN1DERElement &im4p){
     return false;
 }
 
-bool tihmstar::img4tool::isIM4M(const ASN1DERElement &im4m){
+bool tihmstar::img4tool::isIM4M(const ASN1DERElement &im4m) noexcept{
     try {
         assure(im4m.tag().isConstructed);
         assure(im4m.tag().tagNumber == ASN1DERElement::TagSEQUENCE);

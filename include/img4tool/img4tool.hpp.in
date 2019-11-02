@@ -46,9 +46,9 @@ namespace tihmstar {
 
         ASN1DERElement appendPayloadToIM4P(const ASN1DERElement &im4p, const void *buf, size_t size);
 
-        bool isIMG4(const ASN1DERElement &img4);
-        bool isIM4P(const ASN1DERElement &im4p);
-        bool isIM4M(const ASN1DERElement &im4m);
+        bool isIMG4(const ASN1DERElement &img4) noexcept;
+        bool isIM4P(const ASN1DERElement &im4p) noexcept;
+        bool isIM4M(const ASN1DERElement &im4m) noexcept;
 
         ASN1DERElement renameIM4P(const ASN1DERElement &im4p, const char *type);
 
