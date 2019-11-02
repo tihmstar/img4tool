@@ -84,7 +84,7 @@ void tihmstar::img4tool::printKBAG(const void *buf, size_t size){
         for (auto &elem : kbtag) {
             switch (++i) {
                 case 0:
-                    printf("num: %lu\n",elem.getIntegerValue());
+                    printf("num: %llu\n",elem.getIntegerValue());
                     break;
                 case 1:
                 case 2:

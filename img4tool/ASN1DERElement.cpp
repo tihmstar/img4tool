@@ -203,7 +203,7 @@ void ASN1DERElement::print() const{
             break;
         }
         case TagINTEGER:
-            printf("%lu",getIntegerValue());
+            printf("%llu",getIntegerValue());
             break;
         case TagBOOLEAN:
             printf("%s",getIntegerValue() == 0 ? "false" : "true");
