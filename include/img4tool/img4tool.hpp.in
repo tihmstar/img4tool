@@ -34,6 +34,7 @@ namespace tihmstar {
         ASN1DERElement appendIM4MToIMG4(const ASN1DERElement &img4, const ASN1DERElement &im4m);
 
         ASN1DERElement getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv = NULL, const char *decryptKey = NULL);
+        std::pair<const char*,size_t> getBNCHFromIM4M(const ASN1DERElement &im4m);
 
 #if @HEADER_HAVE_CRYPTO@ //HAVE_CRYPTO
         ASN1DERElement decryptPayload(const ASN1DERElement &payload, const char *decryptIv, const char *decryptKey);

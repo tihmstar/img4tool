@@ -43,6 +43,7 @@ compression_decode_buffer(src, src_size, dst, dst_size, scratch, COMPRESSION_LZF
 #   endif //HAVE_COMMCRYPTO
 #endif // HAVE_OPENSSL
 
+using namespace tihmstar;
 using namespace tihmstar::img4tool;
 
 #define putStr(s,l) printf("%.*s",(int)l,s)
@@ -507,6 +508,49 @@ ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement &im4p
     }
     
     return unpackKernelIfNeeded(payload);
+}
+
+std::pair<const char*,size_t> tihmstar::img4tool::getBNCHFromIM4M(const ASN1DERElement &im4m){
+    assure(isIM4M(im4m));
+    
+    ASN1DERElement set = im4m[2];
+    ASN1DERElement manbpriv = set[0];
+    size_t privTagVal = 0;
+    ASN1DERElement manb = parsePrivTag(manbpriv.buf(), manbpriv.size(), &privTagVal);
+    assure(privTagVal == *(uint32_t*)"MANB");
+    assure(manb[0].getStringValue() == "MANB");
+
+    ASN1DERElement manbset = manb[1];
+    
+    ASN1DERElement manppriv = manbset[0];
+    ASN1DERElement manp = parsePrivTag(manppriv.buf(), manppriv.size(), &privTagVal);
+    assure(privTagVal == *(uint32_t*)"MANP");
+    assure(manp[0].getStringValue() == "MANP");
+
+    ASN1DERElement manpset = manp[1];
+
+    for (auto &e : manpset) {
+        char *pstrval= NULL;
+        uint64_t val = 0;
+        size_t ptagVal = 0;
+        plist_t currVal = NULL;
+        cleanup([&]{
+            safeFree(pstrval);
+        });
+        ASN1DERElement ptag = parsePrivTag(e.buf(), e.size(), &ptagVal);
+        
+        switch (ptagVal) {
+            case 'HCNB': //BNCH
+                assure(ptag[0].getStringValue() == "BNCH");
+                return {(char*)ptag[1].payload(),ptag[1].payloadSize()};
+                break;
+            default:
+                continue;
+        }
+    }
+    
+    reterror("failed to find nonce!");
+    return {0,0};
 }
 
 #pragma mark begin_needs_crypto

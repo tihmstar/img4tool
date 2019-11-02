@@ -32,6 +32,7 @@
 		4281CC81234A01C500C30E6D /* libplist.3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libplist.3.dylib; path = ../../../../usr/local/lib/libplist.3.dylib; sourceTree = "<group>"; };
 		42F86F722351EA61009649E4 /* libssl.1.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.1.0.0.dylib; path = ../../../../usr/local/Cellar/openssl/1.0.2s/lib/libssl.1.0.0.dylib; sourceTree = "<group>"; };
 		42F86F742351EAA2009649E4 /* libcrypto.1.0.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.1.0.0.dylib; path = ../../../../usr/local/Cellar/openssl/1.0.2s/lib/libcrypto.1.0.0.dylib; sourceTree = "<group>"; };
+		8762F342236DDFD400F42FDB /* img4tool.hpp.in */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; name = img4tool.hpp.in; path = include/img4tool/img4tool.hpp.in; sourceTree = SOURCE_ROOT; };
 		879896A92344A91900A98709 /* img4tool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = img4tool; sourceTree = BUILT_PRODUCTS_DIR; };
 		879896AC2344A91900A98709 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		87A281322347B7B900ED08BB /* ASN1DERElement.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ASN1DERElement.cpp; sourceTree = "<group>"; };
@@ -91,6 +92,7 @@
 				87A281322347B7B900ED08BB /* ASN1DERElement.cpp */,
 				87EB3A6723561EE2008F1B06 /* lzssdec.h */,
 				87EB3A6823561EE2008F1B06 /* lzssdec.c */,
+				8762F342236DDFD400F42FDB /* img4tool.hpp.in */,
 				87A281362347B7CA00ED08BB /* img4tool.hpp */,
 				87A281352347B7CA00ED08BB /* img4tool.cpp */,
 				879896AC2344A91900A98709 /* main.cpp */,
@@ -310,7 +312,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/usr/local/lib,
-					/usr/local/Cellar/openssl/1.0.2s/lib,
+					/usr/local/Cellar/openssl/1.0.2t/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -328,7 +330,7 @@
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/usr/local/lib,
-					/usr/local/Cellar/openssl/1.0.2s/lib,
+					/usr/local/Cellar/openssl/1.0.2t/lib,
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
