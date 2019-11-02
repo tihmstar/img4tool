@@ -373,7 +373,7 @@ void tihmstar::img4tool::printIM4M(const void *buf, size_t size, bool printAll){
                     printf("IM4M: ---------\n");
                     break;
                 case 1:
-                    printf("Version: %lu\n",tag.getIntegerValue());
+                    printf("Version: %llu\n",tag.getIntegerValue());
                     break;
                 case 2:
                     assure(tag.tag().isConstructed);
@@ -530,15 +530,8 @@ std::pair<const char*,size_t> tihmstar::img4tool::getBNCHFromIM4M(const ASN1DERE
     ASN1DERElement manpset = manp[1];
 
     for (auto &e : manpset) {
-        char *pstrval= NULL;
-        uint64_t val = 0;
         size_t ptagVal = 0;
-        plist_t currVal = NULL;
-        cleanup([&]{
-            safeFree(pstrval);
-        });
-        ASN1DERElement ptag = parsePrivTag(e.buf(), e.size(), &ptagVal);
-        
+        ASN1DERElement ptag = parsePrivTag(e.buf(), e.size(), &ptagVal);        
         switch (ptagVal) {
             case 'HCNB': //BNCH
                 assure(ptag[0].getStringValue() == "BNCH");
@@ -875,9 +868,9 @@ bool tihmstar::img4tool::doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &i
 
             plist_get_string_val(currVal, &pstrval);
             if (strncmp("0x", pstrval, 2) == 0){
-                sscanf(pstrval, "0x%lx",&val);
+                sscanf(pstrval, "0x%llx",&val);
             }else{
-                sscanf(pstrval, "%ld",&val);
+                sscanf(pstrval, "%lld",&val);
             }
             assure(ptag[1].getIntegerValue() == val);
         }
