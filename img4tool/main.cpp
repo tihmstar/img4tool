@@ -13,7 +13,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#include <img4tool/libgeneral/macros.h>
+#include <libgeneral/macros.h>
 #include "img4tool.hpp"
 
 #ifdef HAVE_PLIST
@@ -67,7 +67,7 @@ char *readFromFile(const char *filePath, size_t *outSize){
     if (ret) fread(ret, size, 1, f);
     fclose(f);
     if (outSize) *outSize = size;
-    
+
     return ret;
 }
 
@@ -76,42 +76,42 @@ plist_t readPlistFromFile(const char *filePath){
     FILE *f = fopen(filePath,"rb");
     if (!f) return NULL;
     fseek(f, 0, SEEK_END);
-    
+
     size_t fSize = ftell(f);
     fseek(f, 0, SEEK_SET);
     char *buf = (char*)malloc(fSize);
     fread(buf, fSize, 1, f);
     fclose(f);
-    
+
     plist_t plist = NULL;
-    
+
     if (memcmp(buf, "bplist00", 8) == 0)
         plist_from_bin(buf, (uint32_t)fSize, &plist);
     else
         plist_from_xml(buf, (uint32_t)fSize, &plist);
-    
+
     return plist;
 }
 
 char *im4mFormShshFile(const char *shshfile, size_t *outSize, char **generator){
     plist_t shshplist = readPlistFromFile(shshfile);
-    
+
     plist_t ticket = plist_dict_get_item(shshplist, "ApImg4Ticket");
-    
+
     char *im4m = 0;
     uint64_t im4msize=0;
     plist_get_data_val(ticket, &im4m, &im4msize);
     if (outSize) {
         *outSize = im4msize;
     }
-    
+
     if (generator){
         if ((ticket = plist_dict_get_item(shshplist, "generator")))
             plist_get_string_val(ticket, generator);
     }
-    
+
     plist_free(shshplist);
-    
+
     return im4msize ? im4m : NULL;
 }
 #endif //HAVE_PLIST
@@ -124,7 +124,7 @@ void saveToFile(const char *filePath, const void *buf, size_t bufSize){
             fclose(f);
         }
     });
-    
+
     retassure(f = fopen(filePath, "wb"), "failed to create file");
     retassure(fwrite(buf, 1, bufSize, f) == bufSize, "failed to write to file");
 }
@@ -160,7 +160,7 @@ void cmd_help(){
 
 int main_r(int argc, const char * argv[]) {
     printf("%s\n",version());
-    
+
     const char *lastArg = NULL;
     const char *shshFile = NULL;
     const char *im4mFile = NULL;
@@ -180,12 +180,12 @@ int main_r(int argc, const char * argv[]) {
     size_t workingBufferSize = 0;
     char *generator = NULL;
 
-    
+
     cleanup([&]{
         safeFree(workingBuffer);
         safeFree(generator);
     });
-    
+
     while ((opt = getopt_long(argc, (char* const *)argv, "hais:em:p:c:o:1:2:t:d:n:3v:", longopts, &optindex)) > 0) {
         switch (opt) {
             case 'h':
@@ -256,7 +256,7 @@ int main_r(int argc, const char * argv[]) {
                 return -1;
         }
     }
-    
+
     if (argc-optind == 1) {
         argc -= optind;
         argv += optind;
@@ -267,8 +267,8 @@ int main_r(int argc, const char * argv[]) {
             return -2;
         }
     }
-    
-    
+
+
     if (!(flags & FLAG_CREATE && im4pFile) ) { //don't load shsh if we create a new img4 file
         if (lastArg) {
             retassure((workingBuffer = readFromFile(lastArg, &workingBufferSize)) && workingBufferSize, "failed to read lastArgFile");
@@ -279,13 +279,13 @@ int main_r(int argc, const char * argv[]) {
         }
 #endif //HAVE_PLIST
     }
-    
+
     if (workingBuffer) {
         if (flags & FLAG_EXTRACT) {
             //extract
             bool didExtract = false;
             ASN1DERElement file(workingBuffer, workingBufferSize);
-            
+
             if (outFile) {
                 //check for payload extraction
                 if (isIMG4(file)) {
@@ -293,7 +293,7 @@ int main_r(int argc, const char * argv[]) {
                 } else if (!isIM4P(file)){
                     reterror("File not recognised");
                 }
-                
+
                 ASN1DERElement payload = getPayloadFromIM4P(file, decryptIv, decryptKey);
                 saveToFile(outFile, payload.payload(), payload.payloadSize());
                 printf("Extracted IM4P payload to %s\n",outFile);
@@ -333,13 +333,13 @@ int main_r(int argc, const char * argv[]) {
         } else if (flags & FLAG_RENAME){
             retassure(im4pType, "typen required");
             retassure(outFile, "outputfile required");
-            
+
             ASN1DERElement im4p(workingBuffer, workingBufferSize);
             string seqName = getNameForSequence(workingBuffer, workingBufferSize);
             if (seqName != "IM4P"){
                 reterror("File not an IM4P");
             }
-            
+
             im4p = renameIM4P(im4p, im4pType);
             saveToFile(outFile, im4p.buf(), im4p.size());
             printf("Saved new renamed IM4P to %s\n",outFile);
@@ -349,7 +349,7 @@ int main_r(int argc, const char * argv[]) {
             retassure(shshFile, "output path for shsh file required");
             ASN1DERElement im4m(workingBuffer, workingBufferSize);
             retassure(isIM4M(im4m), "lastarg needs to be IM4M");
-            
+
             plist_t newshsh = NULL;
             plist_t data = NULL;
             char *xml = NULL;
@@ -365,9 +365,9 @@ int main_r(int argc, const char * argv[]) {
             });
             retassure(newshsh = plist_new_dict(),"failed to create new plist dict");
             retassure(data = plist_new_data((const char*)im4m.buf(), im4m.size()),"failed to create plist data from im4m buf");
-            
+
             plist_dict_set_item(newshsh, "ApImg4Ticket", data); data = NULL;
-            
+
             retassure((plist_to_xml(newshsh, &xml, &xmlSize),xml), "failed to convert plist to xml");
             saveToFile(shshFile, xml, xmlSize);
             printf("Saved IM4M to %s\n",shshFile);
@@ -381,14 +381,14 @@ int main_r(int argc, const char * argv[]) {
 #ifdef HAVE_CRYPTO
                 ASN1DERElement im4p = getIM4PFromIMG4(file);
                 file = getIM4MFromIMG4(file);
-                
+
                 im4pSHA1 = getIM4PSHA1(im4p);
                 im4pSHA384 = getIM4PSHA384(im4p);
 #else
                 printf("[WARNING] COMPILED WITHOUT CRYPTO: can not verify im4p payload hash!\n");
 #endif //HAVE_CRYPTO
             }
-            
+
             if (isIM4M(file)) {
                 plist_t buildmanifest = NULL;
                 cleanup([&]{
@@ -397,9 +397,9 @@ int main_r(int argc, const char * argv[]) {
                     }
                 });
                 retassure(buildmanifest = readPlistFromFile(buildmanifestFile),"failed to read buildmanifest");
-                
+
                 printf("APTicket is %s!\n",isValidIM4M(file, buildmanifest) ? "valid" : "invalid");
-                
+
 #ifdef HAVE_CRYPTO
                 if (im4pSHA1.size() || im4pSHA384.size()) {
                     //verify payload hash too
@@ -429,9 +429,9 @@ int main_r(int argc, const char * argv[]) {
     } else if (flags & FLAG_CREATE){
         //create IMG4 file
         ASN1DERElement img4 = getEmptyIMG4Container();
-        
+
         retassure(im4pFile, "im4p file is required for img4");
-        
+
         if (im4pFile) {
             char *buf = NULL;
             size_t bufSize = 0;
@@ -439,12 +439,12 @@ int main_r(int argc, const char * argv[]) {
                 safeFree(buf);
             });
             buf = readFromFile(im4pFile, &bufSize);
-            
+
             ASN1DERElement im4p(buf,bufSize);
-            
+
             img4 = appendIM4PToIMG4(img4, im4p);
         }
-        
+
         if (im4mFile || shshFile){
             char *buf = NULL;
             size_t bufSize = 0;
@@ -470,7 +470,7 @@ int main_r(int argc, const char * argv[]) {
     else{
         reterror("No working buffer");
     }
-    
+
     return 0;
 }
 

@@ -8,7 +8,7 @@
 
 #include <algorithm>
 #include "ASN1DERElement.hpp"
-#include <img4tool/libgeneral/macros.h>
+#include <libgeneral/macros.h>
 #include <string.h>
 
 using namespace tihmstar::img4tool;
@@ -82,7 +82,7 @@ ASN1DERElement::ASN1DERElement(const ASN1TAG tag, const void *payload, size_t pa
 {
     std::string size = makeASN1Size(payloadLen);
     assure(_buf = (const ASN1TAG *)malloc(_bufSize = 1+payloadLen+size.size()));
-    
+
     memcpy((void*)&_buf[0], &tag, 1);
     memcpy((void*)&_buf[1], size.c_str(), size.size());
     if (payloadLen) {
@@ -123,7 +123,7 @@ size_t ASN1DERElement::taginfoSize() const{
             assure(_bufSize >= 2 + (++tagInfoSize));
         }while (ptag++->more);
     }
-    
+
     ASN1Len *tlen = (ASN1Len *)&_buf[1+tagInfoSize];
     return ((!tlen->isLong) ? 2 : 2+tlen->len) + tagInfoSize;
 }
@@ -141,15 +141,15 @@ size_t ASN1DERElement::payloadSize() const{
     ASN1Len *tlen = (ASN1Len *)&_buf[1+tagInfoSize];
     if (!tlen->isLong)
         return tlen->len;
-    
+
     assure(tlen->len <= sizeof(size_t)); //can't hold more than size_t
     assure(_bufSize > 2 + tagInfoSize + tlen->len); //len bytes shouldn't be outside of buffer
-    
+
     for (uint8_t sizebits = 0; sizebits < tlen->len; sizebits++) {
         rt <<= 8;
         rt |= ((uint8_t*)_buf)[2+tagInfoSize+sizebits];
     }
-    
+
     return rt;
 }
 
@@ -222,45 +222,45 @@ void ASN1DERElement::print() const{
 ASN1DERElement ASN1DERElement::operator[](uint32_t i) const{
     assure(_buf->isConstructed);
     ASN1DERElement rt(payload(),payloadSize());
-    
+
     while (i--){
         uint8_t *buf = (uint8_t*)rt.buf()+ rt.size();
         size_t size = _bufSize - (size_t)(buf - (uint8_t*)_buf);
         rt = ASN1DERElement(buf, size);
     }
-    
+
     return rt;
 }
 
 ASN1DERElement &ASN1DERElement::operator+=(const ASN1DERElement &add){
     assure(_buf->isConstructed && _ownsBuffer);
-    
+
     std::string newSize = makeASN1Size(add.size()+payloadSize());
-    
+
     if (newSize.size() < taginfoSize()) {
         //newSize fits in the buffer without resizing at front
         _buf = (const ASN1TAG *)realloc((void*)_buf, _bufSize = size() + add.size());
-        
+
         memcpy((void*)&_buf[size()], add.buf(), add.size());
         memcpy((void*)&_buf[1], newSize.c_str(), newSize.size());
     }else{
         size_t size = add.size() + payloadSize() + 1 + newSize.size();
         const ASN1TAG *buf = (const ASN1TAG *)malloc(size);
-        
+
         cleanup([&]{
             void *b = (void*)buf; buf = NULL;
             safeFree(b);
         })
-        
+
         memcpy((void*)&buf[0], &_buf[0], 1);
         memcpy((void*)&buf[1], newSize.c_str(), newSize.size());
         memcpy((void*)&buf[1+newSize.size()], payload(), payloadSize());
         memcpy((void*)&buf[1+newSize.size()+payloadSize()], add.buf(), add.size());
-        
+
         std::swap(_buf, buf);
         _bufSize = size;
     }
-    
+
     return *this;
 }
 
@@ -272,7 +272,7 @@ ASN1DERElement &ASN1DERElement::operator=(ASN1DERElement &&old){
     _buf = old._buf;
     _bufSize = old._bufSize;
     _ownsBuffer = old._ownsBuffer; old._ownsBuffer = false;
-    
+
     return *this;
 }
 

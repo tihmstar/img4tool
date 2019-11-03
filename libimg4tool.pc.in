@@ -6,7 +6,7 @@ includedir=@includedir@
 Name: libimg4tool
 Description: A library for manipulating IMG4, IM4M and IM4P files
 
-Requires: @openssl_requires@ @libplist_requires@
+Requires: @openssl_requires@ @libplist_requires@ @libgeneral_requires@
 Version: @VERSION_COMMIT_COUNT@
 Libs: -L${libdir} -limg4tool
 Cflags: -I${includedir}

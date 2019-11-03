@@ -6,14 +6,14 @@
 //  Coded by Jonathan Levin (a.k.a @Morpheus______), http://newosxbook.com
 //
 
-#define _GNU_SOURCE 
+#define _GNU_SOURCE
 
 #include <string.h>
 #include <stdlib.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include "lzssdec.h"
-#include <img4tool/libgeneral/macros.h>
+#include <libgeneral/macros.h>
 #include <arpa/inet.h>
 #include <string.h>
 
@@ -26,7 +26,7 @@
  * PC-VAN      SCIENCE
  * NIFTY-Serve PAF01022
  * CompuServe  74050,1022
- 
+
  * Copyright (c) 2003 Apple Computer, Inc.
  * DRI: Josh de Cesare
  */
@@ -43,7 +43,7 @@ int decompressed_lzss(uint8_t *dst, uint8_t *src, uint32_t srclen){
     uint8_t *srcend = src + srclen;
     int  i, j, k, r, c;
     unsigned int flags;
-    
+
     dst = dststart;
     srcend = src + srclen;
     for (i = 0; i < N - F; i++)
@@ -73,7 +73,7 @@ int decompressed_lzss(uint8_t *dst, uint8_t *src, uint32_t srclen){
             }
         }
     }
-    
+
     return (int)(dst - dststart);
 }
 
@@ -90,22 +90,22 @@ char *tryLZSS(const char *compressed, size_t *outSize){
     if (!compHeader) return NULL;
     int sig[2] = { 0xfeedfacf, 0x0100000c };
     int sig2[2] = { 0xfeedface, 0x0000000c };
-    
+
     char *decomp = malloc (ntohl(compHeader->uncompressedSize));
     char *feed = memmem(compressed+64, 1024, sig, sizeof(sig));
-    
+
     if (!feed){
         if (!(feed = memmem(compressed+64, 1024, sig2, sizeof(sig2))))
             return NULL;
     }
-    
+
     feed--;
     int rc = decompressed_lzss((void*)decomp, (void*)feed, ntohl(compHeader->compressedSize));
     if (rc != ntohl(compHeader->uncompressedSize)) {
         return NULL;
     }
-    
+
     *outSize = rc;
     return (decomp);
-    
+
 } // compLZSS
