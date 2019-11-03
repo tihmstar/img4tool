@@ -912,7 +912,7 @@ bool tihmstar::img4tool::doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &i
     return true;
 }
 
-bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, plist_t buildIdentity) noexcept{
+bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, plist_t buildIdentity, std::vector<const char*> ignoreWhitelist) noexcept{
     plist_t manifest = NULL;
     try {
         printf("[IMG4TOOL] checking buildidentity matches board ... ");
@@ -962,16 +962,29 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
             }
 
             assure(pInfo = plist_dict_get_item(eVal, "Info"));
-            if (!(pPersonalize = plist_dict_get_item(pInfo, "Personalize"))){
-                printf("OK (unchecked)\n");
-                continue;
+            if ((pPersonalize = plist_dict_get_item(pInfo, "Personalize"))){
+                assure(plist_get_node_type(pPersonalize) == PLIST_BOOLEAN);
+                plist_get_bool_val(pPersonalize, &doPersonalize);
+                if (!doPersonalize){
+                    printf("OK (unpersonalized)\n");
+                    continue;
+                }
             }
-            assure(plist_get_node_type(pPersonalize) == PLIST_BOOLEAN);
-            plist_get_bool_val(pPersonalize, &doPersonalize);
-            if (!doPersonalize){
-                printf("OK (unpersonalized)\n");
-                continue;
+            
+            {
+                bool doContinue = false;
+                for (auto &ignore : {"BasebandFirmware"}) {
+                    if (!strcmp(eKey, ignore)) {
+                        printf("IGN (ignoring due to whitelist)\n");
+                        doContinue = true;
+                    }
+                }
+                if (doContinue) {
+                    continue;
+                }
             }
+            
+            
             assure(pDigest = plist_dict_get_item(eVal, "Digest"));
             assure(plist_get_node_type(pDigest) == PLIST_DATA);
             plist_get_data_val(pDigest, &digest, &digestLen);
@@ -1005,7 +1018,16 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
                 }
             }
         continue_plist:
-            assure(hasDigit);
+            if (!hasDigit) {
+                for (auto &ignore : ignoreWhitelist) {
+                    if (!strcmp(eKey, ignore)) {
+                        hasDigit = true;
+                        printf("BAD! (but ignoring due to whitelist)\n");
+                        break;
+                    }
+                }
+            }
+            retassure(hasDigit, "missing digist for %s", eKey);
         }
     } catch (tihmstar::exception &e) {
         printf("\nfailed verification with error:\n");
@@ -1015,7 +1037,7 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
     return true;
 }
 
-const plist_t tihmstar::img4tool::getBuildIdentityForIm4m(const ASN1DERElement &im4m, plist_t buildmanifest){
+const plist_t tihmstar::img4tool::getBuildIdentityForIm4m(const ASN1DERElement &im4m, plist_t buildmanifest, std::vector<const char*> ignoreWhitelist){
     plist_t buildidentities = NULL;
 
     assure(buildmanifest);
@@ -1027,7 +1049,7 @@ const plist_t tihmstar::img4tool::getBuildIdentityForIm4m(const ASN1DERElement &
 
         printf("[IMG4TOOL] checking buildidentity %d:\n",i);
         assure(buildIdentity = plist_array_get_item(buildidentities, i));
-        if (im4mMatchesBuildIdentity(im4m, buildIdentity)) {
+        if (im4mMatchesBuildIdentity(im4m, buildIdentity, ignoreWhitelist)) {
             return buildIdentity;
         }
     }

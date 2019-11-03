@@ -12,6 +12,8 @@
 #include <unistd.h>
 #include <iostream>
 #include <img4tool/ASN1DERElement.hpp>
+#include <vector>
+
 
 #if @HEADER_HAVE_PLIST@ //HAVE_PLIST
 #include <plist/plist.h>
@@ -61,8 +63,8 @@ namespace tihmstar {
 
 #if @HEADER_HAVE_PLIST@ //HAVE_PLIST
         bool doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &im4m, plist_t buildIdentity) noexcept;
-        bool im4mMatchesBuildIdentity(const ASN1DERElement &im4m, plist_t buildIdentity) noexcept;
-        const plist_t getBuildIdentityForIm4m(const ASN1DERElement &im4m, plist_t buildmanifest);
+        bool im4mMatchesBuildIdentity(const ASN1DERElement &im4m, plist_t buildIdentity, std::vector<const char*> ignoreWhitelist = {}) noexcept;
+        const plist_t getBuildIdentityForIm4m(const ASN1DERElement &im4m, plist_t buildmanifest, std::vector<const char*> ignoreWhitelist = {});
         void printGeneralBuildIdentityInformation(plist_t buildidentity);
         bool isValidIM4M(const ASN1DERElement &im4m, plist_t buildmanifest);
 #endif //HAVE_PLIST
