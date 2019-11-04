@@ -376,12 +376,14 @@ int main_r(int argc, const char * argv[]) {
             ASN1DERElement file(workingBuffer, workingBufferSize);
             std::string im4pSHA1;
             std::string im4pSHA384;
-
+                        
             if (isIMG4(file)) {
 #ifdef HAVE_CRYPTO
                 ASN1DERElement im4p = getIM4PFromIMG4(file);
                 file = getIM4MFromIMG4(file);
 
+                printIM4P(im4p.buf(), im4p.size());
+                
                 im4pSHA1 = getIM4PSHA1(im4p);
                 im4pSHA384 = getIM4PSHA384(im4p);
 #else
@@ -396,17 +398,31 @@ int main_r(int argc, const char * argv[]) {
                         plist_free(buildmanifest);
                     }
                 });
-                retassure(buildmanifest = readPlistFromFile(buildmanifestFile),"failed to read buildmanifest");
-
-                printf("APTicket is %s!\n",isValidIM4M(file, buildmanifest) ? "valid" : "invalid");
-
+                std::string im4pElemDgstName;
 #ifdef HAVE_CRYPTO
                 if (im4pSHA1.size() || im4pSHA384.size()) {
                     //verify payload hash too
-                    retassure(im4mContainsHash(file, im4pSHA1) || im4mContainsHash(file, im4pSHA384), "IM4P hash not in IM4M");
-                    printf("[IMG4TOOL] IMG4 contains an IM4P which is correctly signed by IM4M\n");
+                    try {
+                        im4pElemDgstName = dgstNameForHash(file, im4pSHA1);
+                    } catch (...) {
+                        //
+                    }
+                    try {
+                        im4pElemDgstName = dgstNameForHash(file, im4pSHA384);
+                    } catch (...) {
+                        //
+                    }
+                    retassure(im4pElemDgstName.size(), "IM4P hash not in IM4M");
                 }
 #endif //HAVE_CRYPTO
+                retassure(buildmanifest = readPlistFromFile(buildmanifestFile),"failed to read buildmanifest");
+                
+                bool isvalid = isValidIM4M(file, buildmanifest, im4pElemDgstName);
+                printf("\n");
+                printf("[IMG4TOOL] APTicket is %s!\n", isvalid ? "valid" : "invalid");
+                if (im4pElemDgstName.size()) {
+                    printf("[IMG4TOOL] IMG4 contains an IM4P which is correctly signed by IM4M\n");
+                }
             }else{
                 reterror("File not recognised");
             }

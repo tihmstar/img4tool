@@ -632,7 +632,7 @@ std::string tihmstar::img4tool::getIM4PSHA384(const ASN1DERElement &im4p){
     return hash;
 }
 
-bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::string hash){
+std::string tihmstar::img4tool::dgstNameForHash(const ASN1DERElement &im4m, std::string hash){
     assure(isIM4M(im4m));
     ASN1DERElement set = im4m[2];
     ASN1DERElement manbpriv = set[0];
@@ -650,7 +650,7 @@ bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::strin
             continue;
 
         ASN1DERElement set = me[1];
-        auto asd = me[0].getStringValue();
+        std::string dgstName = me[0].getStringValue();
 
         for (auto &se : set) {
             size_t pTagVal = 0;
@@ -660,7 +660,7 @@ bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::strin
                 {
                     std::string selDigest = sel[1].getStringValue();
                     if (selDigest == hash){
-                        return true;
+                        return dgstName;
                     }
                 }
                     break;
@@ -669,7 +669,17 @@ bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::strin
             }
         }
     }
-    return false;
+    reterror("Hash not in IM4M");
+}
+
+
+bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::string hash) noexcept{
+    try {
+        dgstNameForHash(im4m,hash);
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 #endif //HAVE_CRYPTO
 #pragma mark end_needs_crypto
@@ -915,6 +925,13 @@ bool tihmstar::img4tool::doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &i
 bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, plist_t buildIdentity, std::vector<const char*> ignoreWhitelist) noexcept{
     plist_t manifest = NULL;
     try {
+        bool checksPassed = true;
+        std::string findDGST;
+        if (ignoreWhitelist.size() == 1 && ignoreWhitelist[0][0] == '!') {
+            checksPassed = false;
+            findDGST = ignoreWhitelist[0]+1;
+        }
+        
         printf("[IMG4TOOL] checking buildidentity matches board ... ");
         if (!doesIM4MBoardMatchBuildIdentity(im4m, buildIdentity)) {
             printf("NO\n");
@@ -947,8 +964,8 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
         while (((void)plist_dict_next_item(manifest, melems, &eKey, &eVal),eVal)) {
             plist_t pInfo = NULL;
             plist_t pDigest = NULL;
-            plist_t pPersonalize = NULL;
-            uint8_t doPersonalize = 0;
+            plist_t pTrusted = NULL;
+            uint8_t isTrusted = 0;
             char *digest = NULL;
             uint64_t digestLen = 0;
             bool hasDigit = false;
@@ -962,11 +979,11 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
             }
 
             assure(pInfo = plist_dict_get_item(eVal, "Info"));
-            if ((pPersonalize = plist_dict_get_item(pInfo, "Personalize"))){
-                assure(plist_get_node_type(pPersonalize) == PLIST_BOOLEAN);
-                plist_get_bool_val(pPersonalize, &doPersonalize);
-                if (!doPersonalize){
-                    printf("OK (unpersonalized)\n");
+            if ((pTrusted = plist_dict_get_item(pInfo, "Trusted"))){
+                assure(plist_get_node_type(pTrusted) == PLIST_BOOLEAN);
+                plist_get_bool_val(pTrusted, &isTrusted);
+                if (!pTrusted){
+                    printf("OK (untrusted)\n");
                     continue;
                 }
             }
@@ -1007,6 +1024,9 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
                             std::string selDigest = sel[1].getStringValue();
                             if (selDigest.size() == digestLen && memcmp(selDigest.c_str(), digest, digestLen) == 0){
                                 hasDigit = true;
+                                if (findDGST == me[0].getStringValue()) {
+                                    checksPassed = true;
+                                }
                                 printf("OK (found \"%s\" with matching hash)\n",me[0].getStringValue().c_str());
                                 goto continue_plist;
                             }
@@ -1019,16 +1039,27 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
             }
         continue_plist:
             if (!hasDigit) {
-                for (auto &ignore : ignoreWhitelist) {
-                    if (!strcmp(eKey, ignore)) {
-                        hasDigit = true;
-                        printf("BAD! (but ignoring due to whitelist)\n");
-                        break;
+                if (!(ignoreWhitelist.size() == 1 && ignoreWhitelist[0][0] == '!')) {
+                    for (auto &ignore : ignoreWhitelist) {
+                        if (!strcmp(eKey, ignore)) {
+                            hasDigit = true;
+                            printf("BAD! (but ignoring due to whitelist)\n");
+                            break;
+                        }
                     }
                 }
             }
-            retassure(hasDigit, "missing digist for %s", eKey);
+            
+            if (!hasDigit) {
+                if (findDGST.size()) {
+                    printf("IGN (hash not found in im4m, but ignoring since we only care about '%s')\n",findDGST.c_str());
+                }else{
+                    printf("BAD! (hash not found in im4m)\n");
+                    checksPassed = false;
+                }
+            }
         }
+        retassure(checksPassed, "verification failed!");
     } catch (tihmstar::exception &e) {
         printf("\nfailed verification with error:\n");
         e.dump();
@@ -1088,10 +1119,15 @@ void tihmstar::img4tool::printGeneralBuildIdentityInformation(plist_t buildident
     }
 }
 
-bool tihmstar::img4tool::isValidIM4M(const ASN1DERElement &im4m, plist_t buildmanifest){
+bool tihmstar::img4tool::isValidIM4M(const ASN1DERElement &im4m, plist_t buildmanifest, std::string forDGSTName){
     try {
         plist_t buildIdentity = NULL;
-        buildIdentity = getBuildIdentityForIm4m(im4m, buildmanifest);
+        if (forDGSTName.size()) {
+            forDGSTName.insert(0, "!");
+            buildIdentity = getBuildIdentityForIm4m(im4m, buildmanifest, {forDGSTName.c_str()});
+        }else{
+            buildIdentity = getBuildIdentityForIm4m(im4m, buildmanifest);
+        }
 
 #ifdef HAVE_OPENSSL
         if (!isIM4MSignatureValid(im4m)) {

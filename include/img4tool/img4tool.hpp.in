@@ -44,7 +44,8 @@ namespace tihmstar {
         ASN1DERElement decryptPayload(const ASN1DERElement &payload, const char *decryptIv, const char *decryptKey);
         std::string getIM4PSHA1(const ASN1DERElement &im4p);
         std::string getIM4PSHA384(const ASN1DERElement &im4p);
-        bool im4mContainsHash(const ASN1DERElement &im4m, std::string hash);
+        std::string dgstNameForHash(const ASN1DERElement &im4m, std::string hash);
+        bool im4mContainsHash(const ASN1DERElement &im4m, std::string hash) noexcept;
 #endif //HAVE_CRYPTO
 
         ASN1DERElement getEmptyIM4PContainer(const char *type, const char *desc);
@@ -66,7 +67,7 @@ namespace tihmstar {
         bool im4mMatchesBuildIdentity(const ASN1DERElement &im4m, plist_t buildIdentity, std::vector<const char*> ignoreWhitelist = {}) noexcept;
         const plist_t getBuildIdentityForIm4m(const ASN1DERElement &im4m, plist_t buildmanifest, std::vector<const char*> ignoreWhitelist = {});
         void printGeneralBuildIdentityInformation(plist_t buildidentity);
-        bool isValidIM4M(const ASN1DERElement &im4m, plist_t buildmanifest);
+        bool isValidIM4M(const ASN1DERElement &im4m, plist_t buildmanifest, std::string forDGSTName = "");
 #endif //HAVE_PLIST
 
     };
