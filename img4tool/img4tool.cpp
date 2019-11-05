@@ -681,6 +681,29 @@ bool tihmstar::img4tool::im4mContainsHash(const ASN1DERElement &im4m, std::strin
         return false;
     }
 }
+
+bool tihmstar::img4tool::isGeneratorValidForIM4M(const ASN1DERElement &im4m, std::string generator) noexcept{
+    try {
+        ASN1DERElement bnch = getValFromIM4M(im4m,'BNCH');
+        uint64_t gen = 0;
+        
+        sscanf(generator.c_str(), "0x%16llx", &gen);
+        
+        if (bnch.payloadSize() == SHA_DIGEST_LENGTH) {
+            std::array<char, SHA_DIGEST_LENGTH> tmp{'\0'};
+            std::string hash{tmp.begin(),tmp.end()};
+            SHA1((unsigned char*)&gen, sizeof(gen), (unsigned char *)hash.c_str());
+            return memcmp(hash.c_str(), bnch.payload(), bnch.payloadSize()) == 0;
+        }else{
+            std::array<char, SHA384_DIGEST_LENGTH> tmp{'\0'};
+            std::string hash{tmp.begin(),tmp.end()};
+            SHA384((unsigned char*)&gen, sizeof(gen), (unsigned char *)hash.c_str());
+            return memcmp(hash.c_str(), bnch.payload(), bnch.payloadSize()) == 0;
+        }
+    } catch (...) {
+        return false;
+    }
+}
 #endif //HAVE_CRYPTO
 #pragma mark end_needs_crypto
 

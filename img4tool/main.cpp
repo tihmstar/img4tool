@@ -419,10 +419,17 @@ int main_r(int argc, const char * argv[]) {
                 
                 bool isvalid = isValidIM4M(file, buildmanifest, im4pElemDgstName);
                 printf("\n");
-                printf("[IMG4TOOL] APTicket is %s!\n", isvalid ? "valid" : "invalid");
+                printf("[IMG4TOOL] APTicket is %s!\n", isvalid ? "GOOD" : "BAD");
                 if (im4pElemDgstName.size()) {
                     printf("[IMG4TOOL] IMG4 contains an IM4P which is correctly signed by IM4M\n");
                 }
+                if (generator) {
+                    bool isGenValid = isGeneratorValidForIM4M(file,generator);
+                    printf("[IMG4TOOL] SHSH2 contains generator %s which is %s for nonce in IM4M!\n", generator, isGenValid ? "GOOD" : "BAD");
+                }
+                
+            }else if (isIM4M(file)){
+                reterror("Verify does not make sense on IM4P file!");
             }else{
                 reterror("File not recognised");
             }

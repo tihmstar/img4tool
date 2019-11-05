@@ -46,6 +46,7 @@ namespace tihmstar {
         std::string getIM4PSHA384(const ASN1DERElement &im4p);
         std::string dgstNameForHash(const ASN1DERElement &im4m, std::string hash);
         bool im4mContainsHash(const ASN1DERElement &im4m, std::string hash) noexcept;
+        bool isGeneratorValidForIM4M(const ASN1DERElement &im4m, std::string generator) noexcept;
 #endif //HAVE_CRYPTO
 
         ASN1DERElement getEmptyIM4PContainer(const char *type, const char *desc);
