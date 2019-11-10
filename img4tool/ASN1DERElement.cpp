@@ -62,10 +62,10 @@ const ASN1DERElement ASN1DERElement::ASN1DERElementIterator::operator*() const{
 
 #pragma mark ASN1DERElement
 
-ASN1DERElement::ASN1DERElement(const void *buf, size_t bufSize) :
+ASN1DERElement::ASN1DERElement(const void *buf, size_t bufSize, bool ownsBuffer) :
     _buf((const ASN1TAG*)buf),
     _bufSize(bufSize),
-    _ownsBuffer(false)
+    _ownsBuffer(ownsBuffer)
 {
 
     assure(_bufSize > 2); //needs at least TAG and Size

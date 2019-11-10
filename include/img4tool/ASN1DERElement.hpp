@@ -102,7 +102,7 @@ namespace tihmstar {
              */
             bool _ownsBuffer;
         public:
-            ASN1DERElement(const void *buf, size_t bufSize);
+            ASN1DERElement(const void *buf, size_t bufSize, bool ownsBuffer = false);
             ASN1DERElement(const ASN1TAG tag, const void *payload, size_t payloadLen);
             ~ASN1DERElement();
             
