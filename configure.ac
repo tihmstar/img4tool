@@ -104,6 +104,16 @@ fi
 # Checks for header files.
 AC_CHECK_HEADERS([arpa/inet.h stdint.h stdlib.h string.h unistd.h])
 
+# Check for libraries
+AC_CHECK_LIB([compression], [compression_decode_buffer], [], [
+  AC_CHECK_LIB([lzfse], [lzfse_decode_buffer], [], [
+    echo "Error! Either libcompression or liblzfse is needed!"
+    exit -1
+  ])
+])
+
+
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_CHECK_HEADER_STDBOOL
 AC_TYPE_SIZE_T

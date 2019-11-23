@@ -35,7 +35,7 @@ namespace tihmstar {
         ASN1DERElement appendIM4PToIMG4(const ASN1DERElement &img4, const ASN1DERElement &im4p);
         ASN1DERElement appendIM4MToIMG4(const ASN1DERElement &img4, const ASN1DERElement &im4m);
 
-        ASN1DERElement getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv = NULL, const char *decryptKey = NULL);
+        ASN1DERElement getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv = NULL, const char *decryptKey = NULL, const char **outUsedCompression = NULL);
         ASN1DERElement getValFromIM4M(const ASN1DERElement &im4m, uint32_t val);
 
         ASN1DERElement genPrivTagForNumberWithPayload(size_t privnum, const ASN1DERElement &payload);

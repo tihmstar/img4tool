@@ -293,10 +293,16 @@ int main_r(int argc, const char * argv[]) {
                 } else if (!isIM4P(file)){
                     reterror("File not recognised");
                 }
-
-                ASN1DERElement payload = getPayloadFromIM4P(file, decryptIv, decryptKey);
+                
+                const char *compression = NULL;
+                ASN1DERElement payload = getPayloadFromIM4P(file, decryptIv, decryptKey, &compression);
                 saveToFile(outFile, payload.payload(), payload.payloadSize());
-                printf("Extracted IM4P payload to %s\n",outFile);
+
+                if (compression) {
+                    printf("Extracted (and uncompressed %s) IM4P payload to %s\n",compression,outFile);
+                }else{
+                    printf("Extracted IM4P payload to %s\n",outFile);
+                }
                 didExtract = true;
             } else if (isIMG4(file)) {
                 //extract im4p an im4m from img4
