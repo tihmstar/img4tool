@@ -26,10 +26,14 @@ namespace tihmstar {
         void printIM4P(const void *buf, size_t size);
         void printIM4M(const void *buf, size_t size, bool printAll);
 
+
         std::string getNameForSequence(const void *buf, size_t size);
 
         ASN1DERElement getIM4PFromIMG4(const ASN1DERElement &img4);
         ASN1DERElement getIM4MFromIMG4(const ASN1DERElement &img4);
+        ASN1DERElement getIM4RFromIMG4(const ASN1DERElement &img4);
+
+        ASN1DERElement getBNCNFromIM4R(const ASN1DERElement &im4r);
 
         ASN1DERElement getEmptyIMG4Container();
         ASN1DERElement appendIM4PToIMG4(const ASN1DERElement &img4, const ASN1DERElement &im4p);
@@ -56,6 +60,7 @@ namespace tihmstar {
         bool isIMG4(const ASN1DERElement &img4) noexcept;
         bool isIM4P(const ASN1DERElement &im4p) noexcept;
         bool isIM4M(const ASN1DERElement &im4m) noexcept;
+        bool isIM4R(const ASN1DERElement &im4m) noexcept;
 
         ASN1DERElement renameIM4P(const ASN1DERElement &im4p, const char *type);
 

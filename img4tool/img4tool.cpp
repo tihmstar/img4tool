@@ -285,7 +285,6 @@ void tihmstar::img4tool::printIMG4(const void *buf, size_t size, bool printAll, 
         int i=-1;
         for (auto &tag : sequence) {
             switch (++i) {
-#warning TODO we don't handle IM4R yet
                 case 0:
                     assure(tag.getStringValue() == "IMG4");
                     printf("IMG4:\n");
@@ -296,10 +295,26 @@ void tihmstar::img4tool::printIMG4(const void *buf, size_t size, bool printAll, 
                 case 2:
                     if (!im4pOnly){
                         assure(tag.tag().isConstructed);
-                        assure(tag.tag().tagNumber == ASN1DERElement::TagEnd_of_Content);
+                        assure(tag.tag().tagNumber == 0);
                         assure(tag.tag().tagClass == ASN1DERElement::TagClass::ContextSpecific);
 
                         printIM4M(tag.payload(), tag.payloadSize(), printAll);
+                    }
+                    break;
+                case 3:
+                    if (!im4pOnly){
+                        assure(tag.tag().isConstructed);
+                        assure(tag.tag().tagNumber == 1);
+                        assure(tag.tag().tagClass == ASN1DERElement::TagClass::ContextSpecific);
+
+                        ASN1DERElement bncn = getBNCNFromIM4R({tag.payload(), tag.payloadSize()});
+                        std::string octetString = bncn.getStringValue();
+                        std::reverse(octetString.begin(), octetString.end());
+                        printf("BNCN: 0x");
+                        for (int i=0; i<octetString.size(); i++) {
+                            printf("%02x",((uint8_t*)octetString.c_str())[i]);
+                        }
+                        printf("\n\n");
                     }
                     break;
                 default:
@@ -439,7 +454,7 @@ ASN1DERElement tihmstar::img4tool::getIM4MFromIMG4(const ASN1DERElement &img4){
     ASN1DERElement container = img4[2];
 
     assure(container.tag().isConstructed);
-    assure(container.tag().tagNumber == ASN1DERElement::TagEnd_of_Content);
+    assure(container.tag().tagNumber == 0);
     assure(container.tag().tagClass == ASN1DERElement::TagClass::ContextSpecific);
 
     ASN1DERElement im4m = container[0];
@@ -451,6 +466,38 @@ ASN1DERElement tihmstar::img4tool::getIM4MFromIMG4(const ASN1DERElement &img4){
     retassure(im4m[0].getStringValue() == "IM4M", "Container is not a IM4M");
 
     return im4m;
+}
+
+ASN1DERElement tihmstar::img4tool::getIM4RFromIMG4(const ASN1DERElement &img4){
+    assure(isIMG4(img4));
+
+    ASN1DERElement container = img4[3];
+
+    assure(container.tag().isConstructed);
+    assure(container.tag().tagNumber == 1);
+    assure(container.tag().tagClass == ASN1DERElement::TagClass::ContextSpecific);
+
+    ASN1DERElement im4r = container[0];
+
+    assure(isIM4R(im4r));
+    
+    return im4r;
+}
+
+ASN1DERElement tihmstar::img4tool::getBNCNFromIM4R(const ASN1DERElement &im4r){
+    assure(isIM4R(im4r));
+    
+    ASN1DERElement set = im4r[1];
+    ASN1DERElement bncnTag = set[0];
+    size_t ptagVal = 0;
+    ASN1DERElement ptag = parsePrivTag(bncnTag.buf(), bncnTag.size(), &ptagVal);
+    ASN1DERElement octet = ptag[1];
+    
+    //convert big endian to little endian
+    std::string octetString{(char*)octet.payload(),octet.payloadSize()};
+    
+    ASN1DERElement retval({ASN1DERElement::TagOCTET, ASN1DERElement::Primitive, ASN1DERElement::Universal},octetString.c_str(),octetString.size());
+    return retval;
 }
 
 ASN1DERElement tihmstar::img4tool::getEmptyIMG4Container(){
@@ -846,6 +893,37 @@ bool tihmstar::img4tool::isIM4M(const ASN1DERElement &im4m) noexcept{
         assure(seq.tag().isConstructed);
         assure(seq.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
         assure(seq.tag().tagClass == ASN1DERElement::TagClass::Universal);
+
+        return true;
+    } catch (tihmstar::exception &e) {
+        //
+    }
+    return false;
+}
+
+bool tihmstar::img4tool::isIM4R(const ASN1DERElement &im4r) noexcept{
+    try {
+        assure(im4r.tag().isConstructed);
+        assure(im4r.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
+        assure(im4r.tag().tagClass == ASN1DERElement::TagClass::Universal);
+
+        retassure(im4r[0].getStringValue() == "IM4R", "Container is not a IM4R");
+
+        auto set = im4r[1];
+        assure(set.tag().isConstructed);
+        assure(set.tag().tagNumber == ASN1DERElement::TagSET);
+        assure(set.tag().tagClass == ASN1DERElement::TagClass::Universal);
+
+        ASN1DERElement bncnTag = set[0];
+        
+        size_t ptagVal = 0;
+        ASN1DERElement ptag = parsePrivTag(bncnTag.buf(), bncnTag.size(), &ptagVal);
+        assure(ptagVal == htonl('BNCN'));
+        assure(*(uint32_t*)ptag[0].getStringValue().c_str() == htonl('BNCN'));
+        ASN1DERElement octet = ptag[1];
+        assure(octet.tag().isConstructed == ASN1DERElement::Primitive);
+        assure(octet.tag().tagNumber == ASN1DERElement::TagOCTET);
+        assure(octet.tag().tagClass == ASN1DERElement::TagClass::Universal);
 
         return true;
     } catch (tihmstar::exception &e) {

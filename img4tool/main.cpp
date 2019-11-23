@@ -352,27 +352,58 @@ int main_r(int argc, const char * argv[]) {
         }
 #ifdef HAVE_PLIST
         else if (flags & FLAG_CONVERT){
-            retassure(shshFile, "output path for shsh file required");
-            ASN1DERElement im4m(workingBuffer, workingBufferSize);
-            retassure(isIM4M(im4m), "lastarg needs to be IM4M");
-
             plist_t newshsh = NULL;
+            plist_t generator = NULL;
             plist_t data = NULL;
             char *xml = NULL;
             uint32_t xmlSize = 0;
             cleanup([&]{
-                if (newshsh) {
-                    plist_free(newshsh);
-                }
-                if (data) {
-                    plist_free(data);
-                }
+                safeFreeCustom(newshsh,plist_free);
+                safeFreeCustom(data,plist_free);
+                safeFreeCustom(generator,plist_free);
                 safeFree(xml);
             });
+            retassure(shshFile, "output path for shsh file required");
+            ASN1DERElement im4m(workingBuffer, workingBufferSize);
+            
+            
+            if (isIMG4(im4m)) {
+                try {
+                    printf("Found IM4R extracting generator: ");
+                    char *generatorStr = NULL;
+                    cleanup([&]{
+                        safeFree(generatorStr);
+                    });
+                    ASN1DERElement im4r = getIM4RFromIMG4(im4m);
+                    ASN1DERElement bncn = getBNCNFromIM4R(im4r);
+                    
+                    size_t generatorStrSize = bncn.payloadSize()*2+2+1;
+                    generatorStr = (char*)malloc(generatorStrSize);
+                    strcpy(generatorStr, "0x");
+                    std::string octetString = bncn.getStringValue();
+                    std::reverse(octetString.begin(), octetString.end());
+                    for (char c : octetString) {
+                        assure(generatorStrSize-strlen(generatorStr)>=3);
+                        snprintf(&generatorStr[strlen(generatorStr)], 3, "%02x",(unsigned char)c);
+                    }
+                    assure(generator = plist_new_string(generatorStr));
+                    printf("ok\n");
+                } catch (...) {
+                    printf("failed!\n");
+                }
+                
+                im4m = getIM4MFromIMG4(im4m);
+            }
+            
+            retassure(isIM4M(im4m), "Not IM4M file");
+
             retassure(newshsh = plist_new_dict(),"failed to create new plist dict");
             retassure(data = plist_new_data((const char*)im4m.buf(), im4m.size()),"failed to create plist data from im4m buf");
 
             plist_dict_set_item(newshsh, "ApImg4Ticket", data); data = NULL;
+            if (generator) {
+                plist_dict_set_item(newshsh, "generator", generator); generator = NULL;
+            }
 
             retassure((plist_to_xml(newshsh, &xml, &xmlSize),xml), "failed to convert plist to xml");
             saveToFile(shshFile, xml, xmlSize);
