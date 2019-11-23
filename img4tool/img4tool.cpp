@@ -1138,13 +1138,14 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
             
             {
                 bool doContinue = false;
-                for (auto &ignore : {"BasebandFirmware"}) {
+                for (auto &ignore : {"BasebandFirmware","ftap","ftsp","rfta","rfts","SE,Bootloader","SE,Firmware","SE,MigrationOS","SE,OS","SE,UpdatePayload"}) {
                     if (!strcmp(eKey, ignore)) {
                         printf("IGN (ignoring due to whitelist)\n");
                         doContinue = true;
                     }
                 }
                 if (doContinue) {
+                    checksPassed = true;
                     continue;
                 }
             }
