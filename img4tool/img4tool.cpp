@@ -1137,20 +1137,17 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
             }
             
             {
-                bool doContinue = false;
-                for (auto &ignore : {"BasebandFirmware"}) {
-                    if (!strcmp(eKey, ignore)) {
-                        printf("IGN (ignoring due to whitelist)\n");
-                        doContinue = true;
-                    }
-                }
-                if (doContinue) {
+                if (!strncmp(eKey, "Savage,",strlen("Savage,"))) {
+                    printf("IGN (custom ignore: Savage)\n");
                     continue;
                 }
             }
             
+            if (!(pDigest = plist_dict_get_item(eVal, "Digest"))) {
+                printf("IGN (no digest in BuildManifest)\n");
+                continue;
+            }
             
-            assure(pDigest = plist_dict_get_item(eVal, "Digest"));
             assure(plist_get_node_type(pDigest) == PLIST_DATA);
             plist_get_data_val(pDigest, &digest, &digestLen);
 
