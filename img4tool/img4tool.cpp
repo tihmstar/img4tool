@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <array>
+#include <algorithm>
 #include <arpa/inet.h>
 #include "ASN1DERElement.hpp"
 #include <libgeneral/macros.h>
@@ -369,7 +370,7 @@ void tihmstar::img4tool::printIM4P(const void *buf, size_t size){
                     {
                         ASN1DERElement versionTag = tag[0];
                         ASN1DERElement sizeTag    = tag[1];
-                        
+
                         assure(versionTag.tag().isConstructed == ASN1DERElement::Primitive);
                         assure(versionTag.tag().tagNumber == ASN1DERElement::TagINTEGER);
                         assure(versionTag.tag().tagClass == ASN1DERElement::Universal);
@@ -480,22 +481,22 @@ ASN1DERElement tihmstar::img4tool::getIM4RFromIMG4(const ASN1DERElement &img4){
     ASN1DERElement im4r = container[0];
 
     assure(isIM4R(im4r));
-    
+
     return im4r;
 }
 
 ASN1DERElement tihmstar::img4tool::getBNCNFromIM4R(const ASN1DERElement &im4r){
     assure(isIM4R(im4r));
-    
+
     ASN1DERElement set = im4r[1];
     ASN1DERElement bncnTag = set[0];
     size_t ptagVal = 0;
     ASN1DERElement ptag = parsePrivTag(bncnTag.buf(), bncnTag.size(), &ptagVal);
     ASN1DERElement octet = ptag[1];
-    
+
     //convert big endian to little endian
     std::string octetString{(char*)octet.payload(),octet.payloadSize()};
-    
+
     ASN1DERElement retval({ASN1DERElement::TagOCTET, ASN1DERElement::Primitive, ASN1DERElement::Universal},octetString.c_str(),octetString.size());
     return retval;
 }
@@ -568,7 +569,7 @@ ASN1DERElement tihmstar::img4tool::uncompressIfNeeded(const ASN1DERElement &comp
         ASN1DERElement compressingSequence = origIM4P[5];
         ASN1DERElement versionTag = compressingSequence[0];
         ASN1DERElement sizeTag    = compressingSequence[1];
-        
+
         assure(versionTag.tag().isConstructed == ASN1DERElement::Primitive);
         assure(versionTag.tag().tagNumber == ASN1DERElement::TagINTEGER);
         assure(versionTag.tag().tagClass == ASN1DERElement::Universal);
@@ -578,10 +579,10 @@ ASN1DERElement tihmstar::img4tool::uncompressIfNeeded(const ASN1DERElement &comp
         assure(sizeTag.tag().isConstructed == ASN1DERElement::Primitive);
         assure(sizeTag.tag().tagNumber == ASN1DERElement::TagINTEGER);
         assure(sizeTag.tag().tagClass == ASN1DERElement::Universal);
-        
+
         unpackedLen = sizeTag.getIntegerValue();
         unpacked = (char*)malloc(unpackedLen);
-        
+
         if ((uncompSizeReal = lzfse_decode_buffer((uint8_t*)unpacked, unpackedLen, (const uint8_t*)compressedOctet.payload(), compressedOctet.payloadSize(), NULL)) == unpackedLen) {
             retVal = ASN1DERElement({ASN1DERElement::TagNumber::TagOCTET,ASN1DERElement::Primitive, ASN1DERElement::Universal}, unpacked, unpackedLen);
             printf("ok\n");
@@ -784,9 +785,9 @@ bool tihmstar::img4tool::isGeneratorValidForIM4M(const ASN1DERElement &im4m, std
     try {
         ASN1DERElement bnch = getValFromIM4M(im4m,'BNCH');
         uint64_t gen = 0;
-        
+
         sscanf(generator.c_str(), "0x%16llx", &gen);
-        
+
         if (bnch.payloadSize() == SHA_DIGEST_LENGTH) {
             std::array<char, SHA_DIGEST_LENGTH> tmp{'\0'};
             std::string hash{tmp.begin(),tmp.end()};
@@ -952,7 +953,7 @@ bool tihmstar::img4tool::isIM4R(const ASN1DERElement &im4r) noexcept{
         assure(set.tag().tagClass == ASN1DERElement::TagClass::Universal);
 
         ASN1DERElement bncnTag = set[0];
-        
+
         size_t ptagVal = 0;
         ASN1DERElement ptag = parsePrivTag(bncnTag.buf(), bncnTag.size(), &ptagVal);
         assure(ptagVal == htonl('BNCN'));
@@ -1116,7 +1117,7 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
             checksPassed = false;
             findDGST = ignoreWhitelist[0]+1;
         }
-        
+
         printf("[IMG4TOOL] checking buildidentity matches board ... ");
         if (!doesIM4MBoardMatchBuildIdentity(im4m, buildIdentity)) {
             printf("NO\n");
@@ -1172,19 +1173,19 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
                     continue;
                 }
             }
-            
+
             {
                 if (!strncmp(eKey, "Savage,",strlen("Savage,"))) {
                     printf("IGN (custom ignore: Savage)\n");
                     continue;
                 }
             }
-            
+
             if (!(pDigest = plist_dict_get_item(eVal, "Digest"))) {
                 printf("IGN (no digest in BuildManifest)\n");
                 continue;
             }
-            
+
             assure(plist_get_node_type(pDigest) == PLIST_DATA);
             plist_get_data_val(pDigest, &digest, &digestLen);
 
@@ -1231,7 +1232,7 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
                     }
                 }
             }
-            
+
             if (!hasDigit) {
                 if (findDGST.size()) {
                     printf("IGN (hash not found in im4m, but ignoring since we only care about '%s')\n",findDGST.c_str());
