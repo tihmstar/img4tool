@@ -39,7 +39,7 @@ namespace tihmstar {
         ASN1DERElement appendIM4PToIMG4(const ASN1DERElement &img4, const ASN1DERElement &im4p);
         ASN1DERElement appendIM4MToIMG4(const ASN1DERElement &img4, const ASN1DERElement &im4m);
 
-        ASN1DERElement getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv = NULL, const char *decryptKey = NULL, const char **outUsedCompression = NULL);
+        ASN1DERElement getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv = NULL, const char *decryptKey = NULL, const char **outUsedCompression = NULL, const char **outHypervisor = NULL, size_t *outHypervisorSize = NULL);
         ASN1DERElement getValFromIM4M(const ASN1DERElement &im4m, uint32_t val);
 
         ASN1DERElement genPrivTagForNumberWithPayload(size_t privnum, const ASN1DERElement &payload);
@@ -55,7 +55,7 @@ namespace tihmstar {
 
         ASN1DERElement getEmptyIM4PContainer(const char *type, const char *desc);
 
-        ASN1DERElement appendPayloadToIM4P(const ASN1DERElement &im4p, const void *buf, size_t size);
+        ASN1DERElement appendPayloadToIM4P(const ASN1DERElement &im4p, const void *buf, size_t size, const char *compression = NULL, const void *buf2Raw = NULL, size_t buf2RawSize = 0);
 
         bool isIMG4(const ASN1DERElement &img4) noexcept;
         bool isIM4P(const ASN1DERElement &im4p) noexcept;

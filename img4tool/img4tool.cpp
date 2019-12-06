@@ -59,7 +59,7 @@ namespace tihmstar {
         void printRecSequence(const void *buf, size_t size);
 
         ASN1DERElement parsePrivTag(const void *buf, size_t size, size_t *outPrivTag);
-        ASN1DERElement uncompressIfNeeded(const ASN1DERElement &compressedOctet, const ASN1DERElement &origIM4P, const char **outUsedCompression = NULL);
+        ASN1DERElement uncompressIfNeeded(const ASN1DERElement &compressedOctet, const ASN1DERElement &origIM4P, const char **outUsedCompression = NULL, const char **outHypervisor = NULL, size_t *outHypervisorSize = NULL);
     };
 };
 
@@ -539,8 +539,9 @@ ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement &img4, 
     return newImg4;
 }
 
-ASN1DERElement tihmstar::img4tool::uncompressIfNeeded(const ASN1DERElement &compressedOctet, const ASN1DERElement &origIM4P, const char **outUsedCompression){
+ASN1DERElement tihmstar::img4tool::uncompressIfNeeded(const ASN1DERElement &compressedOctet, const ASN1DERElement &origIM4P, const char **outUsedCompression, const char **outHypervisor, size_t *outHypervisorSize){
     const char *payload = (const char *)compressedOctet.payload();
+    size_t payloadSize = compressedOctet.size();
     size_t unpackedLen = 0;
     char *unpacked = NULL;
     cleanup([&]{
@@ -550,9 +551,12 @@ ASN1DERElement tihmstar::img4tool::uncompressIfNeeded(const ASN1DERElement &comp
 
     if (strncmp(payload, "complzss", 8) == 0) {
         printf("Compression detected, uncompressing (%s): ", "complzss");
-        if((unpacked = tryLZSS(payload, &unpackedLen))){
+        if((unpacked = tryLZSS(payload, payloadSize, &unpackedLen, outHypervisor, outHypervisorSize))){
             retVal = ASN1DERElement({ASN1DERElement::TagNumber::TagOCTET,ASN1DERElement::Primitive, ASN1DERElement::Universal}, unpacked, unpackedLen);
             printf("ok\n");
+            if (outHypervisor && outHypervisorSize && *outHypervisorSize) {
+                printf("Detected and extracted hypervisor!\n");
+            }
             if (outUsedCompression) *outUsedCompression = "complzss";
         }else{
             printf("failed!\n");
@@ -590,7 +594,7 @@ ASN1DERElement tihmstar::img4tool::uncompressIfNeeded(const ASN1DERElement &comp
     return retVal;
 }
 
-ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv, const char *decryptKey, const char **outUsedCompression){
+ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv, const char *decryptKey, const char **outUsedCompression, const char **outHypervisor, size_t *outHypervisorSize){
     assure(isIM4P(im4p));
     ASN1DERElement payload = im4p[3];
     if (decryptIv || decryptKey) {
@@ -601,7 +605,7 @@ ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement &im4p
 #endif //HAVE_CRYPTO
     }
 
-    return uncompressIfNeeded(payload, im4p, outUsedCompression);
+    return uncompressIfNeeded(payload, im4p, outUsedCompression, outHypervisor, outHypervisorSize);
 }
 
 ASN1DERElement tihmstar::img4tool::getValFromIM4M(const ASN1DERElement &im4m, uint32_t val){
@@ -817,7 +821,8 @@ ASN1DERElement tihmstar::img4tool::getEmptyIM4PContainer(const char *type, const
     return im4p;
 }
 
-ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement &im4p, const void *buf, size_t size){
+
+ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement &im4p, const void *buf, size_t size, const char *compression, const void *buf2Raw, size_t buf2RawSize){
     assure(im4p.tag().isConstructed);
     assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
     assure(im4p.tag().tagClass == ASN1DERElement::TagClass::Universal);
@@ -826,9 +831,41 @@ ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement &im4
     retassure(im4p[1].getStringValue().size() == 4, "IM4P type has size != 4");
     retassure(im4p[2].getStringValue().size(), "IM4P description is empty");
     ASN1DERElement newim4p(im4p);
-
+    
     ASN1DERElement im4p_payload({ASN1DERElement::TagOCTET, ASN1DERElement::Primitive, ASN1DERElement::Universal},buf,size);
-
+    
+    if (compression) {
+        if (strcmp(compression, "complzss") == 0) {
+            uint8_t *packed = NULL;
+            cleanup([&]{
+                safeFree(packed);
+            });
+            size_t packedSize = size + 0x800;
+            
+            printf("Compression requested, compressing (%s): ", "complzss");
+            packed = (uint8_t *)malloc(packedSize);
+            
+            packedSize = lzss_compress((const uint8_t *)buf, (uint32_t)size, packed, (uint32_t)packedSize);
+            assure(packedSize < size);
+            
+            printf("ok\n");
+            
+            if (buf2Raw && buf2RawSize) {
+                printf("Requested appending uncompressed buffer at the end!\n");
+                //we optionally can append a buffer after compression
+                packed = (uint8_t *)realloc(packed, packedSize + buf2RawSize);
+                memcpy(&packed[packedSize], buf2Raw, buf2RawSize);
+                packedSize += buf2RawSize;
+            }
+            
+            im4p_payload = ASN1DERElement({ASN1DERElement::TagNumber::TagOCTET,ASN1DERElement::Primitive, ASN1DERElement::Universal}, packed, packedSize);
+        } else if (strcmp(compression, "bvx2") == 0) {
+            reterror("not implemented");
+        }else {
+            reterror("unknown compression=%s",compression);
+        }
+    }
+    
     newim4p += im4p_payload;
 
     return newim4p;
