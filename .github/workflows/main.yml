@@ -1,0 +1,148 @@
+name: Buildrunner
+
+on: [push]
+
+jobs:
+  build:
+
+    strategy:
+      matrix:
+        platform: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.platform }}
+    env:
+      BUILDROOT: "buildroot_${{ matrix.platform }}"
+      GIT_DEPENDENCIES: tihmstar/libgeneral
+
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: prepre buildroot
+      run: mkdir $BUILDROOT
+    - name:  Install pre-dependencies
+      run: |
+         mkdir predep
+         if [ "$RUNNER_OS" == "Linux" ]; then
+              sudo apt-get install -y libssl-dev
+              
+              # install liblzfse
+              git clone https://github.com/lzfse/lzfse.git
+              make -C lzfse
+              make -C lzfse install INSTALL_PREFIX=$GITHUB_WORKSPACE/predep
+              rm -rf lzfse
+              
+              mv predep/* $BUILDROOT
+         elif [ "$RUNNER_OS" == "macOS" ]; then
+              brew install autoconf automake libtool openssl pkg-config
+         else
+              echo "$RUNNER_OS not supported"
+              exit 1
+         fi
+      shell: bash
+    - name: download dependencies
+      env: 
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        get_latest_release() {
+          curl --silent --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' "https://api.github.com/repos/$1/releases/latest" | # Get latest release from GitHub api
+          grep '"tag_name":' |                                            # Get tag line
+          rev | cut -d '"' -f2 | rev                                   # Pluck JSON value
+        }
+        IFS=',' read -r -a deparray <<< "$GIT_DEPENDENCIES"; for d in ${deparray[@]}; do        
+          echo "Got dependency: $d"
+          r=$(echo $d | cut -d '/' -f 2)
+          echo "Got reponame: $r"
+          tag=$(get_latest_release $d);
+          echo "Found tag: $tag"
+          wget "https://github.com/$d/releases/download/$tag/$BUILDROOT.zip"
+          unzip -u "$BUILDROOT.zip"
+          echo "Set $r pkg-config prefix var"
+          export $(echo "PKG_CONFIG_$(echo $r | tr a-z A-Z)_PREFIX")=$GITHUB_WORKSPACE/$BUILDROOT
+          rm "$BUILDROOT.zip"
+        done
+    - name: autogen
+      run: |
+        IFS=',' read -r -a deparray <<< "$GIT_DEPENDENCIES"; for d in ${deparray[@]}; do        
+          echo "Got dependency: $d"
+          r=$(echo $d | cut -d '/' -f 2)
+          echo "Set $r pkg-config prefix var"
+          export $(echo "PKG_CONFIG_$(echo $r | tr a-z A-Z)_PREFIX")=$GITHUB_WORKSPACE/$BUILDROOT
+        done
+        LDFLAGS="-L$GITHUB_WORKSPACE/$BUILDROOT/lib" ./autogen.sh --enable-static --disable-shared --prefix=$GITHUB_WORKSPACE/$BUILDROOT PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$GITHUB_WORKSPACE/$BUILDROOT/lib/pkgconfig
+    - name: make
+      run: make
+    - name: make install
+      run: |
+        echo "get depfiles list"
+        oldfiles=$(find $GITHUB_WORKSPACE/$BUILDROOT | tr '\n' ',')
+        make install
+        echo "remove depfiles files"
+        IFS=',' read -r -a deplist <<< "$oldfiles"; for f in ${deplist[@]}; do
+          echo "deleting file $f" 
+          rm -f $f 2>/dev/null && echo "ok" || echo "failed"
+        done
+        echo "remove depfiles dirs"
+        IFS=',' read -r -a deplist <<< "$oldfiles"; for f in ${deplist[@]}; do 
+          echo "deleting directory $f" 
+          rmdir $f 2>/dev/null && echo "ok" || echo "failed"
+        done
+    - uses: actions/upload-artifact@v1
+      with:
+        name: ${{ env.BUILDROOT }}
+        path: ${{ env.BUILDROOT }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v1
+    - name: Download ubuntu artifact
+      uses: actions/download-artifact@v1
+      with:
+        name: buildroot_ubuntu-latest   
+        path: buildroot_ubuntu-latest    
+    - name: Download macos artifact
+      uses: actions/download-artifact@v1
+      with:
+        name: buildroot_macos-latest
+        path: buildroot_macos-latest
+    - name: Set env vars and zip
+      run: |
+        echo "::set-env name=BUILD_VERSION_NUM::$(echo "$(git rev-list --count HEAD | tr -d '\n')")"
+        echo "::set-env name=BUILD_VERSION_SHA::$(echo "$(git rev-parse HEAD | tr -d '\n'])")"
+        echo "::set-env name=BUILD_VERSION_STR::$(echo "$(git rev-list --count HEAD | tr -d '\n')-$(git rev-parse HEAD | tr -d '\n'])")"
+        echo "::set-env name=COMMIT_MSG::$(echo "$(git log -1 --pretty=%B)")"
+        zip -r buildroot_macos-latest.zip buildroot_macos-latest
+        zip -r buildroot_ubuntu-latest.zip buildroot_ubuntu-latest
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1.0.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.BUILD_VERSION_NUM }}
+        release_name: Build ${{ env.BUILD_VERSION_STR }}
+        body: ${{ env.COMMIT_MSG }}
+        draft: false
+        prerelease: false
+    - name: Upload Release Asset ubuntu
+      id: upload-release-asset-ubuntu
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: buildroot_ubuntu-latest.zip
+        asset_name: buildroot_ubuntu-latest.zip
+        asset_content_type: application/zip
+    - name: Upload Release Asset macos
+      id: upload-release-asset-macos 
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: buildroot_macos-latest.zip
+        asset_name: buildroot_macos-latest.zip
+        asset_content_type: application/zip
+
