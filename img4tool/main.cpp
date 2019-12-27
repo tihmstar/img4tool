@@ -137,9 +137,10 @@ void cmd_help(){
     printf("  -a, --print-all\t\tprint everything from im4m\n");
     printf("  -i, --im4p-only\t\tprint only im4p\n");
     printf("  -e, --extract\t\t\textracts im4m/im4p payload\n");
-#ifdef HAVE_PLIST
-    printf("  -s, --shsh\t<PATH>\t\tFilepath for shsh (for reading/writing im4m)\n");
+#ifndef HAVE_PLIST
+    printf("UNAVAILABLE: ");
 #endif //HAVE_PLIST
+    printf("  -s, --shsh\t<PATH>\t\tFilepath for shsh (for reading/writing im4m)\n");
     printf("  -m, --im4m\t<PATH>\t\tFilepath for im4m (depending on -e being set)\n");
     printf("  -p, --im4p\t<PATH>\t\tFilepath for im4p (depending on -e being set)\n");
     printf("  -c, --create\t<PATH>\t\tcreates an img4 with the specified im4m, im4p or creates im4p with raw file (last argument)\n");
@@ -147,21 +148,31 @@ void cmd_help(){
     printf("  -t, --type\t\t\tset type for creating IM4P files from raw\n");
     printf("  -d, --desc\t\t\tset desc for creating IM4P files from raw\n");
     printf("  -n, --rename-payload NAME\trename im4p payload (NAME must be exactly 4 bytes)\n");
-#ifdef HAVE_PLIST
-    printf("  -v, --verify BUILDMANIFEST\tverify img4, im4m\n");
+#ifndef HAVE_PLIST
+    printf("UNAVAILABLE: ");
 #endif //HAVE_PLIST
+    printf("  -v, --verify BUILDMANIFEST\tverify img4, im4m\n");
     printf("      --iv\t\t\tIV  for decrypting payload when extracting (requires -e and -o)\n");
     printf("      --key\t\t\tKey for decrypting payload when extracting (requires -e and -o)\n");
-#ifdef HAVE_PLIST
-    printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
+#ifndef HAVE_PLIST
+    printf("UNAVAILABLE: ");
 #endif //HAVE_PLIST
+    printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
 
     printf("\n");
 }
 
 int main_r(int argc, const char * argv[]) {
     printf("%s\n",version());
-
+    printf("Compiled with plist: %s\n",
+#ifdef HAVE_PLIST
+    "YES"
+#else
+    "NO"
+#endif
+    );
+    
+    
     const char *lastArg = NULL;
     const char *shshFile = NULL;
     const char *im4mFile = NULL;
@@ -171,7 +182,9 @@ int main_r(int argc, const char * argv[]) {
     const char *decryptKey = NULL;
     const char *im4pType = NULL;
     const char *im4pDesc = "Image created by img4tool";
+#ifdef HAVE_PLIST
     const char *buildmanifestFile = NULL;
+#endif //HAVE_PLIST
 
     int optindex = 0;
     int opt = 0;
