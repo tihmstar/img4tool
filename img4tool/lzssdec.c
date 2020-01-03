@@ -17,9 +17,9 @@
 #include <arpa/inet.h>
 #include <string.h>
 
-uint32_t decompress_lzss(uint8_t *dst, const uint8_t *src, uint32_t srclen);
-uint8_t *compress_lzss(uint8_t *dst, uint32_t dstlen, const uint8_t *src, uint32_t srcLen);
-uint32_t lzadler32(const uint8_t *buf, int32_t len);
+static uint32_t decompress_lzss(uint8_t *dst, const uint8_t *src, uint32_t srclen);
+static uint8_t *compress_lzss(uint8_t *dst, uint32_t dstlen, const uint8_t *src, uint32_t srcLen);
+static uint32_t lzadler32(const uint8_t *buf, int32_t len);
 
 
 struct compHeader {
@@ -113,7 +113,7 @@ uint32_t lzss_compress(const uint8_t *src, uint32_t src_len,uint8_t *dst, uint32
 #define DO8(buf,i)  DO4(buf,i); DO4(buf,i+4);
 #define DO16(buf)   DO8(buf,0); DO8(buf,8);
 
-uint32_t lzadler32(const uint8_t *buf, int32_t len)
+static uint32_t lzadler32(const uint8_t *buf, int32_t len)
 {
     unsigned long s1 = 1; // adler & 0xffff;
     unsigned long s2 = 0; // (adler >> 16) & 0xffff;
@@ -134,7 +134,7 @@ uint32_t lzadler32(const uint8_t *buf, int32_t len)
         s1 %= BASE;
         s2 %= BASE;
     }
-    return (s2 << 16) | s1;
+    return (uint32_t)((s2 << 16) | s1);
 }
 
 /**************************************************************
@@ -171,7 +171,7 @@ struct encode_state {
 };
 
 
-uint32_t decompress_lzss(uint8_t *dst, const uint8_t *src, uint32_t srclen)
+static uint32_t decompress_lzss(uint8_t *dst, const uint8_t *src, uint32_t srclen)
 {
     /* ring buffer of size N, with extra F-1 bytes to aid string comparison */
     uint8_t text_buf[N + F - 1];
@@ -327,7 +327,7 @@ static void delete_node(struct encode_state *sp, int p)
     sp->parent[p] = NIL;
 }
 
-uint8_t *compress_lzss(uint8_t *dst, uint32_t dstlen, const uint8_t *src, uint32_t srcLen){
+static uint8_t *compress_lzss(uint8_t *dst, uint32_t dstlen, const uint8_t *src, uint32_t srcLen){
     /* Encoding state, mostly tree but some current match stuff */
     struct encode_state *sp;
 

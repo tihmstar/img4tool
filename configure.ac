@@ -138,7 +138,7 @@ Configuration for $PACKAGE-$VERSION:
 -------------------------------------------
 
   install prefix ..........: $prefix
-  have plist ..............: $with_plist
+  have plist ..............: $have_plist
   crypto backend ..........: $crypto_backend"
 
 echo "  compiler ................: ${CC}
