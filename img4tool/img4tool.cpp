@@ -233,7 +233,6 @@ void tihmstar::img4tool::printRecSequence(const void *buf, size_t size){
     }
 }
 
-
 ASN1DERElement tihmstar::img4tool::parsePrivTag(const void *buf, size_t size, size_t *outPrivTag){
     size_t privTag = 0;
     ASN1DERElement::ASN1PrivateTag *ptag = NULL;
@@ -1028,7 +1027,6 @@ bool tihmstar::img4tool::isIM4MSignatureValid(const ASN1DERElement &im4m){
 #endif //HAVE_OPENSSL
 #pragma mark end_needs_openssl
 
-
 #pragma mark begin_needs_plist
 #ifdef HAVE_PLIST
 bool tihmstar::img4tool::doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &im4m, plist_t buildIdentity) noexcept{
@@ -1179,6 +1177,18 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
                     printf("IGN (custom ignore: Savage)\n");
                     continue;
                 }
+            }
+                
+            {
+                if (!strncmp(eKey, "Yonkers,",strlen("Yonkers,"))) {
+                    printf("IGN (custom ignore: Yonkers)\n");
+                    continue;
+            }
+                    
+            {
+                if (!strncmp(eKey, "eUICC,",strlen("eUICC,"))) {
+                    printf("IGN (custom ignore: eUICC)\n");
+                    continue;
             }
 
             if (!(pDigest = plist_dict_get_item(eVal, "Digest"))) {
