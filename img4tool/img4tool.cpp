@@ -1064,7 +1064,6 @@ bool tihmstar::img4tool::doesIM4MBoardMatchBuildIdentity(const ASN1DERElement &i
 
         ASN1DERElement manpset = manp[1];
 
-
         for (auto &e : manpset) {
             char *pstrval= NULL;
             uint64_t val = 0;
@@ -1180,6 +1179,20 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
                     continue;
                 }
             }
+                
+            {
+                if (!strncmp(eKey, "Yonkers,",strlen("Yonkers,"))) {
+                     printf("IGN (custom ignore: Yonkers)\n");
+                     continue;
+                }
+            }
+
+            {
+                if (!strncmp(eKey, "eUICC,",strlen("eUICC,"))) {
+                     printf("IGN (custom ignore: eUICC)\n");
+                     continue;
+                }
+            }
 
             if (!(pDigest = plist_dict_get_item(eVal, "Digest"))) {
                 printf("IGN (no digest in BuildManifest)\n");
@@ -1188,7 +1201,6 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
 
             assure(plist_get_node_type(pDigest) == PLIST_DATA);
             plist_get_data_val(pDigest, &digest, &digestLen);
-
 
             for (auto &e : manbset) {
                 size_t pTagVal = 0;
