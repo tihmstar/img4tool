@@ -360,9 +360,19 @@ void tihmstar::img4tool::printIM4P(const void *buf, size_t size){
                     printf("size: 0x%08lx\n\n",tag.payloadSize());
                     break;
                 case 4:
-                    printKBAG(tag.buf(),tag.size());
-                    printf("\n");
-                    break;
+                {
+                    ASN1DERElement octet = tag;
+                    if (!octet.tag().isConstructed
+                            && octet.tag().tagNumber == ASN1DERElement::TagOCTET
+                        && octet.tag().tagClass == ASN1DERElement::TagClass::Universal){
+                        printKBAG(tag.buf(),tag.size());
+                        printf("\n");
+                        break;
+                    }else{
+                        debug("Warning: got more than 3 elements, but element is not octet!\n");
+                        ++i; //skip to step 5
+                    }
+                }
                 case 5:
                     assure(tag.tag().isConstructed);
                     assure(tag.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -566,7 +576,13 @@ ASN1DERElement tihmstar::img4tool::uncompressIfNeeded(const ASN1DERElement &comp
         size_t uncompSizeReal = 0;
         printf("Compression detected, uncompressing (%s): ", "bvx2");
         //checking
-        ASN1DERElement compressingSequence = origIM4P[5];
+        ASN1DERElement compressingSequence = origIM4P[4];
+        if (!compressingSequence.tag().isConstructed
+                && compressingSequence.tag().tagNumber == ASN1DERElement::TagOCTET
+                && compressingSequence.tag().tagClass == ASN1DERElement::TagClass::Universal){
+            compressingSequence = origIM4P[5];
+        }
+
         ASN1DERElement versionTag = compressingSequence[0];
         ASN1DERElement sizeTag    = compressingSequence[1];
 
