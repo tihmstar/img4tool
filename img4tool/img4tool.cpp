@@ -1181,18 +1181,12 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
             }
 
             assure(pInfo = plist_dict_get_item(eVal, "Info"));
-            if ((pTrusted = plist_dict_get_item(pInfo, "Trusted"))){
+
+            if ((pTrusted = plist_dict_get_item(eVal, "Trusted"))){
                 assure(plist_get_node_type(pTrusted) == PLIST_BOOLEAN);
                 plist_get_bool_val(pTrusted, &isTrusted);
-                if (!pTrusted){
+                if (!isTrusted){
                     printf("OK (untrusted)\n");
-                    continue;
-                }
-            }
-
-            {
-                if (!strncmp(eKey, "Savage,",strlen("Savage,"))) {
-                    printf("IGN (custom ignore: Savage)\n");
                     continue;
                 }
             }
@@ -1252,6 +1246,8 @@ bool tihmstar::img4tool::im4mMatchesBuildIdentity(const ASN1DERElement &im4m, pl
             if (!hasDigit) {
                 if (findDGST.size()) {
                     printf("IGN (hash not found in im4m, but ignoring since we only care about '%s')\n",findDGST.c_str());
+                }else if (!pTrusted){
+                    printf("IGN (hash not found in im4m, but ignoring since not explicitly enforced through \"Trusted\"=\"YES\" tag)\n");
                 }else{
                     printf("BAD! (hash not found in im4m)\n");
                     checksPassed = false;
