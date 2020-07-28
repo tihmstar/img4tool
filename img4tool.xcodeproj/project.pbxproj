@@ -11,11 +11,11 @@
 		8754A6B1236F16B600C0D285 /* libgeneral.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 8754A6B0236F16B600C0D285 /* libgeneral.0.dylib */; };
 		8754A6B2236F16B600C0D285 /* libgeneral.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 8754A6B0236F16B600C0D285 /* libgeneral.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		875585D7238967FA00B90FC9 /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 875585D6238967C500B90FC9 /* libcompression.tbd */; };
+		8791272A24D0ABA30071283F /* libcrypto.1.1.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 8791272924D0ABA30071283F /* libcrypto.1.1.dylib */; };
+		8791272B24D0ABA30071283F /* libcrypto.1.1.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 8791272924D0ABA30071283F /* libcrypto.1.1.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		879896AD2344A91900A98709 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 879896AC2344A91900A98709 /* main.cpp */; };
 		87A281342347B7B900ED08BB /* ASN1DERElement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 87A281322347B7B900ED08BB /* ASN1DERElement.cpp */; };
 		87A281372347B7CA00ED08BB /* img4tool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 87A281352347B7CA00ED08BB /* img4tool.cpp */; };
-		87E6A5FE24A75AC70081D457 /* libcrypto.1.0.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 87E6A5FD24A75AC70081D457 /* libcrypto.1.0.0.dylib */; };
-		87E6A5FF24A75AC70081D457 /* libcrypto.1.0.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 87E6A5FD24A75AC70081D457 /* libcrypto.1.0.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		87EB3A6923561EE2008F1B06 /* lzssdec.c in Sources */ = {isa = PBXBuildFile; fileRef = 87EB3A6823561EE2008F1B06 /* lzssdec.c */; };
 /* End PBXBuildFile section */
 
@@ -26,8 +26,8 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				87E6A5FF24A75AC70081D457 /* libcrypto.1.0.0.dylib in Embed Libraries */,
 				8754A6B2236F16B600C0D285 /* libgeneral.0.dylib in Embed Libraries */,
+				8791272B24D0ABA30071283F /* libcrypto.1.1.dylib in Embed Libraries */,
 			);
 			name = "Embed Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -50,6 +50,7 @@
 		8754A6B0236F16B600C0D285 /* libgeneral.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libgeneral.0.dylib; path = ../../../../usr/local/lib/libgeneral.0.dylib; sourceTree = "<group>"; };
 		875585D6238967C500B90FC9 /* libcompression.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcompression.tbd; path = usr/lib/libcompression.tbd; sourceTree = SDKROOT; };
 		8762F342236DDFD400F42FDB /* img4tool.hpp.in */ = {isa = PBXFileReference; explicitFileType = sourcecode.cpp.h; name = img4tool.hpp.in; path = include/img4tool/img4tool.hpp.in; sourceTree = SOURCE_ROOT; };
+		8791272924D0ABA30071283F /* libcrypto.1.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.1.1.dylib; path = "../../../../usr/local/Cellar/openssl@1.1/1.1.1g/lib/libcrypto.1.1.dylib"; sourceTree = "<group>"; };
 		879896A92344A91900A98709 /* img4tool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = img4tool; sourceTree = BUILT_PRODUCTS_DIR; };
 		879896AC2344A91900A98709 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		87A281322347B7B900ED08BB /* ASN1DERElement.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ASN1DERElement.cpp; sourceTree = "<group>"; };
@@ -69,8 +70,8 @@
 			files = (
 				8754A6B1236F16B600C0D285 /* libgeneral.0.dylib in Frameworks */,
 				4281CC82234A01C500C30E6D /* libplist.3.dylib in Frameworks */,
-				87E6A5FE24A75AC70081D457 /* libcrypto.1.0.0.dylib in Frameworks */,
 				875585D7238967FA00B90FC9 /* libcompression.tbd in Frameworks */,
+				8791272A24D0ABA30071283F /* libcrypto.1.1.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -80,6 +81,7 @@
 		4281CC80234A01C500C30E6D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				8791272924D0ABA30071283F /* libcrypto.1.1.dylib */,
 				87E6A5FD24A75AC70081D457 /* libcrypto.1.0.0.dylib */,
 				87E6A5FA24A75AA10081D457 /* libssl.1.0.0.dylib */,
 				875585D6238967C500B90FC9 /* libcompression.tbd */,
@@ -316,11 +318,11 @@
 					"$(SRCROOT)/include",
 					/usr/local/include,
 					"$(SRCROOT)/include/img4tool",
-					/usr/local/Cellar/openssl/1.0.2t/include,
+					"/usr/local/Cellar/openssl@1.1/1.1.1g/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/usr/local/lib,
-					/usr/local/Cellar/openssl/1.0.2t/lib,
+					"/usr/local/Cellar/openssl@1.1/1.1.1g/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
@@ -335,11 +337,11 @@
 					"$(SRCROOT)/include",
 					/usr/local/include,
 					"$(SRCROOT)/include/img4tool",
-					/usr/local/Cellar/openssl/1.0.2t/include,
+					"/usr/local/Cellar/openssl@1.1/1.1.1g/include",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					/usr/local/lib,
-					/usr/local/Cellar/openssl/1.0.2t/lib,
+					"/usr/local/Cellar/openssl@1.1/1.1.1g/lib",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};

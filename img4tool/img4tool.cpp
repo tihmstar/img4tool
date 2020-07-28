@@ -22,6 +22,8 @@ extern "C"{
 #   include <compression.h>
 #   define lzfse_decode_buffer(dst, dst_size, src, src_size, scratch) \
         compression_decode_buffer(dst, dst_size, src, src_size, scratch, COMPRESSION_LZFSE)
+#   define lzfse_encode_buffer(dst, dst_size, src, src_size, scratch) \
+        compression_encode_buffer(dst, dst_size, src, src_size, scratch, COMPRESSION_LZFSE)
 #elif defined(HAVE_LIBLZFSE)
 #   include <lzfse.h>
 #else
@@ -599,6 +601,7 @@ ASN1DERElement tihmstar::img4tool::uncompressIfNeeded(const ASN1DERElement &comp
         unpackedLen = sizeTag.getIntegerValue();
         unpacked = (char*)malloc(unpackedLen);
 
+        
         if ((uncompSizeReal = lzfse_decode_buffer((uint8_t*)unpacked, unpackedLen, (const uint8_t*)compressedOctet.payload(), compressedOctet.payloadSize(), NULL)) == unpackedLen) {
             retVal = ASN1DERElement({ASN1DERElement::TagNumber::TagOCTET,ASN1DERElement::Primitive, ASN1DERElement::Universal}, unpacked, unpackedLen);
             printf("ok\n");
@@ -876,14 +879,37 @@ ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement &im4
             }
             
             im4p_payload = ASN1DERElement({ASN1DERElement::TagNumber::TagOCTET,ASN1DERElement::Primitive, ASN1DERElement::Universal}, packed, packedSize);
+            
+            newim4p += im4p_payload;
         } else if (strcmp(compression, "bvx2") == 0) {
-            reterror("not implemented");
+            uint8_t *packed = NULL;
+            cleanup([&]{
+                safeFree(packed);
+            });
+            size_t packedSize = size + 0x800;
+            printf("Compression requested, compressing (%s): ", "bvx2");
+            packed = (uint8_t *)malloc(packedSize);
+
+            packedSize = lzfse_encode_buffer(packed, packedSize, (const uint8_t *)buf, size, NULL);
+            
+            printf("ok\n");
+            
+            im4p_payload = ASN1DERElement({ASN1DERElement::TagNumber::TagOCTET,ASN1DERElement::Primitive, ASN1DERElement::Universal}, packed, packedSize);
+            newim4p += im4p_payload;
+            
+            ASN1DERElement bvx2Info({ASN1DERElement::TagNumber::TagSEQUENCE,ASN1DERElement::Constructed, ASN1DERElement::Universal}, NULL, 0);
+            {
+                int one = 1;
+                bvx2Info += ASN1DERElement({ASN1DERElement::TagNumber::TagINTEGER, ASN1DERElement::Universal}, &one, 1);
+            }
+
+            bvx2Info += ASN1DERElement::makeASN1Integer(size);
+            newim4p += bvx2Info;
         }else {
             reterror("unknown compression=%s",compression);
         }
     }
     
-    newim4p += im4p_payload;
 
     return newim4p;
 }

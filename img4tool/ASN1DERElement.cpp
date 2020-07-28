@@ -35,6 +35,20 @@ std::string ASN1DERElement::makeASN1Size(size_t size){
     }
 }
 
+ASN1DERElement ASN1DERElement::makeASN1Integer(uint64_t num){
+    uint64_t bigEndian = num;
+    int bytes = 0;
+        
+    while (num) {
+        bigEndian <<=8;
+        bigEndian |= num & 0xff;
+        num >>=8;
+        bytes++;
+    }
+    
+    return ASN1DERElement({ASN1DERElement::TagNumber::TagINTEGER, ASN1DERElement::Universal}, &bigEndian, bytes);
+}
+
 #pragma mark ASN1DERElementIterator
 
 ASN1DERElement::ASN1DERElementIterator::ASN1DERElementIterator(const ASN1DERElement::ASN1TAG *buf, size_t containerSize, uint64_t pos) :

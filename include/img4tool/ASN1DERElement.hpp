@@ -133,6 +133,7 @@ namespace tihmstar {
             ASN1DERElementIterator end() const;
             
             static std::string makeASN1Size(size_t size);
+            static ASN1DERElement makeASN1Integer(uint64_t num);
         };
         
     };
