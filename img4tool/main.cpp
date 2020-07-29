@@ -55,6 +55,7 @@ static struct option longopts[] = {
 #ifdef HAVE_PLIST
     { "convert",        no_argument,        NULL, '3' },
 #endif //HAVE_PLIST
+    { "compression",    required_argument,  NULL, '4' },
     { NULL, 0, NULL, 0 }
 };
 
@@ -158,7 +159,8 @@ void cmd_help(){
     printf("UNAVAILABLE: ");
 #endif //HAVE_PLIST
     printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
-
+    printf("      --compression\t\t\tset compression type when creating im4p from raw file\n");
+    
     printf("\n");
 }
 
@@ -182,6 +184,7 @@ int main_r(int argc, const char * argv[]) {
     const char *decryptKey = NULL;
     const char *im4pType = NULL;
     const char *im4pDesc = "Image created by img4tool";
+    const char *compressionType = NULL;
 #ifdef HAVE_PLIST
     const char *buildmanifestFile = NULL;
 #endif //HAVE_PLIST
@@ -247,6 +250,9 @@ int main_r(int argc, const char * argv[]) {
                 flags |= FLAG_CONVERT;
                 break;
 #endif //HAVE_PLIST
+            case '4': //compression
+                compressionType = optarg;
+                break;
             case 't':
                 retassure(!(flags & FLAG_RENAME), "Invalid command line arguments. can't rename and create at the same time");
                 retassure(!im4pType, "Invalid command line arguments. im4pType already set!");
@@ -346,7 +352,7 @@ int main_r(int argc, const char * argv[]) {
         } else if (flags & FLAG_CREATE && im4pType){
             ASN1DERElement im4p = getEmptyIM4PContainer(im4pType, im4pDesc);
 
-            im4p = appendPayloadToIM4P(im4p, workingBuffer, workingBufferSize);
+            im4p = appendPayloadToIM4P(im4p, workingBuffer, workingBufferSize, compressionType);
 
             saveToFile(outFile, im4p.buf(), im4p.size());
             printf("Created IM4P file at %s\n",outFile);

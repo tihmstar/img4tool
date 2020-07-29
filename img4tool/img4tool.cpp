@@ -908,6 +908,8 @@ ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement &im4
         }else {
             reterror("unknown compression=%s",compression);
         }
+    }else{
+        newim4p += im4p_payload;
     }
     
 
