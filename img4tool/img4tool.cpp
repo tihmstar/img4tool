@@ -860,7 +860,7 @@ ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement &im4
             cleanup([&]{
                 safeFree(packed);
             });
-            size_t packedSize = size + 0x800;
+            size_t packedSize = size + buf2RawSize;
             
             printf("Compression requested, compressing (%s): ", "complzss");
             packed = (uint8_t *)malloc(packedSize);
@@ -886,7 +886,7 @@ ASN1DERElement tihmstar::img4tool::appendPayloadToIM4P(const ASN1DERElement &im4
             cleanup([&]{
                 safeFree(packed);
             });
-            size_t packedSize = size + 0x800;
+            size_t packedSize = size;
             printf("Compression requested, compressing (%s): ", "bvx2");
             packed = (uint8_t *)malloc(packedSize);
 
