@@ -33,7 +33,7 @@ jobs:
               #install libplist-2.0 because libplist-dev is called "libplist v2.0.0"
               git clone https://github.com/libimobiledevice/libplist
               cd libplist
-              ./autogen.sh --without-cython --enable-static --disable-shared
+              ./autogen.sh --without-cython --enable-static --disable-shared CFLAGS="-fPIC" CXXFLAGS="-fPIC"
               make
               sudo make install
               cd ..
