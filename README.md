@@ -2,11 +2,17 @@
 _A tool for manipulating IMG4, IM4M and IM4P files_
 
 # BUILD
-Be sure to checkout the require submodule after cloning.
-```bash
-git submodule init
-git submodule update
-```
+Install dependencies:
+* Buildsystem
+  * autoconf
+  * automake
+  * libtool
+  * pkg-config
+* External
+  * openssl
+  * libplist-2.0
+* tihmstar's tools
+  * [libgeneral](https://github.com/tihmstar/libgeneral)
 
 To compile run:
 
