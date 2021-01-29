@@ -554,7 +554,7 @@ ASN1DERElement tihmstar::img4tool::appendIM4MToIMG4(const ASN1DERElement &img4, 
 
 ASN1DERElement tihmstar::img4tool::uncompressIfNeeded(const ASN1DERElement &compressedOctet, const ASN1DERElement &origIM4P, const char **outUsedCompression, const char **outHypervisor, size_t *outHypervisorSize){
     const char *payload = (const char *)compressedOctet.payload();
-    size_t payloadSize = compressedOctet.size();
+    size_t payloadSize = compressedOctet.payloadSize();
     size_t unpackedLen = 0;
     char *unpacked = NULL;
     cleanup([&]{
@@ -620,6 +620,7 @@ ASN1DERElement tihmstar::img4tool::getPayloadFromIM4P(const ASN1DERElement &im4p
     if (decryptIv || decryptKey) {
 #ifdef HAVE_CRYPTO
         payload = decryptPayload(payload, decryptIv, decryptKey);
+        info("payload decrypted");
 #else
         reterror("decryption keys were provided, but img4tool was compiled without crypto backend!");
 #endif //HAVE_CRYPTO
