@@ -125,10 +125,10 @@ jobs:
         path: buildroot_macos-latest
     - name: Set env vars and zip
       run: |
-        echo "::set-env name=BUILD_VERSION_NUM::$(echo "$(git rev-list --count HEAD | tr -d '\n')")"
-        echo "::set-env name=BUILD_VERSION_SHA::$(echo "$(git rev-parse HEAD | tr -d '\n'])")"
-        echo "::set-env name=BUILD_VERSION_STR::$(echo "$(git rev-list --count HEAD | tr -d '\n')-$(git rev-parse HEAD | tr -d '\n'])")"
-        echo "::set-env name=COMMIT_MSG::$(echo "$(git log -1 --pretty=%B)")"
+        echo "BUILD_VERSION_NUM=$(echo "$(git rev-list --count HEAD | tr -d '\n')")" >> $GITHUB_ENV
+        echo "BUILD_VERSION_SHA=$(echo "$(git rev-parse HEAD | tr -d '\n'])")" >> $GITHUB_ENV
+        echo "BUILD_VERSION_STR=$(echo "$(git rev-list --count HEAD | tr -d '\n')-$(git rev-parse HEAD | tr -d '\n'])")" >> $GITHUB_ENV
+        echo "COMMIT_MSG=$(echo "$(git log -1 --pretty=%B)")" >> $GITHUB_ENV
         zip -r buildroot_macos-latest.zip buildroot_macos-latest
         zip -r buildroot_ubuntu-latest.zip buildroot_ubuntu-latest
     - name: Create Release
