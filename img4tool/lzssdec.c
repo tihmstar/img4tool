@@ -14,8 +14,58 @@
 #include <stdint.h>
 #include "lzssdec.h"
 #include <libgeneral/macros.h>
-#include <arpa/inet.h>
 #include <string.h>
+
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#elif defined(HAVE_WINSOCK_H)
+#include <winsock.h>
+#endif
+
+#ifndef HAVE_MEMMEM
+void *memmem(const void *haystack_start, size_t haystack_len, const void *needle_start, size_t needle_len){
+    const unsigned char *haystack = (const unsigned char *)haystack_start;
+    const unsigned char *needle = (const unsigned char *)needle_start;
+    const unsigned char *h = NULL;
+    const unsigned char *n = NULL;
+    size_t x = needle_len;
+
+    /* The first occurrence of the empty string is deemed to occur at
+    the beginning of the string.  */
+    if (needle_len == 0) {
+        return (void *)haystack_start;
+    }
+
+    /* Sanity check, otherwise the loop might search through the whole
+        memory.  */
+    if (haystack_len < needle_len) {
+        return NULL;
+    }
+
+    for (; *haystack && haystack_len--; haystack++) {
+        x = needle_len;
+        n = needle;
+        h = haystack;
+
+        if (haystack_len < needle_len)
+            break;
+
+        if ((*haystack != *needle) || (*haystack + needle_len != *needle + needle_len))
+            continue;
+
+        for (; x; h++, n++) {
+            x--;
+
+            if (*h != *n)
+                break;
+
+            if (x == 0)
+                return (void *)haystack;
+        }
+    }
+    return NULL;
+}
+#endif
 
 static uint32_t decompress_lzss(uint8_t *dst, const uint8_t *src, uint32_t srclen);
 static uint8_t *compress_lzss(uint8_t *dst, uint32_t dstlen, const uint8_t *src, uint32_t srcLen);

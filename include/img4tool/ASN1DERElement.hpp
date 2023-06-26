@@ -70,6 +70,8 @@ namespace tihmstar {
                 uint8_t tagNumber : 5;
                 uint8_t isConstructed : 1;
                 uint8_t tagClass : 2;
+                
+                operator uint8_t () const{ return *(uint8_t*)this;}
             };
             
             struct ASN1Len{
@@ -84,10 +86,10 @@ namespace tihmstar {
             
             class ASN1DERElementIterator{
                 const ASN1TAG *_buf;
-                uint64_t _pos;
+                size_t _pos;
                 size_t _containerSize;
             public:
-                ASN1DERElementIterator(const ASN1TAG *buf, size_t containerSize, uint64_t pos);
+                ASN1DERElementIterator(const ASN1TAG *buf, size_t containerSize, size_t pos);
                 ASN1DERElementIterator &operator++();
                 bool operator!=(const ASN1DERElementIterator &e);
                 const ASN1DERElement operator*() const;
@@ -102,6 +104,7 @@ namespace tihmstar {
              */
             bool _ownsBuffer;
         public:
+            ASN1DERElement();
             ASN1DERElement(const void *buf, size_t bufSize, bool ownsBuffer = false);
             ASN1DERElement(const ASN1TAG tag, const void *payload, size_t payloadLen);
             ~ASN1DERElement();

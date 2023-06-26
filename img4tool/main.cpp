@@ -13,6 +13,9 @@
 #include <string.h>
 #include <stdlib.h>
 #include <algorithm>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 
 #include <libgeneral/macros.h>
 #include "img4tool.hpp"
@@ -31,6 +34,7 @@ using namespace std;
 #define FLAG_CREATE     (1 << 3)
 #define FLAG_RENAME     (1 << 4)
 #define FLAG_CONVERT    (1 << 5)
+#define FLAG_VERIFY     (1 << 6)
 
 static struct option longopts[] = {
     { "help",           no_argument,        NULL, 'h' },
@@ -47,15 +51,16 @@ static struct option longopts[] = {
     { "type",           required_argument,  NULL, 't' },
     { "desc",           required_argument,  NULL, 'd' },
     { "rename-payload", required_argument,  NULL, 'n' },
+    { "generator",      required_argument,  NULL, 'h' },
 #ifdef HAVE_PLIST
-    { "verify",         required_argument,  NULL, 'v' },
+    { "verify",         optional_argument,  NULL, 'v' },
 #endif //HAVE_PLIST
-    { "iv",             required_argument,  NULL, '1' },
-    { "key",            required_argument,  NULL, '2' },
+    { "iv",             required_argument,  NULL,  0  },
+    { "key",            required_argument,  NULL,  0  },
 #ifdef HAVE_PLIST
-    { "convert",        no_argument,        NULL, '3' },
+    { "convert",        no_argument,        NULL,  0  },
 #endif //HAVE_PLIST
-    { "compression",    required_argument,  NULL, '4' },
+    { "compression",    required_argument,  NULL,  0  },
     { NULL, 0, NULL, 0 }
 };
 
@@ -75,23 +80,20 @@ char *readFromFile(const char *filePath, size_t *outSize){
 
 #ifdef HAVE_PLIST
 plist_t readPlistFromFile(const char *filePath){
-    FILE *f = fopen(filePath,"rb");
-    if (!f) return NULL;
-    fseek(f, 0, SEEK_END);
-
-    size_t fSize = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char *buf = (char*)malloc(fSize);
-    fread(buf, fSize, 1, f);
-    fclose(f);
-
+    int fd = -1;
+    char *buf = NULL;
+    cleanup([&]{
+        safeFree(buf);
+        safeClose(fd);
+    });
+    size_t bufSize = 0;
+    struct stat st = {};
+    retassure((fd = open(filePath, O_RDONLY)) != -1, "Failed to open '%s'",filePath);
+    retassure(!fstat(fd, &st), "Failed to stat file");
+    retassure(buf = (char*)malloc(bufSize = st.st_size), "Failed to malloc buf");
+    retassure(read(fd, buf, bufSize) == bufSize, "Failed to read file");
     plist_t plist = NULL;
-
-    if (memcmp(buf, "bplist00", 8) == 0)
-        plist_from_bin(buf, (uint32_t)fSize, &plist);
-    else
-        plist_from_xml(buf, (uint32_t)fSize, &plist);
-
+    plist_from_memory(buf, (uint32_t)bufSize, &plist, NULL);
     return plist;
 }
 
@@ -149,6 +151,7 @@ void cmd_help(){
     printf("  -t, --type\t\t\tset type for creating IM4P files from raw\n");
     printf("  -d, --desc\t\t\tset desc for creating IM4P files from raw\n");
     printf("  -n, --rename-payload NAME\trename im4p payload (NAME must be exactly 4 bytes)\n");
+    printf("  -g, --generator GEN\tAdd generator to img4 (eg. 0x726174736d686974)\n");
 #ifndef HAVE_PLIST
     printf("UNAVAILABLE: ");
 #endif //HAVE_PLIST
@@ -159,11 +162,33 @@ void cmd_help(){
     printf("UNAVAILABLE: ");
 #endif //HAVE_PLIST
     printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
-    printf("      --compression\t\t\tset compression type when creating im4p from raw file\n");
+    printf("      --compression\t\tset compression type when creating im4p from raw file\n");
+    
+    printf("\n");
+    
+    printf("Features:\n");
+#ifdef HAVE_PLIST
+    printf("plist: yes\n");
+#else
+    printf("plist: no\n");
+#endif //HAVE_PLIST
+    
+#ifdef HAVE_OPENSSL
+    printf("openssl: yes\n");
+#else
+    printf("openssl: no\n");
+#endif //HAVE_OPENSSL
+    
+#ifdef HAVE_LIBCOMPRESSION
+    printf("bvx2: yes\n");
+#else
+    printf("bvx2: no\n");
+#endif //HAVE_LIBCOMPRESSION
     
     printf("\n");
 }
 
+MAINFUNCTION
 int main_r(int argc, const char * argv[]) {
     printf("%s\n",version());
     printf("Compiled with plist: %s\n",
@@ -196,15 +221,34 @@ int main_r(int argc, const char * argv[]) {
     char *workingBuffer = NULL;
     size_t workingBufferSize = 0;
     char *generator = NULL;
-
+    uint64_t bnch = 0;
 
     cleanup([&]{
         safeFree(workingBuffer);
         safeFree(generator);
     });
 
-    while ((opt = getopt_long(argc, (char* const *)argv, "hais:em:p:c:o:1:2:t:d:n:3v:", longopts, &optindex)) > 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "hais:em:p:c:o:t:d:n:g:v::", longopts, &optindex)) >= 0) {
         switch (opt) {
+            case 0: //long opts
+            {
+                std::string curopt = longopts[optindex].name;
+                
+#ifdef HAVE_PLIST
+                if (curopt == "convert") {
+                    flags |= FLAG_CONVERT;
+                }else
+#endif //HAVE_PLIST
+                if (curopt == "compression") {
+                    compressionType = optarg;
+                }else if (curopt == "iv") {
+                    decryptIv = optarg;
+                }else if (curopt == "key") {
+                    decryptKey = optarg;
+                }
+                break;
+            }
+                
             case 'h':
                 cmd_help();
                 return 0;
@@ -239,20 +283,6 @@ int main_r(int argc, const char * argv[]) {
                 retassure(!outFile, "Invalid command line arguments. outFile already set!");
                 outFile = optarg;
                 break;
-            case '1':  //iv
-                decryptIv = optarg;
-                break;
-            case '2':  //key
-                decryptKey = optarg;
-                break;
-#ifdef HAVE_PLIST
-            case '3':  //convert
-                flags |= FLAG_CONVERT;
-                break;
-#endif //HAVE_PLIST
-            case '4': //compression
-                compressionType = optarg;
-                break;
             case 't':
                 retassure(!(flags & FLAG_RENAME), "Invalid command line arguments. can't rename and create at the same time");
                 retassure(!im4pType, "Invalid command line arguments. im4pType already set!");
@@ -266,8 +296,13 @@ int main_r(int argc, const char * argv[]) {
                 im4pType = optarg;
                 flags |= FLAG_RENAME;
                 break;
+            case 'g': //generator
+                bnch = strtoll(optarg, NULL, 16);
+                retassure(bnch, "Failed to set generator!");
+                break;
 #ifdef HAVE_PLIST
             case 'v':
+                flags |= FLAG_VERIFY;
                 buildmanifestFile = optarg;
                 break;
 #endif //HAVE_PLIST
@@ -428,7 +463,7 @@ int main_r(int argc, const char * argv[]) {
             retassure((plist_to_xml(newshsh, &xml, &xmlSize),xml), "failed to convert plist to xml");
             saveToFile(shshFile, xml, xmlSize);
             printf("Saved IM4M to %s\n",shshFile);
-        } else if (buildmanifestFile){
+        } else if (flags & FLAG_VERIFY){
             //verify
             ASN1DERElement file(workingBuffer, workingBufferSize);
             std::string im4pSHA1;
@@ -472,7 +507,9 @@ int main_r(int argc, const char * argv[]) {
                     retassure(im4pElemDgstName.size(), "IM4P hash not in IM4M");
                 }
 #endif //HAVE_CRYPTO
-                retassure(buildmanifest = readPlistFromFile(buildmanifestFile),"failed to read buildmanifest");
+                if (buildmanifestFile){
+                    retassure(buildmanifest = readPlistFromFile(buildmanifestFile),"failed to read buildmanifest");
+                }
                 
                 bool isvalid = isValidIM4M(file, buildmanifest, im4pElemDgstName);
                 printf("\n");
@@ -543,6 +580,10 @@ int main_r(int argc, const char * argv[]) {
             ASN1DERElement im4m(buf,bufSize);
             img4 = appendIM4MToIMG4(img4, im4m);
         }
+        
+        if (bnch){
+            img4 = appendIM4RToIMG4(img4, getIM4RFromGenerator(bnch));
+        }
 
         saveToFile(outFile, img4.buf(), img4.size());
         printf("Created IMG4 file at %s\n",outFile);
@@ -552,18 +593,4 @@ int main_r(int argc, const char * argv[]) {
     }
 
     return 0;
-}
-
-int main(int argc, const char * argv[]) {
-#ifdef DEBUG
-    return main_r(argc, argv);
-#else
-    try {
-        return main_r(argc, argv);
-    } catch (tihmstar::exception &e) {
-        printf("%s: failed with exception:\n",PACKAGE_NAME);
-        e.dump();
-        return e.code();
-    }
-#endif
 }

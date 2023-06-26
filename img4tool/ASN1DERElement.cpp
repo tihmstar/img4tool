@@ -51,7 +51,7 @@ ASN1DERElement ASN1DERElement::makeASN1Integer(uint64_t num){
 
 #pragma mark ASN1DERElementIterator
 
-ASN1DERElement::ASN1DERElementIterator::ASN1DERElementIterator(const ASN1DERElement::ASN1TAG *buf, size_t containerSize, uint64_t pos) :
+ASN1DERElement::ASN1DERElementIterator::ASN1DERElementIterator(const ASN1DERElement::ASN1TAG *buf, size_t containerSize, size_t pos) :
     _buf(buf),
     _containerSize(containerSize),
     _pos(pos)
@@ -61,7 +61,7 @@ ASN1DERElement::ASN1DERElementIterator::ASN1DERElementIterator(const ASN1DERElem
 
 ASN1DERElement::ASN1DERElementIterator &ASN1DERElement::ASN1DERElementIterator::operator++(){
     ASN1DERElement e(_buf+_pos,_containerSize-_pos);
-    _pos = (uint64_t)e.buf() + e.size() - (uint64_t)_buf;
+    _pos += e.size();
     assure(_pos<=_containerSize);
     return *this;
 }
@@ -76,13 +76,34 @@ const ASN1DERElement ASN1DERElement::ASN1DERElementIterator::operator*() const{
 
 #pragma mark ASN1DERElement
 
-ASN1DERElement::ASN1DERElement(const void *buf, size_t bufSize, bool ownsBuffer) :
-    _buf((const ASN1TAG*)buf),
-    _bufSize(bufSize),
-    _ownsBuffer(ownsBuffer)
+ASN1DERElement::ASN1DERElement() :
+    _buf(NULL),
+    _bufSize(0),
+    _ownsBuffer(true)
 {
+    constexpr const ASN1TAG tag{img4tool::ASN1DERElement::TagNULL,img4tool::ASN1DERElement::Primitive,img4tool::ASN1DERElement::Universal};
+    std::string size = makeASN1Size(0);
+    assure(_buf = (const ASN1TAG *)malloc(_bufSize = 1+size.size()));
 
-    assure(_bufSize > 2); //needs at least TAG and Size
+    memcpy((void*)&_buf[0], &tag, 1);
+    memcpy((void*)&_buf[1], size.c_str(), size.size());
+}
+
+ASN1DERElement::ASN1DERElement(const void *buf, size_t bufSize, bool ownsBuffer) :
+    _buf(NULL),
+    _bufSize(0),
+    _ownsBuffer(true)
+{
+    if (ownsBuffer) {
+        _buf = (const ASN1TAG*)buf;
+        _bufSize = bufSize;
+    }else{
+        //if we don't get the ownershipt of the buffer transfered to us, we have to make a copy!
+        _buf = (ASN1TAG*)malloc(_bufSize = bufSize);
+        memcpy((void*)_buf, buf, _bufSize);
+    }
+
+    assure(_bufSize >= 2); //needs at least TAG and Size
     if (((uint8_t*)_buf)[0] != 0xff) {
         assure(_buf->tagNumber <= TagBMPString);
     }
@@ -104,12 +125,28 @@ ASN1DERElement::ASN1DERElement(const ASN1TAG tag, const void *payload, size_t pa
     }
 }
 
-ASN1DERElement::ASN1DERElement(ASN1DERElement &&old) :
-    _buf(old._buf),
-    _bufSize(old._bufSize),
-    _ownsBuffer(old._ownsBuffer)
-{
-    old._ownsBuffer = false;
+ASN1DERElement::ASN1DERElement(ASN1DERElement &&old){
+    void *buf = NULL;
+    cleanup([&]{
+        safeFree(buf);
+    });
+    if (_ownsBuffer){
+        buf = (void*)_buf; _buf = NULL;
+    }
+    if (old._ownsBuffer) {
+        _buf = old._buf;
+        _bufSize = old._bufSize;
+        _ownsBuffer = old._ownsBuffer; old._ownsBuffer = false;
+    }else{
+        /*
+         if the old object doesn't own the buffer, we have to perform a copy!
+         Otherwise there is no guarantee that the buffer will stay valid
+         */
+        _bufSize = old._bufSize;
+        _ownsBuffer = true;
+        _buf = (ASN1TAG*)malloc(_bufSize);
+        memcpy((void*)&_buf[0], old._buf, _bufSize);
+    }
 }
 
 ASN1DERElement::ASN1DERElement(const ASN1DERElement &old) :
@@ -124,8 +161,7 @@ ASN1DERElement::ASN1DERElement(const ASN1DERElement &old) :
 
 ASN1DERElement::~ASN1DERElement(){
     if (_ownsBuffer) {
-        void *freeme = (void*)_buf;_buf = NULL;
-        safeFree(freeme);
+        safeFreeConst(_buf);
     }
 }
 
@@ -191,7 +227,7 @@ ASN1DERElement::ASN1TAG ASN1DERElement::tag() const{
 
 std::string ASN1DERElement::getStringValue() const{
     assure(((uint8_t*)_buf)[0] != 0xff);
-    assure(_buf->tagNumber == TagNumber::TagIA5String || _buf->tagNumber == TagNumber::TagOCTET);
+    assure(_buf->tagNumber == TagNumber::TagIA5String || _buf->tagNumber == TagNumber::TagOCTET || _buf->tagNumber == TagNumber::TagUTF8String);
 
     return {(char*)payload(),payloadSize()};
 }
@@ -236,17 +272,23 @@ void ASN1DERElement::print() const{
 ASN1DERElement ASN1DERElement::operator[](uint32_t i) const{
     assure(_buf->isConstructed);
     ASN1DERElement rt(payload(),payloadSize());
-
+    
+    size_t bufSize = payloadSize();
+    const uint8_t *bufptr = (const uint8_t *)payload();
     while (i--){
-        uint8_t *buf = (uint8_t*)rt.buf()+ rt.size();
-        size_t size = _bufSize - (size_t)(buf - (uint8_t*)_buf);
-        rt = ASN1DERElement(buf, size);
+        bufptr += rt.size();
+        bufSize -= rt.size();
+        rt = ASN1DERElement(bufptr, bufSize);
     }
 
     return rt;
 }
 
 ASN1DERElement &ASN1DERElement::operator+=(const ASN1DERElement &add){
+    if (!_ownsBuffer){
+        //make a copy
+        *this = (const ASN1DERElement&)(*this);
+    }
     assure(_buf->isConstructed && _ownsBuffer);
 
     std::string newSize = makeASN1Size(add.size()+payloadSize());
@@ -279,13 +321,27 @@ ASN1DERElement &ASN1DERElement::operator+=(const ASN1DERElement &add){
 }
 
 ASN1DERElement &ASN1DERElement::operator=(ASN1DERElement &&old){
-    if (_ownsBuffer) {
-        void *buf = (void*)_buf; _buf = NULL;
+    void *buf = NULL;
+    cleanup([&]{
         safeFree(buf);
+    });
+    if (_ownsBuffer){
+        buf = (void*)_buf; _buf = NULL;
     }
-    _buf = old._buf;
-    _bufSize = old._bufSize;
-    _ownsBuffer = old._ownsBuffer; old._ownsBuffer = false;
+    if (old._ownsBuffer) {
+        _buf = old._buf;
+        _bufSize = old._bufSize;
+        _ownsBuffer = old._ownsBuffer; old._ownsBuffer = false;
+    }else{
+        /*
+         if the old object doesn't own the buffer, we have to perform a copy!
+         Otherwise there is no guarantee that the buffer will stay valid
+         */
+        _bufSize = old._bufSize;
+        _ownsBuffer = true;
+        _buf = (ASN1TAG*)malloc(_bufSize);
+        memcpy((void*)&_buf[0], old._buf, _bufSize);
+    }
 
     return *this;
 }
