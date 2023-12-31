@@ -179,11 +179,11 @@ void cmd_help(){
     printf("openssl: no\n");
 #endif //HAVE_OPENSSL
     
-#ifdef HAVE_LIBCOMPRESSION
+#if defined HAVE_LIBCOMPRESSION || HAVE_LIBLZFSE
     printf("bvx2: yes\n");
 #else
     printf("bvx2: no\n");
-#endif //HAVE_LIBCOMPRESSION
+#endif //* HAVE_LIBCOMPRESSION || HAVE_LIBLZFSE *//
     
     printf("\n");
 }
