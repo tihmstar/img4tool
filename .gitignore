@@ -30,4 +30,4 @@ img4tool/img4tool
 include/img4tool/img4tool.hpp
 configure~
 project.xcworkspace
-xcshareddata
+*.exe

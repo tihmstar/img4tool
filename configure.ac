@@ -28,7 +28,7 @@ case $host_os in
   crypto_backend="CommCrypto"
   CXXFLAGS+=" -stdlib=libc++"
         ;;
-  *mingw32*|*cygwin*)
+  *mingw*|*msys*|*cygwin*)
   AC_MSG_RESULT([${host_os}])
   win32=true
       ;;
