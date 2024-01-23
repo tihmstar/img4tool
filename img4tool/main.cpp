@@ -18,7 +18,7 @@
 
 
 #include <libgeneral/macros.h>
-#include "img4tool.hpp"
+#include "../include/img4tool/img4tool.hpp"
 
 #ifdef HAVE_PLIST
 #include <plist/plist.h>

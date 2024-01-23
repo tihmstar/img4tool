@@ -7,13 +7,15 @@
 //
 
 #include <algorithm>
-#include "ASN1DERElement.hpp"
+#include "../include/img4tool/ASN1DERElement.hpp"
 #include <libgeneral/macros.h>
 #include <string.h>
 
 using namespace tihmstar::img4tool;
 
 #pragma mark helper
+#define putStr(s,l) printf("%.*s",(int)l,s)
+
 
 std::string ASN1DERElement::makeASN1Size(size_t size){
     assure(size < 0x100000000);
@@ -251,8 +253,19 @@ void ASN1DERElement::print() const{
         case TagOCTET:
         {
             std::string s = getStringValue();
+            bool isASCII = true;
             for (int i=0; i<s.size(); i++) {
-                printf("%02x",((uint8_t*)s.c_str())[i]);
+                if (!isprint(s.c_str()[i])){
+                    isASCII = false;
+                    break;
+                }
+            }
+            if (isASCII) {
+                printf("%s",s.c_str());
+            }else{
+                for (int i=0; i<s.size(); i++) {
+                    printf("%02x",((uint8_t*)s.c_str())[i]);
+                }
             }
             break;
         }
