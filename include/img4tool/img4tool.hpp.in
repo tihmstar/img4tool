@@ -9,9 +9,9 @@
 #ifndef img4tool_hpp
 #define img4tool_hpp
 
-#include <unistd.h>
-#include <iostream>
 #include <img4tool/ASN1DERElement.hpp>
+#include <libgeneral/Mem.hpp>
+#include <unistd.h>
 #include <vector>
 #include <map>
 
@@ -48,7 +48,9 @@ namespace tihmstar {
     
         ASN1DERElement getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv = NULL, const char *decryptKey = NULL, const char **outUsedCompression = NULL, ASN1DERElement *outHypervisor = NULL);
         ASN1DERElement getValFromIM4M(const ASN1DERElement &im4m, uint32_t val);
+        ASN1DERElement getValFromElement(const ASN1DERElement &e, uint32_t val);
 
+    
         ASN1DERElement genPrivTagForNumberWithPayload(size_t privnum, const ASN1DERElement &payload);
 
 #if @HEADER_HAVE_CRYPTO@ //HAVE_CRYPTO
@@ -61,7 +63,7 @@ namespace tihmstar {
 #endif //HAVE_CRYPTO
 
         ASN1DERElement getEmptyIM4PContainer(const char *type, const char *desc);
-        ASN1DERElement getIM4RWithElements(std::map<std::string,std::vector<uint8_t>> elements);
+        ASN1DERElement getIM4RWithElements(std::map<std::string,tihmstar::Mem> elements);
 
         ASN1DERElement appendPayloadToIM4P(const ASN1DERElement &im4p, const void *buf, size_t size, const char *compression = NULL, const void *buf2Raw = NULL, size_t buf2RawSize = 0);
 
