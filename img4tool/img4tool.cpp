@@ -647,8 +647,9 @@ ASN1DERElement tihmstar::img4tool::getBNCNFromIM4R(const ASN1DERElement &im4r){
     for (auto elem : set){
         if (*(uint8_t*)elem.buf() == (uint8_t)ASN1DERElement::TagPrivate){
             size_t privTag = 0;
-            if (privTag == 'bnch'){
-                ASN1DERElement octet = elem[1];
+            ASN1DERElement bncn = parsePrivTag(elem.buf(), elem.size(), &privTag);
+            if (privTag == *(uint32_t*)"BNCN"){
+                ASN1DERElement octet = bncn[1];
                 //convert big endian to little endian
                 std::string octetString{(char*)octet.payload(),octet.payloadSize()};
 
