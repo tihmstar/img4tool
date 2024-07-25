@@ -1378,16 +1378,8 @@ bool tihmstar::img4tool::isIM4MSignatureValid(const ASN1DERElement &im4m){
         ASN1DERElement sig   = im4m[3];
         ASN1DERElement certelem = im4m[4][0];
         
-        /*
-            Certificate signature should be 512
-         */
-        if (sig.size() < 400) {
-            //What is this?
-            ASN1DERElement sigelems{ sig.payload(), sig.payloadSize()};
-            ASN1DERElement e0 = sigelems[0];
-            ASN1DERElement e1 = sigelems[1];
-            reterror("Unkown signing variant");
-        }else{
+//        if (sig.payloadSize() == 256 /*tested (A8)*/ || sig.payloadSize() == 512 /*untested*/)
+        {
 #ifndef HAVE_OPENSSL
             reterror("Compiled without openssl");
 #else

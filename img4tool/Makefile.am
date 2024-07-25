@@ -1,5 +1,4 @@
-AM_CFLAGS = -I$(top_srcdir)/include/img4tool -I$(top_srcdir)/include -I../include/img4tool -I../include \
-						$(GLOBAL_CFLAGS) $(libplist_CFLAGS) $(openssl_CFLAGS) $(libgeneral_CFLAGS)
+AM_CFLAGS = -I$(top_srcdir)/include $(GLOBAL_CFLAGS) $(libplist_CFLAGS) $(openssl_CFLAGS) $(libgeneral_CFLAGS)
 AM_CXXFLAGS = $(AM_CFLAGS) $(GLOBAL_CXXFLAGS)
 AM_LDFLAGS = $(libplist_LIBS) $(openssl_LIBS) $(libgeneral_LIBS)
 
@@ -10,8 +9,8 @@ libimg4tool_la_CFLAGS = $(AM_CFLAGS)
 libimg4tool_la_CXXFLAGS = $(AM_CXXFLAGS)
 libimg4tool_la_LDFLAGS = $(AM_LDFLAGS)
 libimg4tool_la_SOURCES = 	ASN1DERElement.cpp \
-													lzssdec.c \
-													img4tool.cpp
+                            lzssdec.c \
+                            img4tool.cpp
 
 img4tool_CFLAGS = $(AM_CFLAGS)
 img4tool_CXXFLAGS = $(AM_CXXFLAGS)
