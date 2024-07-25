@@ -18,6 +18,8 @@
 
 
 #include <libgeneral/macros.h>
+#include <libgeneral/Mem.hpp>
+#include <libgeneral/Utils.hpp>
 #include "../include/img4tool/img4tool.hpp"
 
 #ifdef HAVE_PLIST
@@ -80,43 +82,33 @@ char *readFromFile(const char *filePath, size_t *outSize){
 
 #ifdef HAVE_PLIST
 plist_t readPlistFromFile(const char *filePath){
-    int fd = -1;
-    char *buf = NULL;
-    cleanup([&]{
-        safeFree(buf);
-        safeClose(fd);
-    });
-    size_t bufSize = 0;
-    struct stat st = {};
-    retassure((fd = open(filePath, O_RDONLY)) != -1, "Failed to open '%s'",filePath);
-    retassure(!fstat(fd, &st), "Failed to stat file");
-    retassure(buf = (char*)malloc(bufSize = st.st_size), "Failed to malloc buf");
-    retassure(read(fd, buf, bufSize) == bufSize, "Failed to read file");
+    auto f = tihmstar::readFile(filePath);
     plist_t plist = NULL;
-    plist_from_memory(buf, (uint32_t)bufSize, &plist, NULL);
+    plist_from_memory((const char*)f.data(), (uint32_t)f.size(), &plist, NULL);
     return plist;
 }
 
-char *im4mFormShshFile(const char *shshfile, size_t *outSize, char **generator){
-    plist_t shshplist = readPlistFromFile(shshfile);
-
-    plist_t ticket = plist_dict_get_item(shshplist, "ApImg4Ticket");
-
-    char *im4m = 0;
-    uint64_t im4msize=0;
-    plist_get_data_val(ticket, &im4m, &im4msize);
-    if (outSize) {
-        *outSize = im4msize;
+tihmstar::Mem im4mFormShshFile(const char *shshfile, char **generator){
+    plist_t shshplist = NULL;
+    cleanup([&]{
+        safeFreeCustom(shshplist, plist_free);
+    });
+    tihmstar::Mem ret;
+    
+    shshplist = readPlistFromFile(shshfile);
+    
+    if (plist_t ticket = plist_dict_get_item(shshplist, "ApImg4Ticket")){
+        char *im4m = 0;
+        uint64_t im4msize=0;
+        plist_get_data_val(ticket, &im4m, &im4msize);
+        ret.append(im4m, im4msize);
     }
-
+    
     if (generator){
-        if ((ticket = plist_dict_get_item(shshplist, "generator")))
+        if (plist_t ticket = plist_dict_get_item(shshplist, "generator"))
             plist_get_string_val(ticket, generator);
     }
-
-    plist_free(shshplist);
-
-    return im4msize ? im4m : NULL;
+    return ret;
 }
 #endif //HAVE_PLIST
 
@@ -218,13 +210,11 @@ int main_r(int argc, const char * argv[]) {
     int opt = 0;
     long flags = 0;
 
-    char *workingBuffer = NULL;
-    size_t workingBufferSize = 0;
+    tihmstar::Mem workingBuf;
     char *generator = NULL;
     uint64_t bnch = 0;
 
     cleanup([&]{
-        safeFree(workingBuffer);
         safeFree(generator);
     });
 
@@ -326,20 +316,34 @@ int main_r(int argc, const char * argv[]) {
 
     if (!(flags & FLAG_CREATE && im4pFile) ) { //don't load shsh if we create a new img4 file
         if (lastArg) {
-            retassure((workingBuffer = readFromFile(lastArg, &workingBufferSize)) && workingBufferSize, "failed to read lastArgFile");
+            if (strcmp(lastArg, "-") == 0){
+                char cbuf[0x1000] = {};
+                ssize_t didRead = 0;
+                
+                while ((didRead = read(STDIN_FILENO, cbuf, sizeof(cbuf))) > 0) {
+                    workingBuf.append(cbuf, didRead);
+                }
+                
+            }else{
+                workingBuf = tihmstar::readFile(lastArg);
+            }
         }
 #ifdef HAVE_PLIST
         else if (shshFile){
-            retassure((workingBuffer = im4mFormShshFile(shshFile, &workingBufferSize, &generator)), "Failed to read shshFile");
+            try {
+                workingBuf = im4mFormShshFile(shshFile, &generator);
+            } catch (...) {
+                reterror("Failed to read shshFile");
+            }
         }
 #endif //HAVE_PLIST
     }
 
-    if (workingBuffer) {
+    if (workingBuf.size()) {
         if (flags & FLAG_EXTRACT) {
             //extract
             bool didExtract = false;
-            ASN1DERElement file(workingBuffer, workingBufferSize);
+            ASN1DERElement file(workingBuf.data(), workingBuf.size());
 
             if (outFile) {
                 //check for payload extraction
@@ -387,7 +391,7 @@ int main_r(int argc, const char * argv[]) {
         } else if (flags & FLAG_CREATE && im4pType){
             ASN1DERElement im4p = getEmptyIM4PContainer(im4pType, im4pDesc);
 
-            im4p = appendPayloadToIM4P(im4p, workingBuffer, workingBufferSize, compressionType);
+            im4p = appendPayloadToIM4P(im4p, workingBuf.data(), workingBuf.size(), compressionType);
 
             saveToFile(outFile, im4p.buf(), im4p.size());
             printf("Created IM4P file at %s\n",outFile);
@@ -395,8 +399,8 @@ int main_r(int argc, const char * argv[]) {
             retassure(im4pType, "typen required");
             retassure(outFile, "outputfile required");
 
-            ASN1DERElement im4p(workingBuffer, workingBufferSize);
-            string seqName = getNameForSequence(workingBuffer, workingBufferSize);
+            ASN1DERElement im4p(workingBuf.data(), workingBuf.size());
+            string seqName = getNameForSequence(workingBuf.data(), workingBuf.size());
             if (seqName != "IM4P"){
                 reterror("File not an IM4P");
             }
@@ -419,7 +423,7 @@ int main_r(int argc, const char * argv[]) {
                 safeFree(xml);
             });
             retassure(shshFile, "output path for shsh file required");
-            ASN1DERElement im4m(workingBuffer, workingBufferSize);
+            ASN1DERElement im4m(workingBuf.data(), workingBuf.size());
             
             
             if (isIMG4(im4m)) {
@@ -465,7 +469,7 @@ int main_r(int argc, const char * argv[]) {
             printf("Saved IM4M to %s\n",shshFile);
         } else if (flags & FLAG_VERIFY){
             //verify
-            ASN1DERElement file(workingBuffer, workingBufferSize);
+            ASN1DERElement file(workingBuf.data(), workingBuf.size());
             std::string im4pSHA1;
             std::string im4pSHA384;
                         
@@ -531,13 +535,13 @@ int main_r(int argc, const char * argv[]) {
 #endif //HAVE_PLIST
         else {
             //printing only
-            string seqName = getNameForSequence(workingBuffer, workingBufferSize);
+            string seqName = getNameForSequence(workingBuf.data(), workingBuf.size());
             if (seqName == "IMG4") {
-                printIMG4(workingBuffer, workingBufferSize, flags & FLAG_ALL, flags & FLAG_IM4PONLY);
+                printIMG4(workingBuf.data(), workingBuf.size(), flags & FLAG_ALL, flags & FLAG_IM4PONLY);
             } else if (seqName == "IM4P"){
-                printIM4P(workingBuffer, workingBufferSize);
+                printIM4P(workingBuf.data(), workingBuf.size());
             } else if (seqName == "IM4M"){
-                printIM4M(workingBuffer, workingBufferSize, flags & FLAG_ALL);
+                printIM4M(workingBuf.data(), workingBuf.size(), flags & FLAG_ALL);
             }
             else{
                 reterror("File not recognised");
@@ -550,34 +554,25 @@ int main_r(int argc, const char * argv[]) {
         retassure(im4pFile, "im4p file is required for img4");
 
         if (im4pFile) {
-            char *buf = NULL;
-            size_t bufSize = 0;
-            cleanup([&]{
-                safeFree(buf);
-            });
-            buf = readFromFile(im4pFile, &bufSize);
-
-            ASN1DERElement im4p(buf,bufSize);
+            tihmstar::Mem wbuf = tihmstar::readFile(im4pFile);
+            ASN1DERElement im4p(wbuf.data(),wbuf.size());
 
             img4 = appendIM4PToIMG4(img4, im4p);
         }
 
         if (im4mFile || shshFile){
-            char *buf = NULL;
-            size_t bufSize = 0;
-            cleanup([&]{
-                safeFree(buf);
-            });
-
+            tihmstar::Mem obuf;
+            
             if (im4mFile) {
-                buf = readFromFile(im4mFile, &bufSize);
+                obuf = tihmstar::readFile(im4mFile);
             }
 #ifdef HAVE_PLIST
             else if (shshFile){
-                buf = im4mFormShshFile(shshFile, &bufSize, NULL);
+                obuf = im4mFormShshFile(shshFile, NULL);
             }
 #endif //HAVE_PLIST
-            ASN1DERElement im4m(buf,bufSize);
+            assure(obuf.size());
+            ASN1DERElement im4m(obuf.data(),obuf.size());
             img4 = appendIM4MToIMG4(img4, im4m);
         }
         
