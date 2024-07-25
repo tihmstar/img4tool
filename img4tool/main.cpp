@@ -120,9 +120,13 @@ void saveToFile(const char *filePath, const void *buf, size_t bufSize){
             fclose(f);
         }
     });
-
-    retassure(f = fopen(filePath, "wb"), "failed to create file");
-    retassure(fwrite(buf, 1, bufSize, f) == bufSize, "failed to write to file");
+    
+    if (strcmp(filePath, "-") == 0) {
+        write(STDERR_FILENO, buf, bufSize);
+    }else{
+        retassure(f = fopen(filePath, "wb"), "failed to create file");
+        retassure(fwrite(buf, 1, bufSize, f) == bufSize, "failed to write to file");
+    }
 }
 
 void cmd_help(){
@@ -300,6 +304,19 @@ int main_r(int argc, const char * argv[]) {
                 cmd_help();
                 return -1;
         }
+    }
+    
+    if (outFile && strcmp(outFile, "-") == 0) {
+        int s_out = -1;
+        int s_err = -1;
+        cleanup([&]{
+            safeClose(s_out);
+            safeClose(s_err);
+        });
+        s_out = dup(STDOUT_FILENO);
+        s_err = dup(STDERR_FILENO);
+        dup2(s_out, STDERR_FILENO);
+        dup2(s_err, STDOUT_FILENO);
     }
 
     if (argc-optind == 1) {
