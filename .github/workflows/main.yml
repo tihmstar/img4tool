@@ -38,12 +38,6 @@ jobs:
           cd $(brew --prefix openssl)
           sudo mkdir -p /usr/local/lib/pkgconfig/
           sudo cp -r lib/pkgconfig/* /usr/local/lib/pkgconfig/
-
-          IFS=',' read -r -a deparray <<< "$MAC_DYNAMIC_LIBS"; for d in ${deparray[@]}; do        
-            echo "moving library $d"
-            cd $(brew --prefix $d)
-            find . -name "*.dylib" -exec mv {} {}.bak \;
-          done       
           cd $GITHUB_WORKSPACE
 
          else
@@ -86,7 +80,26 @@ jobs:
     - name: autogen
       run: ./autogen.sh --enable-static --disable-shared
     - name: make
-      run: make -j || make
+      run: |
+        if [ "$RUNNER_OS" == "macOS" ]; then
+          IFS=',' read -r -a deparray <<< "$MAC_DYNAMIC_LIBS"; for d in ${deparray[@]}; do        
+            echo "moving library $d"
+            cd $(brew --prefix $d)
+            find . -name "*.dylib" -exec mv {} {}.bak \;
+          done       
+          cd $GITHUB_WORKSPACE
+          
+          make -j || make
+          
+          IFS=',' read -r -a deparray <<< "$MAC_DYNAMIC_LIBS"; for d in ${deparray[@]}; do        
+            echo "restoring library $d"
+            cd $(brew --prefix $d)
+          find . -name "*.dylib.bak" | while read f; do o=$(echo $f | rev | cut -d '.' -f2- | rev); mv $f $o; done
+          done       
+          cd $GITHUB_WORKSPACE
+        else
+          make -j || make
+        fi
     - name: make install
       run: make DESTDIR=$GITHUB_WORKSPACE/$BUILDROOT install
     - uses: actions/upload-artifact@v4
