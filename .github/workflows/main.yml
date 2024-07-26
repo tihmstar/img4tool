@@ -27,8 +27,8 @@ jobs:
           # install liblzfse
           git clone https://github.com/lzfse/lzfse.git
           make -C lzfse CFLAGS="-fPIC"
-          make -C lzfse INSTALL_PREFIX=$GITHUB_WORKSPACE/$BUILDROOT install
-          sudo make -C lzfse install
+          make -C lzfse INSTALL_PREFIX=$GITHUB_WORKSPACE/$BUILDROOT/usr/local install
+          sudo make -C lzfse install INSTALL_PREFIX=/usr/local
           rm -rf lzfse
 
          elif [ "$RUNNER_OS" == "macOS" ]; then
