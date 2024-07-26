@@ -36,6 +36,7 @@ jobs:
           brew install openssl
 
           cd $(brew --prefix openssl)
+          sudo mkdir -p /usr/local/lib/pkgconfig/
           sudo cp -r lib/pkgconfig/* /usr/local/lib/pkgconfig/
 
           IFS=',' read -r -a deparray <<< "$MAC_DYNAMIC_LIBS"; for d in ${deparray[@]}; do        
