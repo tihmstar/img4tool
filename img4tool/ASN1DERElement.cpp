@@ -237,10 +237,18 @@ std::string ASN1DERElement::getStringValue() const{
 uint64_t ASN1DERElement::getIntegerValue() const{
     uint64_t rt = 0;
     assure(_buf->tagNumber == TagNumber::TagINTEGER || _buf->tagNumber == TagNumber::TagBOOLEAN);
-    assure(payloadSize() <= sizeof(uint64_t));
-    for (uint8_t sizebits = 0; sizebits < payloadSize(); sizebits++) {
+    uint8_t *data = (uint8_t*)payload();
+    size_t dataSize = payloadSize();
+    
+    while (dataSize > 0 && *data == 0) {
+        data++;
+        dataSize--;
+    }
+    
+    assure(dataSize <= sizeof(uint64_t));
+    for (uint8_t sizebits = 0; sizebits < dataSize; sizebits++) {
         rt <<= 8;
-        rt |= ((uint8_t*)payload())[sizebits];
+        rt |= data[sizebits];
     }
     return rt;
 }
