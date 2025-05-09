@@ -289,6 +289,51 @@ void ASN1DERElement::print() const{
     }
 }
 
+std::string ASN1DERElement::printString() const{
+    switch (tag().tagNumber) {
+        case TagIA5String:
+            return getStringValue();
+        case TagOCTET:
+        {
+            std::string s = getStringValue();
+            bool isASCII = true;
+            for (int i=0; i<s.size(); i++) {
+                if (!isprint(s.c_str()[i])){
+                    isASCII = false;
+                    break;
+                }
+            }
+            if (isASCII) {
+                return s;
+            }else{
+                std::string ret;
+                ret.resize(s.size()*2+1);
+                for (int i=0; i<s.size(); i++) {
+                    snprintf((char*)&ret.data()[i*2], 3, "%02x",((uint8_t*)s.c_str())[i]);
+                }
+                return ret;
+            }
+        }
+        case TagINTEGER:
+        {
+            char buf[100]={};
+            snprintf(buf, sizeof(buf), "%llu",getIntegerValue());
+            return buf;
+        }
+        case TagBOOLEAN:
+        {
+            char buf[20]={};
+            snprintf(buf, sizeof(buf), "%s",getIntegerValue() == 0 ? "false" : "true");
+            return buf;
+        }
+        default:
+            reterror("unimplemented ASN1DERElement::print() for type=%d",tag().tagNumber);
+            break;
+    }
+    reterror("Shouldn't get here");
+}
+
+
 
 ASN1DERElement ASN1DERElement::operator[](uint32_t i) const{
     assure(_buf->isConstructed);

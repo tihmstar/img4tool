@@ -125,6 +125,7 @@ namespace tihmstar {
             std::string getStringValue() const;
             uint64_t getIntegerValue() const;
             void print() const;
+            std::string printString() const;
 
             
             ASN1DERElement operator[](uint32_t i) const;

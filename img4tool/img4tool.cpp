@@ -292,15 +292,21 @@ void tihmstar::img4tool::printRecSequence(const void *buf, size_t size, int inde
             bool haveSubelem = true;
             try {subelem = {elem.payload(),elem.payloadSize()};(void)*subelem.begin();} catch (...) {haveSubelem=false;}
             if (elem.tag().tagNumber == ASN1DERElement::TagOCTET && haveSubelem && subelem.tag().isConstructed) {
-                printRecSequence(subelem.buf(), subelem.size(), indent+1);
-                printf("\n");
-            }else{
+                try{
+                    printRecSequence(subelem.buf(), subelem.size(), indent+1);
+                    printf("\n");
+                }catch (...){
+                    haveSubelem = false;
+                }
+            }
+            if (!haveSubelem){
+                std::string ps = elem.printString();
                 if (indent && !dontIndentNext) {
                     printf("\n");
                     for (int i=0; i<indent*INDENTVALUE; i++) printf(" ");
                 }
                 dontIndentNext = false;
-                elem.print();
+                printf("%s",ps.c_str());
                 if (elem.tag().tagNumber == ASN1DERElement::TagIA5String) {
                     printf(": ");
                     dontIndentNext = true;
