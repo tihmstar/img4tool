@@ -26,6 +26,9 @@
 #include <plist/plist.h>
 #endif //HAVE_PLIST
 
+#ifdef HAVE_LIBIPATCHER
+#include <libipatcher/libipatcher.hpp>
+#endif //HAVE_LIBIPATCHER
 
 using namespace tihmstar::img4tool;
 using namespace std;
@@ -41,28 +44,29 @@ using namespace std;
 static struct option longopts[] = {
     { "help",           no_argument,        NULL, 'h' },
     { "print-all",      no_argument,        NULL, 'a' },
-    { "im4p-only",      no_argument,        NULL, 'i' },
-#ifdef HAVE_PLIST
-    { "shsh",           required_argument,  NULL, 's' },
-#endif //HAVE_PLIST
-    { "extract",        no_argument,        NULL, 'e' },
-    { "im4m",           required_argument,  NULL, 'm' },
-    { "im4p",           required_argument,  NULL, 'p' },
     { "create",         required_argument,  NULL, 'c' },
-    { "outfile",        required_argument,  NULL, 'o' },
-    { "type",           required_argument,  NULL, 't' },
     { "desc",           required_argument,  NULL, 'd' },
+    { "extract",        no_argument,        NULL, 'e' },
+    { "generator",      required_argument,  NULL, 'g' },
+    { "im4p-only",      no_argument,        NULL, 'i' },
+    { "im4m",           required_argument,  NULL, 'm' },
     { "rename-payload", required_argument,  NULL, 'n' },
-    { "generator",      required_argument,  NULL, 'h' },
-#ifdef HAVE_PLIST
-    { "verify",         optional_argument,  NULL, 'v' },
-#endif //HAVE_PLIST
+    { "outfile",        required_argument,  NULL, 'o' },
+    { "im4p",           required_argument,  NULL, 'p' },
+    { "type",           required_argument,  NULL, 't' },
+
     { "iv",             required_argument,  NULL,  0  },
     { "key",            required_argument,  NULL,  0  },
+    { "compression",    required_argument,  NULL,  0  },
+
+#ifdef HAVE_LIBIPATCHER
+    { "fetch",          no_argument,        NULL, 'f' },
+#endif //HAVE_LIBIPATCHER
 #ifdef HAVE_PLIST
+    { "shsh",           required_argument,  NULL, 's' },
+    { "verify",         optional_argument,  NULL, 'v' },
     { "convert",        no_argument,        NULL,  0  },
 #endif //HAVE_PLIST
-    { "compression",    required_argument,  NULL,  0  },
     { NULL, 0, NULL, 0 }
 };
 
@@ -130,58 +134,67 @@ void saveToFile(const char *filePath, const void *buf, size_t bufSize){
 }
 
 void cmd_help(){
-    printf("Usage: img4tool [OPTIONS] FILE\n");
-    printf("Parses img4, im4p, im4m files\n\n");
-    printf("  -h, --help\t\t\tprints usage information\n");
-    printf("  -a, --print-all\t\tprint everything from im4m\n");
-    printf("  -i, --im4p-only\t\tprint only im4p\n");
-    printf("  -e, --extract\t\t\textracts im4m/im4p payload\n");
-#ifndef HAVE_PLIST
-    printf("UNAVAILABLE: ");
-#endif //HAVE_PLIST
-    printf("  -s, --shsh\t<PATH>\t\tFilepath for shsh (for reading/writing im4m)\n");
-    printf("  -m, --im4m\t<PATH>\t\tFilepath for im4m (depending on -e being set)\n");
-    printf("  -p, --im4p\t<PATH>\t\tFilepath for im4p (depending on -e being set)\n");
-    printf("  -c, --create\t<PATH>\t\tcreates an img4 with the specified im4m, im4p or creates im4p with raw file (last argument)\n");
-    printf("  -o, --outfile\t\t\toutput path for extracting im4p payload (-e) or renaming im4p (-n)\n");
-    printf("  -t, --type\t\t\tset type for creating IM4P files from raw\n");
-    printf("  -d, --desc\t\t\tset desc for creating IM4P files from raw\n");
-    printf("  -n, --rename-payload NAME\trename im4p payload (NAME must be exactly 4 bytes)\n");
-    printf("  -g, --generator GEN\tAdd generator to img4 (eg. 0x726174736d686974)\n");
-#ifndef HAVE_PLIST
-    printf("UNAVAILABLE: ");
-#endif //HAVE_PLIST
-    printf("  -v, --verify BUILDMANIFEST\tverify img4, im4m\n");
-    printf("      --iv\t\t\tIV  for decrypting payload when extracting (requires -e and -o)\n");
-    printf("      --key\t\t\tKey for decrypting payload when extracting (requires -e and -o)\n");
-#ifndef HAVE_PLIST
-    printf("UNAVAILABLE: ");
-#endif //HAVE_PLIST
-    printf("      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n");
-    printf("      --compression\t\tset compression type when creating im4p from raw file\n");
-    
-    printf("\n");
-    
-    printf("Features:\n");
+    printf(
+           "Usage: img4tool [OPTIONS] FILE\n"
+           "Parses img4, im4p, im4m files\n\n"
+           "  -h, --help\t\t\tprints usage information\n"
+           "  -a, --print-all\t\tprint everything from im4m\n"
+           "  -e, --extract\t\t\textracts im4m/im4p payload\n"
+           "  -i, --im4p-only\t\tprint only im4p\n"
+           "  -m, --im4m\t\t<PATH>\tFilepath for im4m (depending on -e being set)\n"
+           "  -p, --im4p\t\t<PATH>\tFilepath for im4p (depending on -e being set)\n"
+           "  -c, --create\t\t<PATH>\tcreates an img4 with the specified im4m, im4p or creates im4p with raw file (last argument)\n"
+           "  -o, --outfile\t\t\toutput path for extracting im4p payload (-e) or renaming im4p (-n)\n"
+           "  -t, --type\t\t\tset type for creating IM4P files from raw\n"
+           "  -d, --desc\t\t\tset desc for creating IM4P files from raw\n"
+           "  -n, --rename-payload\t<NAME>\trename im4p payload (NAME must be exactly 4 bytes)\n"
+           "  -g, --generator\t<GEN>\tAdd generator to img4 (eg. 0x726174736d686974)\n"
+           "      --iv\t\t\tIV  for decrypting payload when extracting (requires -e and -o)\n"
+           "      --key\t\t\tKey for decrypting payload when extracting (requires -e and -o)\n"
+           "      --compression\t\tset compression type when creating im4p from raw file\n"
+#ifdef HAVE_LIBIPATCHER
+           "[libipatcher]\n"
+#else
+           "[libipatcher] (UNAVAILABLE)\n"
+#endif //HAVE_LIBIPATCHER
+           "  -f, --fetch\t\t\tTry to get IV/KEY based on KBAG from fwkeydb\n"
+
 #ifdef HAVE_PLIST
-    printf("plist: yes\n");
+           "[plist]\n"
 #else
-    printf("plist: no\n");
+           "[plist] (UNAVAILABLE)\n"
 #endif //HAVE_PLIST
-    
+           "  -s, --shsh\t\t<PATH>\tFilepath for shsh (for reading/writing im4m)\n"
+           "  -v, --verify\t<BUILDMANIFEST>\tverify img4, im4m\n"
+           "      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n"
+           "\n"
+           
+           "Features:\n"
+#ifdef HAVE_LIBIPATCHER
+           "libipatcher: yes\n"
+#else
+           "libipatcher: no\n"
+#endif //HAVE_LIBIPATCHER
+
+#ifdef HAVE_PLIST
+           "plist: yes\n"
+#else
+           "plist: no\n"
+#endif //HAVE_PLIST
+
 #ifdef HAVE_OPENSSL
-    printf("openssl: yes\n");
+           "openssl: yes\n"
 #else
-    printf("openssl: no\n");
+           "openssl: no\n"
 #endif //HAVE_OPENSSL
-    
+           
 #ifdef HAVE_LIBCOMPRESSION
-    printf("bvx2: yes\n");
+           "bvx2: yes\n"
 #else
-    printf("bvx2: no\n");
+           "bvx2: no\n"
 #endif //HAVE_LIBCOMPRESSION
-    
-    printf("\n");
+           "\n"
+           );
 }
 
 MAINFUNCTION
@@ -217,12 +230,13 @@ int main_r(int argc, const char * argv[]) {
     tihmstar::Mem workingBuf;
     char *generator = NULL;
     uint64_t bnch = 0;
-
+    bool fetchKeys = false;
+    
     cleanup([&]{
         safeFree(generator);
     });
 
-    while ((opt = getopt_long(argc, (char* const *)argv, "hais:em:p:c:o:t:d:n:g:v::", longopts, &optindex)) >= 0) {
+    while ((opt = getopt_long(argc, (char* const *)argv, "hac:d:efg:im:n:o:p:s:t:v::", longopts, &optindex)) >= 0) {
         switch (opt) {
             case 0: //long opts
             {
@@ -249,50 +263,53 @@ int main_r(int argc, const char * argv[]) {
             case 'a':
                 flags |= FLAG_ALL;
                 break;
-            case 'i':
-                flags |= FLAG_IM4PONLY;
-                break;
-#ifdef HAVE_PLIST
-            case 's':
-                shshFile = optarg;
-                break;
-#endif //HAVE_PLIST
-            case 'e':
-                retassure(!(flags & FLAG_CREATE), "Invalid command line arguments. can't extract and create at the same time");
-                flags |= FLAG_EXTRACT;
-                break;
-            case 'm':
-                im4mFile = optarg;
-                break;
-            case 'p':
-                im4pFile = optarg;
-                break;
             case 'c':
                 flags |= FLAG_CREATE;
                 retassure(!(flags & FLAG_EXTRACT), "Invalid command line arguments. can't extract and create at the same time");
                 retassure(!outFile, "Invalid command line arguments. outFile already set!");
                 outFile = optarg;
                 break;
-            case 'o':
-                retassure(!outFile, "Invalid command line arguments. outFile already set!");
-                outFile = optarg;
-                break;
-            case 't':
-                retassure(!(flags & FLAG_RENAME), "Invalid command line arguments. can't rename and create at the same time");
-                retassure(!im4pType, "Invalid command line arguments. im4pType already set!");
-                im4pType = optarg;
-                break;
-            case 'd':  //info
+            case 'd':
                 im4pDesc = optarg;
+                break;
+            case 'e':
+                retassure(!(flags & FLAG_CREATE), "Invalid command line arguments. can't extract and create at the same time");
+                flags |= FLAG_EXTRACT;
+                break;
+            case 'f':
+                fetchKeys = true;
+                break;
+            case 'g': //generator
+                bnch = strtoll(optarg, NULL, 16);
+                retassure(bnch, "Failed to set generator!");
+                break;
+            case 'i':
+                flags |= FLAG_IM4PONLY;
+                break;
+            case 'm':
+                im4mFile = optarg;
                 break;
             case 'n': //rename-payload
                 retassure(!im4pType, "Invalid command line arguments. im4pType already set!");
                 im4pType = optarg;
                 flags |= FLAG_RENAME;
                 break;
-            case 'g': //generator
-                bnch = strtoll(optarg, NULL, 16);
-                retassure(bnch, "Failed to set generator!");
+            case 'o':
+                retassure(!outFile, "Invalid command line arguments. outFile already set!");
+                outFile = optarg;
+                break;
+            case 'p':
+                im4pFile = optarg;
+                break;
+#ifdef HAVE_PLIST
+            case 's':
+                shshFile = optarg;
+                break;
+#endif //HAVE_PLIST
+            case 't':
+                retassure(!(flags & FLAG_RENAME), "Invalid command line arguments. can't rename and create at the same time");
+                retassure(!im4pType, "Invalid command line arguments. im4pType already set!");
+                im4pType = optarg;
                 break;
 #ifdef HAVE_PLIST
             case 'v':
@@ -305,6 +322,9 @@ int main_r(int argc, const char * argv[]) {
                 return -1;
         }
     }
+#ifdef HAVE_LIBIPATCHER
+    tihmstar::libipatcher::fw_key fwKey = {};
+#endif //HAVE_LIBIPATCHER
     
     if (outFile && strcmp(outFile, "-") == 0) {
         int s_out = -1;
@@ -363,6 +383,8 @@ int main_r(int argc, const char * argv[]) {
             ASN1DERElement file(workingBuf.data(), workingBuf.size());
 
             if (outFile) {
+                const char *compression = NULL;
+                ASN1DERElement payload;
                 //check for payload extraction
                 if (isIMG4(file)) {
                     file = getIM4PFromIMG4(file);
@@ -370,8 +392,45 @@ int main_r(int argc, const char * argv[]) {
                     reterror("File not recognised");
                 }
                 
-                const char *compression = NULL;
-                ASN1DERElement payload = getPayloadFromIM4P(file, decryptIv, decryptKey, &compression);
+                if (fetchKeys && (!decryptIv || !strlen(decryptIv)) && (!decryptKey || !strlen(decryptKey))) {
+#ifndef HAVE_LIBIPATCHER
+                    reterror("Compiled without libipatcher");
+#else
+                    for (int i=1; i>0; i++) {
+                        std::string kbagstr;
+                        try {
+                            tihmstar::Mem kbag = getKBAG(file, i);
+                            for (int z=0; z<kbag.size(); z++) {
+                                char cur[4] = {};
+                                snprintf(cur, sizeof(cur), "%02x",kbag.data()[z]);
+                                kbagstr += cur;
+                            }
+                        } catch (tihmstar::exception &e) {
+#ifdef DEBUG
+                            e.dump();
+#endif
+                            warning("Failed to get KBAG at index %d, falling back to extraction without keys!",i);
+                            goto failedToFindKeys;
+                        }
+                        try {
+                            info("Fetching keys for KBAG %d",i);
+                            fwKey = tihmstar::libipatcher::getFirmwareKeyForKBAG(kbagstr);
+                        } catch (tihmstar::exception &e) {
+#ifdef DEBUG
+                            e.dump();
+#endif
+                            error("Failed to fetch IV/Key for KBAG %d (%s), retrying with next...",i,kbagstr.c_str());
+                            continue;
+                        }
+                        decryptIv = fwKey.iv;
+                        decryptKey = fwKey.key;
+                        info("Found IV: %s KEY: %s", decryptIv, decryptKey);
+                        break;
+                    }
+#endif
+                failedToFindKeys:;
+                }
+                payload = getPayloadFromIM4P(file, decryptIv, decryptKey, &compression);
                 saveToFile(outFile, payload.payload(), payload.payloadSize());
 
                 if (compression) {

@@ -745,7 +745,7 @@ bool tihmstar::img4tool::im4pContainsKBAG(const ASN1DERElement &im4p){
     return false;
 }
 
-std::string tihmstar::img4tool::getKBAG(const ASN1DERElement &im4p, int kbagNum){
+tihmstar::Mem tihmstar::img4tool::getKBAG(const ASN1DERElement &im4p, int kbagNum){
     retassure(isIM4P(im4p), "Arg is not IM4P");
     assure(im4p.tag().isConstructed);
     assure(im4p.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -763,7 +763,7 @@ std::string tihmstar::img4tool::getKBAG(const ASN1DERElement &im4p, int kbagNum)
     assure(sequence.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
     assure(sequence.tag().tagClass == ASN1DERElement::TagClass::Universal);
 
-    std::string retval;
+    tihmstar::Mem ret;
     for (auto &kbtag : sequence) {
         assure(kbtag.tag().isConstructed);
         assure(kbtag.tag().tagNumber == ASN1DERElement::TagSEQUENCE);
@@ -777,13 +777,16 @@ std::string tihmstar::img4tool::getKBAG(const ASN1DERElement &im4p, int kbagNum)
                     break;
                 case 1:
                     if (curKBAG == kbagNum) {
-                        retval = elem.getStringValue();
+                        auto v = elem.getStringValue();
+                        ret.append(v.data(), v.size());
                     }
                     break;
                 case 2:
                 {
                     if (curKBAG == kbagNum) {
-                        return retval + elem.getStringValue();
+                        auto v = elem.getStringValue();
+                        ret.append(v.data(), v.size());
+                        return ret;
                     }
                     break;
                 }

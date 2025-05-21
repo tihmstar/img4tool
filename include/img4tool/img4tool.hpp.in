@@ -44,7 +44,7 @@ namespace tihmstar {
         ASN1DERElement appendIM4RToIMG4(const ASN1DERElement &img4, const ASN1DERElement &im4r);
 
         bool im4pContainsKBAG(const ASN1DERElement &im4p);
-        std::string getKBAG(const ASN1DERElement &im4p, int kbagNum);
+        tihmstar::Mem getKBAG(const ASN1DERElement &im4p, int kbagNum);
     
         ASN1DERElement getPayloadFromIM4P(const ASN1DERElement &im4p, const char *decryptIv = NULL, const char *decryptKey = NULL, const char **outUsedCompression = NULL, ASN1DERElement *outHypervisor = NULL);
         ASN1DERElement getValFromIM4M(const ASN1DERElement &im4m, uint32_t val);

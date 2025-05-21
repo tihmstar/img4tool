@@ -39,12 +39,15 @@ CFLAGS+=" -std=c11"
 # Versioning.
 
 # Checks for libraries.
-OPENSSL_REQUIRES_STR="openssl >= 0.9.8"
-LIBPLIST_REQUIRES_STR="libplist-2.0 >= 2.3.0"
 LIBGENERAL_REQUIRES_STR="libgeneral >= 75"
-PKG_CHECK_MODULES(openssl, $OPENSSL_REQUIRES_STR, have_openssl=yes, have_openssl=no)
-PKG_CHECK_MODULES(libplist, $LIBPLIST_REQUIRES_STR, have_plist=yes, have_plist=no)
+LIBIPATCHER_REQUIRES_STR="libipatcher >= 97"
+LIBPLIST_REQUIRES_STR="libplist-2.0 >= 2.3.0"
+OPENSSL_REQUIRES_STR="openssl >= 0.9.8"
+
 PKG_CHECK_MODULES(libgeneral, $LIBGENERAL_REQUIRES_STR)
+PKG_CHECK_MODULES(libipatcher, $LIBIPATCHER_REQUIRES_STR, have_libipatcher=yes, have_libipatcher=no)
+PKG_CHECK_MODULES(libplist, $LIBPLIST_REQUIRES_STR, have_plist=yes, have_plist=no)
+PKG_CHECK_MODULES(openssl, $OPENSSL_REQUIRES_STR, have_openssl=yes, have_openssl=no)
 
 AC_SUBST([libgeneral_requires], [$LIBGENERAL_REQUIRES_STR])
 
@@ -53,6 +56,12 @@ AC_ARG_ENABLE([debug],
             [enable debug build(default is no)])],
             [debug_build=true],
             [debug_build=false])
+
+AC_ARG_WITH([libipatcher],
+            [AS_HELP_STRING([--without-libipatcher],
+            [do not build with libipatcher @<:@default=yes (if available)@:>@])],
+            [with_libipatcher=no],
+            [with_libipatcher=yes])
 
 AC_ARG_WITH([plist],
             [AS_HELP_STRING([--without-plist],
@@ -71,6 +80,22 @@ AC_ARG_WITH([compression],
             [do not build with bvx2 support @<:@default=yes@:>@])],
             [with_compression=no],
             [with_compression=yes])
+
+if test "x$have_libipatcher" == "xyes"; then
+  if test "x$with_libipatcher" == "xyes"; then
+    AC_DEFINE(HAVE_LIBIPATCHER, 1, [Define if you have libipatcher])
+    AC_SUBST([HEADER_HAVE_LIBIPATCHER], [1])
+    AC_SUBST([libipatcher_requires], [$LIBPLIST_REQUIRES_STR])
+    AC_SUBST(libipatcher_CFLAGS)
+    AC_SUBST(libipatcher_LIBS)
+  else
+    echo "*** Note: libipatcher has been disabled ***"
+    AC_SUBST([HEADER_HAVE_LIBIPATCHER], [0])
+  fi
+else
+  echo "*** Note: libipatcher is unavailable ***"
+  AC_SUBST([HEADER_HAVE_LIBIPATCHER], [0])
+fi
 
 if test "x$with_plist" == "xyes"; then
   if test "x$have_plist" = "xyes"; then
@@ -159,6 +184,7 @@ Configuration for $PACKAGE-$VERSION:
 -------------------------------------------
 
   install prefix ..........: $prefix
+  with libipatcher ........: $with_libipatcher
   with plist ..............: $with_plist
   with bvx2 ...............: $with_compression
   crypto backend ..........: $crypto_backend"

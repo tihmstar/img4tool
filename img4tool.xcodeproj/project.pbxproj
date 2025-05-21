@@ -15,6 +15,8 @@
 		8754A6B2236F16B600C0D285 /* libgeneral.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 8754A6B0236F16B600C0D285 /* libgeneral.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		876D341425DE5E330059C1F5 /* libcompression.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = 875585D6238967C500B90FC9 /* libcompression.tbd */; };
 		879896AD2344A91900A98709 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 879896AC2344A91900A98709 /* main.cpp */; };
+		879B59F92DDDAA1D00273349 /* libipatcher.0.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 879B59F82DDDAA1D00273349 /* libipatcher.0.dylib */; };
+		879B59FA2DDDAA1D00273349 /* libipatcher.0.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = 879B59F82DDDAA1D00273349 /* libipatcher.0.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		87A281342347B7B900ED08BB /* ASN1DERElement.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 87A281322347B7B900ED08BB /* ASN1DERElement.cpp */; };
 		87A281372347B7CA00ED08BB /* img4tool.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 87A281352347B7CA00ED08BB /* img4tool.cpp */; };
 		87EB3A6923561EE2008F1B06 /* lzssdec.c in Sources */ = {isa = PBXBuildFile; fileRef = 87EB3A6823561EE2008F1B06 /* lzssdec.c */; };
@@ -29,6 +31,7 @@
 			files = (
 				8754A6B2236F16B600C0D285 /* libgeneral.0.dylib in Embed Libraries */,
 				2AAE83AE2906DC1500AA1083 /* libcrypto.3.dylib in Embed Libraries */,
+				879B59FA2DDDAA1D00273349 /* libipatcher.0.dylib in Embed Libraries */,
 				8746A3502C48DEDD00AB2921 /* libplist-2.0.4.dylib in Embed Libraries */,
 			);
 			name = "Embed Libraries";
@@ -63,6 +66,7 @@
 		8791272924D0ABA30071283F /* libcrypto.1.1.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.1.1.dylib; path = "../../../../usr/local/Cellar/openssl@1.1/1.1.1g/lib/libcrypto.1.1.dylib"; sourceTree = "<group>"; };
 		879896A92344A91900A98709 /* img4tool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = img4tool; sourceTree = BUILT_PRODUCTS_DIR; };
 		879896AC2344A91900A98709 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		879B59F82DDDAA1D00273349 /* libipatcher.0.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libipatcher.0.dylib; path = ../../../../usr/local/lib/libipatcher.0.dylib; sourceTree = "<group>"; };
 		87A281322347B7B900ED08BB /* ASN1DERElement.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ASN1DERElement.cpp; sourceTree = "<group>"; };
 		87A281332347B7B900ED08BB /* ASN1DERElement.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; name = ASN1DERElement.hpp; path = ../include/img4tool/ASN1DERElement.hpp; sourceTree = "<group>"; };
 		87A281352347B7CA00ED08BB /* img4tool.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = img4tool.cpp; sourceTree = "<group>"; };
@@ -83,6 +87,7 @@
 				2AAE83AD2906DC1500AA1083 /* libcrypto.3.dylib in Frameworks */,
 				8754A6B1236F16B600C0D285 /* libgeneral.0.dylib in Frameworks */,
 				876D341425DE5E330059C1F5 /* libcompression.tbd in Frameworks */,
+				879B59F92DDDAA1D00273349 /* libipatcher.0.dylib in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -92,6 +97,7 @@
 		4281CC80234A01C500C30E6D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				879B59F82DDDAA1D00273349 /* libipatcher.0.dylib */,
 				8746A34E2C48DEDD00AB2921 /* libplist-2.0.4.dylib */,
 				2AAE83AC2906DC1500AA1083 /* libcrypto.3.dylib */,
 				873E047A27A7FE14004BA5CE /* libcrypto.1.1.dylib */,
@@ -334,6 +340,7 @@
 					"HAVE_OPENSSL=1",
 					"HAVE_LIBCOMPRESSION=1",
 					XCODE,
+					"HAVE_LIBIPATCHER=1",
 				);
 				HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)/include",
