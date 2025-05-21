@@ -94,6 +94,7 @@ if test "x$have_libfwkeyfetch" == "xyes"; then
   fi
 else
   echo "*** Note: libfwkeyfetch is unavailable ***"
+  with_libfwkeyfetch="no"
   AC_SUBST([HEADER_HAVE_LIBFWKEYFETCH], [0])
 fi
 
