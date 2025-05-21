@@ -12,8 +12,8 @@ libimg4tool_la_SOURCES = 	ASN1DERElement.cpp \
                             lzssdec.c \
                             img4tool.cpp
 
-img4tool_CFLAGS = $(AM_CFLAGS)
+img4tool_CFLAGS = $(AM_CFLAGS) $(libipatcher_CFLAGS)
 img4tool_CXXFLAGS = $(AM_CXXFLAGS)
-img4tool_LDFLAGS = $(AM_LDFLAGS)
+img4tool_LDFLAGS = $(AM_LDFLAGS) $(libipatcher_LIBS)
 img4tool_LDADD = libimg4tool.la
 img4tool_SOURCES = 	main.cpp
