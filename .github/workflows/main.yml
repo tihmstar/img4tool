@@ -11,7 +11,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
     env:
       BUILDROOT: "buildroot_${{ matrix.platform }}"
-      GIT_DEPENDENCIES: libgeneral,libplist
+      GIT_DEPENDENCIES: libfwkeyfetch,libgeneral,libplist
       MAC_DYNAMIC_LIBS: openssl
 
     steps:

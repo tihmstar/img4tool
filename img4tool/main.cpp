@@ -26,9 +26,9 @@
 #include <plist/plist.h>
 #endif //HAVE_PLIST
 
-#ifdef HAVE_LIBIPATCHER
-#include <libipatcher/libipatcher.hpp>
-#endif //HAVE_LIBIPATCHER
+#ifdef HAVE_LIBFWKEYFETCH
+#include <libfwkeyfetch/libfwkeyfetch.hpp>
+#endif //HAVE_LIBFWKEYFETCH
 
 using namespace tihmstar::img4tool;
 using namespace std;
@@ -59,9 +59,9 @@ static struct option longopts[] = {
     { "key",            required_argument,  NULL,  0  },
     { "compression",    required_argument,  NULL,  0  },
 
-#ifdef HAVE_LIBIPATCHER
+#ifdef HAVE_LIBFWKEYFETCH
     { "fetch",          no_argument,        NULL, 'f' },
-#endif //HAVE_LIBIPATCHER
+#endif //HAVE_LIBFWKEYFETCH
 #ifdef HAVE_PLIST
     { "shsh",           required_argument,  NULL, 's' },
     { "verify",         optional_argument,  NULL, 'v' },
@@ -152,11 +152,11 @@ void cmd_help(){
            "      --iv\t\t\tIV  for decrypting payload when extracting (requires -e and -o)\n"
            "      --key\t\t\tKey for decrypting payload when extracting (requires -e and -o)\n"
            "      --compression\t\tset compression type when creating im4p from raw file\n"
-#ifdef HAVE_LIBIPATCHER
-           "[libipatcher]\n"
+#ifdef HAVE_LIBFWKEYFETCH
+           "[libfwkeyfetch]\n"
 #else
-           "[libipatcher] (UNAVAILABLE)\n"
-#endif //HAVE_LIBIPATCHER
+           "[libfwkeyfetch] (UNAVAILABLE)\n"
+#endif //HAVE_LIBFWKEYFETCH
            "  -f, --fetch\t\t\tTry to get IV/KEY based on KBAG from fwkeydb\n"
 
 #ifdef HAVE_PLIST
@@ -170,11 +170,11 @@ void cmd_help(){
            "\n"
            
            "Features:\n"
-#ifdef HAVE_LIBIPATCHER
-           "libipatcher: yes\n"
+#ifdef HAVE_LIBFWKEYFETCH
+           "libfwkeyfetch: yes\n"
 #else
-           "libipatcher: no\n"
-#endif //HAVE_LIBIPATCHER
+           "libfwkeyfetch: no\n"
+#endif //HAVE_LIBFWKEYFETCH
 
 #ifdef HAVE_PLIST
            "plist: yes\n"
@@ -322,9 +322,9 @@ int main_r(int argc, const char * argv[]) {
                 return -1;
         }
     }
-#ifdef HAVE_LIBIPATCHER
-    tihmstar::libipatcher::fw_key fwKey = {};
-#endif //HAVE_LIBIPATCHER
+#ifdef HAVE_LIBFWKEYFETCH
+    tihmstar::libfwkeyfetch::fw_key fwKey = {};
+#endif //HAVE_LIBFWKEYFETCH
     
     if (outFile && strcmp(outFile, "-") == 0) {
         int s_out = -1;
@@ -393,8 +393,8 @@ int main_r(int argc, const char * argv[]) {
                 }
                 
                 if (fetchKeys && (!decryptIv || !strlen(decryptIv)) && (!decryptKey || !strlen(decryptKey))) {
-#ifndef HAVE_LIBIPATCHER
-                    reterror("Compiled without libipatcher");
+#ifndef HAVE_LIBFWKEYFETCH
+                    reterror("Compiled without libfwkeyfetch");
 #else
                     for (int i=1; i>0; i++) {
                         std::string kbagstr;
@@ -414,7 +414,7 @@ int main_r(int argc, const char * argv[]) {
                         }
                         try {
                             info("Fetching keys for KBAG %d",i);
-                            fwKey = tihmstar::libipatcher::getFirmwareKeyForKBAG(kbagstr);
+                            fwKey = tihmstar::libfwkeyfetch::getFirmwareKeyForKBAG(kbagstr);
                         } catch (tihmstar::exception &e) {
 #ifdef DEBUG
                             e.dump();
