@@ -1,0 +1,11 @@
+prefix=/workspaces/img4tool
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: libgeneral
+Description: Minimal in-repo libgeneral for img4tool
+Version: 75
+Requires:
+Cflags: -I${includedir}
+Libs:
