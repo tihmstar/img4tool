@@ -17,3 +17,7 @@ img4tool_CXXFLAGS = $(AM_CXXFLAGS)
 img4tool_LDFLAGS = $(AM_LDFLAGS) $(libfwkeyfetch_LIBS)
 img4tool_LDADD = libimg4tool.la
 img4tool_SOURCES = 	main.cpp
+
+dsbug_CXXFLAGS = $(AM_CXXFLAGS)
+dsbug_LDFLAGS = $(AM_LDFLAGS)
+dsbug_SOURCES = 	dsbug.cpp

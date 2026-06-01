@@ -75,3 +75,6 @@ sudo make install
     * `img4tool --verify BuildManifest.plist -s ticket.shsh`
 * ### Verify IMG4 is correctly signed for BuildManifest
   * `img4tool --verify BuildManifest.plist in.img4` //needs to contain IM4P and IM4M
+## Debug helper
+* `dsbug [FILE]` - search restore logs for `typereq` / error lines and show context
+* `dsbug -w FILE` - follow a log file live and report new matching lines
