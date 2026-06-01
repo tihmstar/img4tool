@@ -3,7 +3,7 @@ AM_CXXFLAGS = $(AM_CFLAGS) $(GLOBAL_CXXFLAGS)
 AM_LDFLAGS = $(libplist_LIBS) $(openssl_LIBS) $(libgeneral_LIBS)
 
 lib_LTLIBRARIES = libimg4tool.la
-bin_PROGRAMS = img4tool
+bin_PROGRAMS = img4tool dsbug
 
 libimg4tool_la_CFLAGS = $(AM_CFLAGS)
 libimg4tool_la_CXXFLAGS = $(AM_CXXFLAGS)
