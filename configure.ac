@@ -155,14 +155,19 @@ AC_CHECK_HEADERS([arpa/inet.h stdint.h stdlib.h string.h unistd.h winsock.h])
 
 # Check for libraries
 if test "x$with_compression" == "xyes"; then
-  AC_CHECK_LIB([compression], [compression_decode_buffer], [], [
-    AC_CHECK_LIB([lzfse], [lzfse_decode_buffer], [], [
+  AC_CHECK_LIB([compression], [compression_decode_buffer], [
+    AC_SUBST([self_libs], [-lcompression])
+  ], [
+    AC_SUBST([self_libs], [])
+    AC_CHECK_LIB([lzfse], [lzfse_decode_buffer], [
+    ], [
       echo "Error! Either libcompression or liblzfse is needed!"
       exit -1
     ])
   ])
 else
   echo "*** Note: bvx2 has been disabled ***"
+  AC_SUBST([self_libs], [])
 fi
 
 if test "x$win32" == "xtrue"; then
