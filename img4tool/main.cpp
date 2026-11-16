@@ -592,6 +592,15 @@ int main_r(int argc, const char * argv[]) {
             saveToFile(shshFile, xml, xmlSize);
             printf("Saved IM4M to %s\n",shshFile);
         } else if (flags & FLAG_VERIFY){
+#ifdef HAVE_PLIST
+            if (shshFile){
+                try {
+                    workingBuf = im4mFormShshFile(shshFile, &generator);
+                } catch (...) {
+                    reterror("Failed to read shshFile");
+                }
+            }
+#endif //HAVE_PLIST
             //verify
             ASN1DERElement file(workingBuf.data(), workingBuf.size());
             std::string im4pSHA1;
