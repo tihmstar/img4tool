@@ -111,7 +111,7 @@ void cmd_help(){
            "[plist] (UNAVAILABLE)\n"
 #endif //HAVE_PLIST
            "  -s, --shsh\t\t<PATH>\tFilepath for shsh (for reading/writing im4m)\n"
-           "  -v, --verify\t<BUILDMANIFEST>\tverify img4, im4m\n"
+           "  -v, --verify\t[BUILDMANIFEST]\tverify img4, im4m\n"
            "      --convert\t\t\tconvert IM4M file to .shsh (use with -s)\n"
            "\n"
            
